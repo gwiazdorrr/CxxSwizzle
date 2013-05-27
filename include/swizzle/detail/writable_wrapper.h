@@ -1,7 +1,6 @@
 #ifndef HEADER_GUARD_SWIZZLE_DETAIL_WRITABLE_WRAPPER
 #define HEADER_GUARD_SWIZZLE_DETAIL_WRITABLE_WRAPPER
 
-#include "read_only_wrapper.h"
 
 namespace swizzle
 {
@@ -9,12 +8,13 @@ namespace swizzle
     {
         //! Unary and binary operators definitions.
         template <class TBase>
-        struct writable_wrapper : read_only_wrapper<TBase>
+        struct writable_wrapper : TBase
         {
             typedef TBase base_type;
             typedef typename TBase::vector_type vector_type;
             typedef typename TBase::scalar_type scalar_type;
-            
+            static const size_t num_of_components = TBase::num_of_components;
+
 
             writable_wrapper& operator=(const vector_type& o)
             {
