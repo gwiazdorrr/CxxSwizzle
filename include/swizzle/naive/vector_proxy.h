@@ -27,8 +27,29 @@ namespace swizzle
             scalar_type data[NumOfComponents];
         };
 
-        template <class TVector, class TScalar, size_t NumOfComponents, size_t x, size_t y, size_t z = -1, size_t w = -1>
+        template <class TVector, class TScalar, size_t NumOfComponents, size_t x, size_t y = -1, size_t z = -1, size_t w = -1>
         struct vector_proxy;
+
+        template <class TVector, class TScalar, size_t NumOfComponents, size_t x>
+        struct vector_proxy<TVector, TScalar, NumOfComponents, x, -1, -1, -1> : vector_proxy_base<TVector, TScalar, NumOfComponents, 1>
+        {
+            static const bool is_writable = true;
+            typedef TVector vector_type;
+            typedef TScalar scalar_type;
+            static const size_t num_of_components = 1;
+
+
+            operator TVector() const
+            {
+                return TVector()._set(data[x]);
+            }
+
+            vector_proxy& operator=(const typename std::conditional< is_writable, TVector, private_dummy >::type& vec) 
+            { 
+                data[x] = vec._components[0]; 
+                return *this; 
+            }
+        };
 
         template <class TVector, class TScalar, size_t NumOfComponents, size_t x, size_t y>
         struct vector_proxy<TVector, TScalar, NumOfComponents, x, y, -1, -1> : vector_proxy_base<TVector, TScalar, NumOfComponents, 2>
@@ -46,8 +67,8 @@ namespace swizzle
 
             vector_proxy& operator=(const typename std::conditional< is_writable, TVector, private_dummy >::type& vec) 
             { 
-                data[x] = vec.x; 
-                data[y] = vec.y; 
+                data[x] = vec._components[0]; 
+                data[y] = vec._components[1]; 
                 return *this; 
             }
 
@@ -81,9 +102,9 @@ namespace swizzle
 
             vector_proxy& operator=(const typename std::conditional< is_writable, TVector, private_dummy >::type& vec) 
             { 
-                data[x] = vec.x; 
-                data[y] = vec.y; 
-                data[z] = vec.z; 
+                data[x] = vec._components[0];
+                data[y] = vec._components[1]; 
+                data[z] = vec._components[2]; 
                 return *this; 
             }
 
@@ -121,10 +142,10 @@ namespace swizzle
 
             vector_proxy& operator=(const typename std::conditional<is_writable, TVector, private_dummy >::type& vec) 
             { 
-                data[x] = vec.x; 
-                data[y] = vec.y; 
-                data[z] = vec.z; 
-                data[w] = vec.w; 
+                data[x] = vec._components[0]; 
+                data[y] = vec._components[1]; 
+                data[z] = vec._components[2]; 
+                data[w] = vec._components[3]; 
                 return *this; 
             }
 

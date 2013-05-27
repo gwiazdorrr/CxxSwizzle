@@ -18,13 +18,19 @@ namespace swizzle
             typedef TScalar scalar_type;
             static const size_t num_of_components = NumComponents;
 
-            template <size_t x, size_t y, size_t z = -1, size_t w = -1>
+            template <size_t x>
+            struct proxy1_factory
+            {
+                typedef vector_proxy< TVector<scalar_type, 1>, scalar_type, num_of_components, x> proxy_type;
+                typedef typename std::conditional < proxy_type::is_writable, detail::writable_wrapper<proxy_type>, proxy_type>::type type;
+            };
+            template <size_t x, size_t y>
             struct proxy2_factory
             {
                 typedef vector_proxy< TVector<scalar_type, 2>, scalar_type, num_of_components, x, y> proxy_type;
                 typedef typename std::conditional < proxy_type::is_writable, detail::writable_wrapper<proxy_type>, proxy_type>::type type;
             };
-            template <size_t x, size_t y, size_t z, size_t w = -1>
+            template <size_t x, size_t y, size_t z>
             struct proxy3_factory
             {
                 typedef vector_proxy< TVector<scalar_type, 3>, scalar_type, num_of_components, x, y, z> proxy_type;
@@ -52,11 +58,7 @@ namespace swizzle
             {
                 scalar_type _components[num_of_components];
 
-                struct
-                {
-                    scalar_type x;
-                };
-
+                typename proxy1_factory<0>::type x;
                 typename proxy2_factory<0,0>::type xx;
                 typename proxy3_factory<0,0,0>::type xxx;
                 typename proxy4_factory<0,0,0,0>::type xxxx;
@@ -77,12 +79,8 @@ namespace swizzle
             {
                 scalar_type _components[num_of_components];
 
-                struct
-                {
-                    scalar_type x;
-                    scalar_type y;
-                };
-
+                typename proxy1_factory<0>::type x;
+                typename proxy1_factory<1>::type y;
                 typename proxy2_factory<0,0>::type xx;
                 typename proxy2_factory<0,1>::type xy;
                 typename proxy2_factory<1,0>::type yx;
@@ -128,13 +126,9 @@ namespace swizzle
             {
                 scalar_type _components[num_of_components];
 
-                struct
-                {
-                    scalar_type x;
-                    scalar_type y;
-                    scalar_type z;
-                    scalar_type w;
-                };
+                typename proxy1_factory<0>::type x;
+                typename proxy1_factory<1>::type y;
+                typename proxy1_factory<2>::type z;
 
                 typename proxy2_factory<0,0>::type xx;
                 typename proxy2_factory<0,1>::type xy;
@@ -270,13 +264,10 @@ namespace swizzle
             {
                 scalar_type _components[num_of_components];
 
-                struct
-                {
-                    scalar_type x;
-                    scalar_type y;
-                    scalar_type z;
-                    scalar_type w;
-                };
+                typename proxy1_factory<0>::type x;
+                typename proxy1_factory<1>::type y;
+                typename proxy1_factory<2>::type z;
+                typename proxy1_factory<3>::type w;
 
                 typename proxy2_factory<0,0>::type xx;
                 typename proxy2_factory<0,1>::type xy;

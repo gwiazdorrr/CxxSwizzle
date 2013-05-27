@@ -13,7 +13,7 @@ namespace swizzle
         #define SWIZZLE_DETAIL_VECTOR(T) typename SWIZZLE_DETAIL_TRAITS(T)::vector_type
         #define SWIZZLE_DETAIL_SCALAR(T) typename SWIZZLE_DETAIL_TRAITS(T)::scalar_type
         #define SWIZZLE_DETAIL_NUM(T) SWIZZLE_DETAIL_TRAITS(T)::num_of_components
-        #define SWIZZLE_DETAIL_SCALAR_PROXY(T) typename SWIZZLE_DETAIL_TRAITS(T)::vector_type::scalar_type
+        #define SWIZZLE_DETAIL_SCALAR_PROXY(T) typename SWIZZLE_DETAIL_TRAITS(T)::vector_type::fallback_scalar_type
 
         #define SWIZZLE_DETAIL_ENABLE_IF_SAME2(T, U, Out) typename std::enable_if< \
             std::is_same<SWIZZLE_DETAIL_VECTOR(T), SWIZZLE_DETAIL_VECTOR(U)>::value, Out>::type
@@ -56,6 +56,16 @@ namespace swizzle
         SWIZZLE_DETAIL_ENABLE_IF_SAME(TVector1, TVector2) operator+(const TVector1& a, const TVector2& b)
         {
             return add_forwarder<SWIZZLE_DETAIL_VECTOR(TVector1)>(a, b);
+        }
+
+        template <class TVector1, class TVector2>
+        typename std::enable_if< 
+            !std::is_same<SWIZZLE_DETAIL_VECTOR(TVector1), SWIZZLE_DETAIL_VECTOR(TVector2)>::value &&  
+            SWIZZLE_DETAIL_TRAITS(TVector1)::num_of_components == SWIZZLE_DETAIL_TRAITS(TVector2)::num_of_components,
+            SWIZZLE_DETAIL_VECTOR(TVector1)>::type
+            operator+(const TVector1& a, const TVector2& b)
+        {
+            return add_forwarder<SWIZZLE_DETAIL_VECTOR(TVector1)>(a, static_cast<SWIZZLE_DETAIL_VECTOR(TVector1)>(b));
         }
 
         template <class TVector1, class TVector2>
