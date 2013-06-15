@@ -49,6 +49,11 @@ namespace swizzle
                 data[x] = vec._components[0]; 
                 return *this; 
             }
+
+            operator scalar_type() const
+            {
+                return data[x];
+            }
         };
 
         template <class TVector, class TScalar, size_t NumOfComponents, size_t x, size_t y>

@@ -5,7 +5,7 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include "vector_adapter.h"
-
+static_assert(0, "wtf");
 namespace swizzle
 {
     namespace naive
