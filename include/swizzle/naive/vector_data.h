@@ -44,7 +44,7 @@ namespace swizzle
             };
         };
 
-        /*template <template <class, size_t> class TVector, class TScalar>
+        template <template <class, size_t> class TVector, class TScalar>
         struct naive_vector_data< TVector, TScalar, 1 > : naive_vector_data_base<TVector, TScalar, 1>
         {
             typedef naive_vector_data_base<TVector, TScalar, 1> base_type;
@@ -68,7 +68,7 @@ namespace swizzle
                 typename proxy3_factory<0,0,0>::type xxx;
                 typename proxy4_factory<0,0,0,0>::type xxxx;
             };
-        };*/
+        };
 
         template <template <class, size_t> class TVector, class TScalar>
         struct naive_vector_data< TVector, TScalar, 2 > : naive_vector_data_base<TVector, TScalar, 2>

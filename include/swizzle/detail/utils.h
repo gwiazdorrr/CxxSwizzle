@@ -14,6 +14,20 @@ namespace swizzle
                 (VectorSize > Size1 + Size2 + Size3 || !Size4) &&
                 (VectorSize <= Size1 + Size2 + Size3 + Size4);
         };
+
+        template <class T>
+        struct scalar_proxy
+        {
+            T value;
+
+            scalar_proxy(T value) : value(value)
+            {}
+
+            operator T() const
+            {
+                return value;
+            }
+        };
     }
 }
 

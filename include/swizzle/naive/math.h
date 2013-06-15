@@ -10,6 +10,7 @@ namespace swizzle
 {
     namespace naive
     {
+        /*
         #define SWIZZLE_NAIVE_ENABLE_IS_SAME(T, U) typename std::enable_if<std::is_same<typename vector_traits<T>::vector_type, typename vector_traits<U>::vector_type>::value, typename vector_traits<T>::vector_type>::type
         #define SWIZZLE_NAIVE_MATH_VECTOR(T) typename vector_traits<T>::vector_type
         #define SWIZZLE_NAIVE_MATH_SCALAR(T) typename vector_traits<T>::scalar_type

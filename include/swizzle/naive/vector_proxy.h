@@ -41,7 +41,9 @@ namespace swizzle
 
             operator TVector() const
             {
-                return TVector()._set(data[x]);
+                TVector result;
+                result._components[0] = data[x];
+                return result;
             }
 
             vector_proxy& operator=(const typename std::conditional< is_writable, TVector, private_dummy >::type& vec) 
@@ -67,7 +69,10 @@ namespace swizzle
 
             operator TVector() const
             {
-                return TVector()._set(data[x], data[y]);
+                TVector result;
+                result._components[0] = data[x];
+                result._components[1] = data[y];
+                return result;
             }
 
             vector_proxy& operator=(const typename std::conditional< is_writable, TVector, private_dummy >::type& vec) 
@@ -102,7 +107,11 @@ namespace swizzle
 
             operator TVector() const
             {
-                return TVector()._set(data[x], data[y], data[z]);
+                TVector result;
+                result._components[0] = data[x];
+                result._components[1] = data[y];
+                result._components[2] = data[z];
+                return result;
             }
 
             vector_proxy& operator=(const typename std::conditional< is_writable, TVector, private_dummy >::type& vec) 
@@ -142,7 +151,12 @@ namespace swizzle
 
             operator TVector() const
             {
-                return TVector()._set(data[x], data[y], data[z], data[w]);
+                TVector result;
+                result._components[0] = data[x];
+                result._components[1] = data[y];
+                result._components[2] = data[z];
+                result._components[3] = data[w];
+                return result;
             }
 
             vector_proxy& operator=(const typename std::conditional<is_writable, TVector, private_dummy >::type& vec) 

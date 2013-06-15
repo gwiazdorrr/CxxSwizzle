@@ -10,37 +10,37 @@ namespace swizzle
         // Angle and Trigonometry Functions
 
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) radians(T&& degrees)
+        SWIZZLE_DETAIL_RESULT(T) radians(T&& degrees)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::radians(degrees);
         }
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) degrees(T&& radians)
+        SWIZZLE_DETAIL_RESULT(T) degrees(T&& radians)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::degrees(radians);
         }   
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) sin(T&& angle)
+        SWIZZLE_DETAIL_RESULT(T) sin(T&& angle)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::sin(angle);
         }         
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) cos(T&& angle)
+        SWIZZLE_DETAIL_RESULT(T) cos(T&& angle)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::cos(angle);
         }         
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) tan(T&& angle)
+        SWIZZLE_DETAIL_RESULT(T) tan(T&& angle)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::tan(angle);
         }         
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) asin(T&& x)
+        SWIZZLE_DETAIL_RESULT(T) asin(T&& x)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::asin(x);
         }            
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) acos(T&& x)
+        SWIZZLE_DETAIL_RESULT(T) acos(T&& x)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::acos(x);
         }            
@@ -50,7 +50,7 @@ namespace swizzle
             return SWIZZLE_DETAIL_VECTOR(T)::atan(y, x);
         }  
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) atan(T&& y_over_x)
+        SWIZZLE_DETAIL_RESULT(T) atan(T&& y_over_x)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::atan(y_over_x);
         } 
@@ -63,63 +63,63 @@ namespace swizzle
         }    
 
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) exp(T&& x)
+        SWIZZLE_DETAIL_RESULT(T) exp(T&& x)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::exp(x);
         }             
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) log(T&& x)
+        SWIZZLE_DETAIL_RESULT(T) log(T&& x)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::log(x);
         }             
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) exp2(T&& x)
+        SWIZZLE_DETAIL_RESULT(T) exp2(T&& x)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::exp2(x);
         }            
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) log2(T&& x)
+        SWIZZLE_DETAIL_RESULT(T) log2(T&& x)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::log2(x);
         }            
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) sqrt(T&& x)
+        SWIZZLE_DETAIL_RESULT(T) sqrt(T&& x)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::sqrt(x);
         }            
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) inversesqrt(T&& x)
+        SWIZZLE_DETAIL_RESULT(T) inversesqrt(T&& x)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::inversesqrt(x);
         }     
 
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) abs(T&& x)
+        SWIZZLE_DETAIL_RESULT(T) abs(T&& x)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::abs(x);
         }                          
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) sign(T&& x)
+        SWIZZLE_DETAIL_RESULT(T) sign(T&& x)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::sign(x);
         }                                                             
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) floor(T&& x)
+        SWIZZLE_DETAIL_RESULT(T) floor(T&& x)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::floor(x);
         }                          
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) ceil(T&& x)
+        SWIZZLE_DETAIL_RESULT(T) ceil(T&& x)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::ceil(x);
         }                           
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) fract(T&& x)
+        SWIZZLE_DETAIL_RESULT(T) fract(T&& x)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::fract(x);
         }                          
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) mod(T&& x, SWIZZLE_DETAIL_SCALAR_PROXY(T) y)
+        SWIZZLE_DETAIL_RESULT(T) mod(T&& x, SWIZZLE_DETAIL_SCALAR_PROXY(T) y)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::mod(x, y);
         }                     
@@ -134,7 +134,7 @@ namespace swizzle
             return SWIZZLE_DETAIL_VECTOR(T)::min(x, y);
         }                   
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) min(T&& x, SWIZZLE_DETAIL_SCALAR_PROXY(T) y)
+        SWIZZLE_DETAIL_RESULT(T) min(T&& x, SWIZZLE_DETAIL_SCALAR_PROXY(T) y)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::min(x, y);
         }     
@@ -144,7 +144,7 @@ namespace swizzle
             return SWIZZLE_DETAIL_VECTOR(T)::max(x, y);
         }                   
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) max(T&& x, SWIZZLE_DETAIL_SCALAR_PROXY(T) y)
+        SWIZZLE_DETAIL_RESULT(T) max(T&& x, SWIZZLE_DETAIL_SCALAR_PROXY(T) y)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::max(x, y);
         }     
@@ -155,7 +155,7 @@ namespace swizzle
             return SWIZZLE_DETAIL_VECTOR(T)::clamp(x, minVal, maxVal);
         }            
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) clamp(T&& x, SWIZZLE_DETAIL_SCALAR_PROXY(T) minVal, SWIZZLE_DETAIL_SCALAR_PROXY(T) maxVal)
+        SWIZZLE_DETAIL_RESULT(T) clamp(T&& x, SWIZZLE_DETAIL_SCALAR_PROXY(T) minVal, SWIZZLE_DETAIL_SCALAR_PROXY(T) maxVal)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::clamp(x, minVal, maxVal);
         }     
@@ -175,7 +175,7 @@ namespace swizzle
             return SWIZZLE_DETAIL_VECTOR(T)::step(edge, x);
         }                 
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) step(SWIZZLE_DETAIL_SCALAR_PROXY(T) edge, T&& x)
+        SWIZZLE_DETAIL_RESULT(T) step(SWIZZLE_DETAIL_SCALAR_PROXY(T) edge, T&& x)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::step(edge, x);
         }     
@@ -185,7 +185,7 @@ namespace swizzle
             return SWIZZLE_DETAIL_VECTOR(T)::smoothstep(edge0, edge1, x);
         }       
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) step(SWIZZLE_DETAIL_SCALAR_PROXY(T) edge0, SWIZZLE_DETAIL_SCALAR_PROXY(T) edge1, T&& x)
+        SWIZZLE_DETAIL_RESULT(T) step(SWIZZLE_DETAIL_SCALAR_PROXY(T) edge0, SWIZZLE_DETAIL_SCALAR_PROXY(T) edge1, T&& x)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::smoothstep(edge0, edge1, x);
         }     
@@ -214,7 +214,7 @@ namespace swizzle
             
         // vec3 cross (vec3 x , vec3 y )                      
         template <class T>
-        SWIZZLE_DETAIL_VECTOR(T) normalize(T&& x)
+        SWIZZLE_DETAIL_RESULT(T) normalize(T&& x)
         {
             return SWIZZLE_DETAIL_VECTOR(T)::normalize(x);
         }                     
