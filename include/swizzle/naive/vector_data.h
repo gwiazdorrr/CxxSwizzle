@@ -9,45 +9,46 @@ namespace swizzle
 {
     namespace naive
     {
-        template <template <class, size_t> class TVector, class TScalar, size_t NumComponents>
+        template <template <class> class TVector, class TTraits, size_t NumOfComponents>
         struct naive_vector_data;
-
-        template <template <class, size_t> class TVector, class TScalar, size_t NumComponents>
+        
+        template <template <class> class TVector, class TTraits>
         struct naive_vector_data_base
         {
-            typedef TScalar scalar_type;
-            static const size_t num_of_components = NumComponents;
+            typedef typename TTraits::scalar_type scalar_type;
+            typedef typename TTraits::tag_type tag_type;
+            static const size_t num_of_components = TTraits::num_of_components;
 
             template <size_t x>
             struct proxy1_factory
             {
-                typedef vector_proxy< TVector<scalar_type, 1>, scalar_type, num_of_components, x> proxy_type;
+                typedef vector_proxy< TVector, TTraits, x> proxy_type;
                 typedef typename std::conditional < proxy_type::is_writable, detail::writable_wrapper<proxy_type>, proxy_type>::type type;
             };
             template <size_t x, size_t y>
             struct proxy2_factory
             {
-                typedef vector_proxy< TVector<scalar_type, 2>, scalar_type, num_of_components, x, y> proxy_type;
+                typedef vector_proxy< TVector, TTraits, x, y> proxy_type;
                 typedef typename std::conditional < proxy_type::is_writable, detail::writable_wrapper<proxy_type>, proxy_type>::type type;
             };
             template <size_t x, size_t y, size_t z>
             struct proxy3_factory
             {
-                typedef vector_proxy< TVector<scalar_type, 3>, scalar_type, num_of_components, x, y, z> proxy_type;
+                typedef vector_proxy< TVector, TTraits, x, y, z> proxy_type;
                 typedef typename std::conditional < proxy_type::is_writable, detail::writable_wrapper<proxy_type>, proxy_type>::type type;
             };
             template <size_t x, size_t y, size_t z, size_t w>
             struct proxy4_factory
             {
-                typedef vector_proxy< TVector<scalar_type, 4>, scalar_type, num_of_components, x, y, z, w> proxy_type;
+                typedef vector_proxy< TVector, TTraits, x, y, z, w> proxy_type;
                 typedef typename std::conditional < proxy_type::is_writable, detail::writable_wrapper<proxy_type>, proxy_type>::type type;
             };
         };
 
-        template <template <class, size_t> class TVector, class TScalar>
-        struct naive_vector_data< TVector, TScalar, 1 > : naive_vector_data_base<TVector, TScalar, 1>
+        template <template <class> class TVector, class TTraits>
+        struct naive_vector_data< TVector, TTraits, 1 > : naive_vector_data_base<TVector, TTraits>
         {
-            typedef naive_vector_data_base<TVector, TScalar, 1> base_type;
+            typedef naive_vector_data_base<TVector, TTraits> base_type;
             using base_type::scalar_type;
             using base_type::num_of_components;
             using base_type::proxy2_factory;
@@ -60,20 +61,19 @@ namespace swizzle
 
                 struct 
                 {
-                    scalar_type _x;
+                    scalar_type x;
                 };
 
-                typename proxy1_factory<0>::type x;
                 typename proxy2_factory<0,0>::type xx;
                 typename proxy3_factory<0,0,0>::type xxx;
                 typename proxy4_factory<0,0,0,0>::type xxxx;
             };
         };
 
-        template <template <class, size_t> class TVector, class TScalar>
-        struct naive_vector_data< TVector, TScalar, 2 > : naive_vector_data_base<TVector, TScalar, 2>
+        template <template <class> class TVector, class TTraits>
+        struct naive_vector_data< TVector, TTraits, 2 > : naive_vector_data_base<TVector, TTraits>
         {
-            typedef naive_vector_data_base<TVector, TScalar, 2> base_type;
+            typedef naive_vector_data_base<TVector, TTraits> base_type;
             using base_type::scalar_type;
             using base_type::num_of_components;
             using base_type::proxy2_factory;
@@ -83,12 +83,6 @@ namespace swizzle
             union
             {
                 scalar_type _components[num_of_components];
-
-                struct 
-                {
-                    scalar_type _x;
-                    scalar_type _y;
-                };
 
                 struct 
                 {
@@ -96,8 +90,6 @@ namespace swizzle
                     scalar_type y;
                 };
 
-                /*typename proxy1_factory<0>::type x;
-                typename proxy1_factory<1>::type y;*/
                 typename proxy2_factory<0,0>::type xx;
                 typename proxy2_factory<0,1>::type xy;
                 typename proxy2_factory<1,0>::type yx;
@@ -129,10 +121,10 @@ namespace swizzle
             };
         };
 
-        template <template <class, size_t> class TVector, class TScalar>
-        struct naive_vector_data< TVector, TScalar, 3 > : naive_vector_data_base<TVector, TScalar, 3>
+        template <template <class> class TVector, class TTraits>
+        struct naive_vector_data< TVector, TTraits, 3 > : naive_vector_data_base<TVector, TTraits>
         {
-            typedef naive_vector_data_base<TVector, TScalar, 3> base_type;
+            typedef naive_vector_data_base<TVector, TTraits> base_type;
             using base_type::scalar_type;
             using base_type::num_of_components;
             using base_type::proxy2_factory;
@@ -145,22 +137,10 @@ namespace swizzle
 
                 struct 
                 {
-                    scalar_type _x;
-                    scalar_type _y;
-                    scalar_type _z;
-                };
-
-                struct 
-                {
                     scalar_type x;
                     scalar_type y;
                     scalar_type z;
-                  
                 };
-
-                /*typename proxy1_factory<0>::type x;
-                typename proxy1_factory<1>::type y;
-                typename proxy1_factory<2>::type z;*/
 
                 typename proxy2_factory<0,0>::type xx;
                 typename proxy2_factory<0,1>::type xy;
@@ -282,10 +262,10 @@ namespace swizzle
             };
         };
 
-        template <template <class, size_t> class TVector, class TScalar>
-        struct naive_vector_data< TVector, TScalar, 4 > : naive_vector_data_base<TVector, TScalar, 4>
+        template <template <class> class TVector, class TTraits>
+        struct naive_vector_data< TVector, TTraits, 4 > : naive_vector_data_base<TVector, TTraits>
         {
-            typedef naive_vector_data_base<TVector, TScalar, 4> base_type;
+            typedef naive_vector_data_base<TVector, TTraits> base_type;
             using base_type::scalar_type;
             using base_type::num_of_components;
             using base_type::proxy2_factory;
@@ -295,14 +275,6 @@ namespace swizzle
             union
             {
                 scalar_type _components[num_of_components];
-
-                struct 
-                {
-                    scalar_type _x;
-                    scalar_type _y;
-                    scalar_type _z;
-                    scalar_type _w;
-                };
 
                 struct 
                 {
