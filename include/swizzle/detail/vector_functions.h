@@ -5,91 +5,61 @@ namespace swizzle
 {
     namespace detail
     {
-        struct default_functions_tag {};
+        namespace glsl_functions
+        {
+            struct tag {};
 
-        // Angle and Trigonometry Functions
+#define SWIZZLE_FORWARD_FUNC_1(name)\
+            template <class T> auto name(T&& t) -> decltype(typename get_vector_type<T>::type::name(t))\
+            { return typename get_vector_type<T>::type::name(std::forward<T>(t)); }      
 
-#define SWIZZLE_FORWARD_FUNCTION_VECTOR(name)    template <class T>                      SWIZZLE_DETAIL_RESULT_1(T)       name(T&& t)                 { return SWIZZLE_DETAIL_VECTOR(T)::name(std::forward<T>(t)); }
-#define SWIZZLE_FORWARD_FUNCTION_BINARY(name)   template <class T, class U>             SWIZZLE_DETAIL_RESULT_2(T, U)    name(T&& t, U&& u)          { return SWIZZLE_DETAIL_VECTOR(T)::name(std::forward<T>(t), std::forward<U>(u)); }
-#define SWIZZLE_FORWARD_FUNCTION_TERNARY(name)  template <class T, class U, class V>    SWIZZLE_DETAIL_RESULT_3(T, U, V) name(T&& t, U&& u, V&& v)   { return SWIZZLE_DETAIL_VECTOR(T)::name(std::forward<T>(t), std::forward<U>(u), std::forward<V>(v)); }
-        
+#define SWIZZLE_FORWARD_FUNC_2(name)\
+            template <class T, class U> auto name(T&& t, U&& u) -> decltype(typename get_vector_type<T, U>::type::name(t, u))\
+            { return typename get_vector_type<T, U>::type::name(std::forward<T>(t), std::forward<U>(u)); }                      
 
-#define SWIZZLE_FORWARD_FUNC_V_V(name) \
-    template <class T> SWIZZLE_DETAIL_RESULT_1(T) name(T&& t) { return SWIZZLE_DETAIL_VECTOR(T)::name(std::forward<T>(t)); }
-
-#define SWIZZLE_FORWARD_FUNC_S_V(name) \
-    template <class T> SWIZZLE_DETAIL_SCALAR_PROXY(T) name(T&& t) { return SWIZZLE_DETAIL_VECTOR(T)::name(std::forward<T>(t)); }
-
-
-#define SWIZZLE_FORWARD_FUNC_V_VV(name) \
-    template <class T, class U> SWIZZLE_DETAIL_RESULT_2(T, U) name(T&& t, U&& u) { return SWIZZLE_DETAIL_VECTOR(T)::name(std::forward<T>(t), std::forward<U>(u)); }
-
-#define SWIZZLE_FORWARD_FUNC_S_VV(name) \
-    template <class T, class U> typename std::enable_if< SWIZZLE_DETAIL_ARE_SAME(T, U), SWIZZLE_DETAIL_SCALAR_PROXY(T) >::type name(T&& t, U&& u) { return SWIZZLE_DETAIL_VECTOR(T)::name(std::forward<T>(t), std::forward<U>(u)); }
+#define SWIZZLE_FORWARD_FUNC_3(name)\
+            template <class T, class U, class V> auto name(T&& t, U&& u, V&& v) ->  decltype( typename get_vector_type<T, U, V>::type::name(t, u, v)  )\
+            { return typename get_vector_type<T, U, V>::type::name(std::forward<T>(t), std::forward<U>(u), std::forward<V>(v)); }
 
 
+            SWIZZLE_FORWARD_FUNC_1(radians)
+            SWIZZLE_FORWARD_FUNC_1(degrees)
+            SWIZZLE_FORWARD_FUNC_1(sin)
+            SWIZZLE_FORWARD_FUNC_1(cos)
+            SWIZZLE_FORWARD_FUNC_1(tan)
+            SWIZZLE_FORWARD_FUNC_1(asin)
+            SWIZZLE_FORWARD_FUNC_1(acos)
+            SWIZZLE_FORWARD_FUNC_1(atan)
+            SWIZZLE_FORWARD_FUNC_2(atan)
+            SWIZZLE_FORWARD_FUNC_2(pow)
+            SWIZZLE_FORWARD_FUNC_1(exp)
+            SWIZZLE_FORWARD_FUNC_1(log)
+            SWIZZLE_FORWARD_FUNC_1(exp2)
+            SWIZZLE_FORWARD_FUNC_1(log2)
+            SWIZZLE_FORWARD_FUNC_1(sqrt)
+            SWIZZLE_FORWARD_FUNC_1(inversesqrt)
+            SWIZZLE_FORWARD_FUNC_1(abs)
+            SWIZZLE_FORWARD_FUNC_1(sign)
+            SWIZZLE_FORWARD_FUNC_1(floor)
+            SWIZZLE_FORWARD_FUNC_1(ceil)
+            SWIZZLE_FORWARD_FUNC_1(fract)
+            SWIZZLE_FORWARD_FUNC_2(mod)
+            SWIZZLE_FORWARD_FUNC_2(min)
+            SWIZZLE_FORWARD_FUNC_2(max)
+            SWIZZLE_FORWARD_FUNC_3(clamp)
+            SWIZZLE_FORWARD_FUNC_3(mix)
+            SWIZZLE_FORWARD_FUNC_2(step)
+            SWIZZLE_FORWARD_FUNC_3(smoothstep)
+            SWIZZLE_FORWARD_FUNC_2(reflect)
+            SWIZZLE_FORWARD_FUNC_1(length)
+            SWIZZLE_FORWARD_FUNC_2(distance)
+            SWIZZLE_FORWARD_FUNC_2(dot)
+            SWIZZLE_FORWARD_FUNC_1(normalize)
+            SWIZZLE_FORWARD_FUNC_3(faceforward)
 
-#define SWIZZLE_FORWARD_FUNC_V_VVV(name) \
-    template <class T, class U, class V> SWIZZLE_DETAIL_RESULT_3(T, U, V) name(T&& t, U&& u, V&& v) { return SWIZZLE_DETAIL_VECTOR(T)::name(std::forward<T>(t), std::forward<U>(u), std::forward<V>(v)); }
-
-#define SWIZZLE_FORWARD_FUNC_V_VS(name) \
-    template <class T> SWIZZLE_DETAIL_RESULT_1(T) name(T&& t, SWIZZLE_DETAIL_SCALAR_PROXY(T) a) { return SWIZZLE_DETAIL_VECTOR(T)::name(std::forward<T>(t), a); }
-
-#define SWIZZLE_FORWARD_FUNC_V_SV(name) \
-    template <class T> SWIZZLE_DETAIL_RESULT_1(T) name(SWIZZLE_DETAIL_SCALAR_PROXY(T) a, T&& t) { return SWIZZLE_DETAIL_VECTOR(T)::name(a, std::forward<T>(t)); }
-
-
-#define SWIZZLE_FORWARD_FUNC_V_VSS(name) \
-    template <class T> SWIZZLE_DETAIL_RESULT_1(T) name(T&& t, SWIZZLE_DETAIL_SCALAR_PROXY(T) a, SWIZZLE_DETAIL_SCALAR_PROXY(T) b) { return SWIZZLE_DETAIL_VECTOR(T)::name(std::forward<T>(t), a, b); }
-
-#define SWIZZLE_FORWARD_FUNC_V_SSV(name) \
-    template <class T> SWIZZLE_DETAIL_RESULT_1(T) name(SWIZZLE_DETAIL_SCALAR_PROXY(T) a, SWIZZLE_DETAIL_SCALAR_PROXY(T) b, T&& t) { return SWIZZLE_DETAIL_VECTOR(T)::name(a, b, std::forward<T>(t)); }
-
-#define SWIZZLE_FORWARD_FUNC_V_VVS(name) \
-    template <class T, class U> SWIZZLE_DETAIL_RESULT_2(T, U) name(T&& t, U&& u, SWIZZLE_DETAIL_SCALAR_PROXY(T) a) { return SWIZZLE_DETAIL_VECTOR(T)::name(std::forward<T>(t), std::forward<U>(u), a); }
-
-
-        SWIZZLE_FORWARD_FUNC_V_V(radians)
-        SWIZZLE_FORWARD_FUNC_V_V(degrees)
-        SWIZZLE_FORWARD_FUNC_V_V(sin)
-        SWIZZLE_FORWARD_FUNC_V_V(cos)
-        SWIZZLE_FORWARD_FUNC_V_V(tan)
-        SWIZZLE_FORWARD_FUNC_V_V(asin)
-        SWIZZLE_FORWARD_FUNC_V_V(acos)
-        SWIZZLE_FORWARD_FUNC_V_V(atan)
-        SWIZZLE_FORWARD_FUNC_V_VV(atan)
-        SWIZZLE_FORWARD_FUNC_V_VV(pow)
-        SWIZZLE_FORWARD_FUNC_V_V(exp)
-        SWIZZLE_FORWARD_FUNC_V_V(log)
-        SWIZZLE_FORWARD_FUNC_V_V(exp2)
-        SWIZZLE_FORWARD_FUNC_V_V(log2)
-        SWIZZLE_FORWARD_FUNC_V_V(sqrt)
-        SWIZZLE_FORWARD_FUNC_V_V(inversesqrt)
-        SWIZZLE_FORWARD_FUNC_V_V(abs)
-        SWIZZLE_FORWARD_FUNC_V_V(sign)
-        SWIZZLE_FORWARD_FUNC_V_V(floor)
-        SWIZZLE_FORWARD_FUNC_V_V(ceil)
-        SWIZZLE_FORWARD_FUNC_V_V(fract)
-        SWIZZLE_FORWARD_FUNC_V_VS(mod)
-        SWIZZLE_FORWARD_FUNC_V_VV(mod)
-        SWIZZLE_FORWARD_FUNC_V_VS(min)
-        SWIZZLE_FORWARD_FUNC_V_VV(min)
-        SWIZZLE_FORWARD_FUNC_V_VS(max)
-        SWIZZLE_FORWARD_FUNC_V_VV(max)
-        SWIZZLE_FORWARD_FUNC_V_VVV(clamp)
-        SWIZZLE_FORWARD_FUNC_V_VSS(clamp)
-        SWIZZLE_FORWARD_FUNC_V_VVV(mix)
-        SWIZZLE_FORWARD_FUNC_V_VVS(mix)
-        SWIZZLE_FORWARD_FUNC_V_VV(step)
-        SWIZZLE_FORWARD_FUNC_V_SV(step)
-        SWIZZLE_FORWARD_FUNC_V_VVV(smoothstep)
-        SWIZZLE_FORWARD_FUNC_V_SSV(smoothstep)
-        SWIZZLE_FORWARD_FUNC_V_VV(reflect)
-        SWIZZLE_FORWARD_FUNC_S_V(length)
-        SWIZZLE_FORWARD_FUNC_S_VV(distance)
-        SWIZZLE_FORWARD_FUNC_S_VV(dot)
-        SWIZZLE_FORWARD_FUNC_V_V(normalize)
-        SWIZZLE_FORWARD_FUNC_V_VVV(faceforward)
+#undef SWIZZLE_FORWARD_FUNC_1
+#undef SWIZZLE_FORWARD_FUNC_2
+#undef SWIZZLE_FORWARD_FUNC_3
 
 
         
@@ -143,6 +113,7 @@ namespace swizzle
             //genType normalize (genType x)                     
             //vec4 ftransform()                                  
             //genType faceforward(genType N, genType I, genType Nref )
+        }
     }
 }
 

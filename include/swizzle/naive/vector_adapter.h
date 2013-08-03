@@ -2,20 +2,16 @@
 #define HEADER_GUARD_SWIZZLE_NAIVE_VECTOR_ADAPTER
 
 #include <type_traits>
-#include "vector_traits.h"
-#include "../detail/vector_binary_operators.h"
-#include "../detail/vector_functions.h"
-#include "vector_data.h"
-#include "scalars.h"
-#include <type_traits>
-#include "../detail/utils.h"
-#include "../detail/vector_traits.h"
 #include <algorithm>
 #include <iterator>
 #include <functional>
-
 #define _USE_MATH_DEFINES
 #include <cmath>
+
+#include "vector_traits.h"
+#include "vector_data.h"
+#include "vector_adapter_traits.h"
+#include "../detail/utils.h"
 
 namespace swizzle
 {
@@ -44,6 +40,18 @@ namespace swizzle
             typedef std::reverse_iterator<iterator> reverse_iterator;
             typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
+        private:
+            template <class T>
+            struct get_num_of_components
+            {
+                static const size_t value = detail::get_vector_type<T>::type::num_of_components;
+            };
+
+            class not_available
+            {
+                not_available() {}
+            };
+
         public:
             //! Default constructor.
             vector_adapter()
@@ -64,12 +72,12 @@ namespace swizzle
             }
 
             //! Constructor from scalar for 1-component vector should be implicit
-            vector_adapter( typename std::conditional<num_of_components == 1, scalar_type, detail::not_available>::type o )
+            vector_adapter( typename std::conditional<num_of_components == 1, scalar_type, not_available>::type o )
             {
                 iterate( [&](size_t i) -> void { at(i) = o; } );
             }
             //! Constructor from scalar for 2 and more component vectors are explicit
-            explicit vector_adapter( typename std::conditional<num_of_components == 1, detail::not_available, scalar_type>::type o )
+            explicit vector_adapter( typename std::conditional<num_of_components == 1, not_available, scalar_type>::type o )
             {
                 iterate( [&](size_t i) -> void { at(i) = o; } );
             }
@@ -77,7 +85,7 @@ namespace swizzle
             //! A composite constructor variant with 1 argument
             template <class T1>
             explicit vector_adapter( const T1& v1, 
-                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::vector_traits<T1>::num_of_components, 0, 0, 0>::value, void>::type* = 0 )
+                typename std::enable_if< detail::are_sizes_valid<num_of_components, get_num_of_components<T1>::value, 0, 0, 0>::value, void>::type* = 0 )
             {
                 compose<0>(v1);
             }
@@ -85,31 +93,31 @@ namespace swizzle
             //! A composite constructor variant with 2 arguments
             template <class T1, class T2>
             vector_adapter( const T1& v1, const T2& v2,
-                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::vector_traits<T1>::num_of_components, detail::vector_traits<T2>::num_of_components, 0, 0>::value, void>::type* = 0 )
+                typename std::enable_if< detail::are_sizes_valid<num_of_components, get_num_of_components<T1>::value, get_num_of_components<T2>::value, 0, 0>::value, void>::type* = 0 )
             {
                 compose<0>(v1);
-                compose<detail::vector_traits<T1>::num_of_components>(v2);
+                compose<get_num_of_components<T1>::value>(v2);
             }
 
             //! A composite constructor variant with 3 arguments
             template <class T1, class T2, class T3>
             vector_adapter( const T1& v1, const T2& v2, const T3& v3,
-                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::vector_traits<T1>::num_of_components, detail::vector_traits<T2>::num_of_components, detail::vector_traits<T3>::num_of_components, 0>::value, void>::type* = 0 )
+                typename std::enable_if< detail::are_sizes_valid<num_of_components, get_num_of_components<T1>::value, get_num_of_components<T2>::value, get_num_of_components<T3>::value, 0>::value, void>::type* = 0 )
             {
                 compose<0>(v1);
-                compose<detail::vector_traits<T1>::num_of_components>(v2);
-                compose<detail::vector_traits<T1>::num_of_components + detail::vector_traits<T2>::num_of_components>(v3);
+                compose<get_num_of_components<T1>::value>(v2);
+                compose<get_num_of_components<T1>::value + get_num_of_components<T2>::value>(v3);
             }
 
             //! A composite constructor variant with 4 arguments
             template <class T1, class T2, class T3, class T4>
             vector_adapter( const T1& v1, const T2& v2, const T3& v3, const T4& v4,
-                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::vector_traits<T1>::num_of_components, detail::vector_traits<T2>::num_of_components, detail::vector_traits<T3>::num_of_components, detail::vector_traits<T4>::num_of_components>::value, void>::type* = 0 )
+                typename std::enable_if< detail::are_sizes_valid<num_of_components, get_num_of_components<T1>::value, get_num_of_components<T2>::value, get_num_of_components<T3>::value, get_num_of_components<T4>::value>::value, void>::type* = 0 )
             {
                 compose<0>(v1);
-                compose<detail::vector_traits<T1>::num_of_components>(v2);
-                compose<detail::vector_traits<T1>::num_of_components + detail::vector_traits<T2>::num_of_components>(v3);
-                compose<detail::vector_traits<T1>::num_of_components + detail::vector_traits<T2>::num_of_components + detail::vector_traits<T3>::num_of_components>(v4);
+                compose<get_num_of_components<T1>::value>(v2);
+                compose<get_num_of_components<T1>::value + get_num_of_components<T2>::value>(v3);
+                compose<get_num_of_components<T1>::value + get_num_of_components<T2>::value + get_num_of_components<T3>::value>(v4);
             }
 
         public:
@@ -204,13 +212,13 @@ namespace swizzle
                 return *this;
             }
 
-            typename std::conditional<num_of_components==1, vector_adapter, detail::not_available>::type& operator++()
+            typename std::conditional<num_of_components==1, vector_adapter, not_available>::type& operator++()
             {
                 ++_components[0];
                 return *this;
             }
 
-            typename std::conditional<num_of_components==1, vector_adapter, detail::not_available>::type operator++(int)
+            typename std::conditional<num_of_components==1, vector_adapter, not_available>::type operator++(int)
             {
                 auto copy = *this;
                 ++(*this);
@@ -267,7 +275,8 @@ namespace swizzle
             template <size_t N, class TTraits>
             void compose( const vector_adapter<TTraits>& v )
             {
-                iterate<N, (N + TTraits::num_of_components > num_of_components) ? num_of_components : (N + TTraits::num_of_components)>([&](size_t i) -> void { at(i) = v.at(i - N); });
+                const size_t limit = (N + TTraits::num_of_components > num_of_components) ? num_of_components : (N + TTraits::num_of_components);
+                iterate<N, limit>([&](size_t i) -> void { at(i) = v.at(i - N); });
             }
 
             template <size_t N, template <class> class TVector, class TTraits, size_t x, size_t y, size_t z, size_t w>
@@ -359,7 +368,7 @@ namespace swizzle
             {
                 return transform(degrees, [](scalar_type a) -> scalar_type { return scalar_type(M_PI * a / 180) } );
             }
-            static result_type degrees(vector_adapter )
+            static result_type degrees(vector_adapter radians)
             {
                 return transform(radians, [](scalar_type a) -> scalar_type { return scalar_type(180 * a / M_PI) } );
             }   

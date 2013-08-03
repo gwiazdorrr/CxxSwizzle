@@ -2,43 +2,91 @@
 #define HEADER_GUARD_SWIZZLE_DETAIL_VECTOR_TRAITS
 
 #include <type_traits>
+#include "writable_wrapper.h"
 
 namespace swizzle
 {
     namespace detail
     {
-        //! A base for vector traits. All valid specialisations of vector_traits should derive from it.
-        template <class TVector>
-        struct vector_traits_base
-        {
-            typedef TVector vector_type;
-            typedef typename TVector::scalar_type scalar_type;
-            typedef typename TVector::result_type result_type;
-            typedef typename TVector::fallback_scalar_type fallback_scalar_type;
-            static const size_t num_of_components = TVector::num_of_components;
+        template <class T, class U=
+            typename std::remove_cv<
+                typename std::remove_pointer<
+                    typename std::remove_reference<
+                        typename std::remove_extent<T>::type
+                    >::type
+                >::type
+            >::type
+        > struct remove_all : remove_all<U> {};
+
+        template <class T> struct remove_all<T, T> 
+        { 
+            typedef T type; 
         };
 
-        //! An undefined class, specialisations must derive from vector_traits_base.
+        struct nothing {};
+
         template <class T>
-        struct vector_traits;
+        struct get_vector_type_impl
+        {};
 
-        //! Helper type, checks if two traits are compatible. Default version is undefined.
-        template <class TTraits1, class TTraits2>
-        struct are_traits_compatible;
+        template <class TBase>
+        struct get_vector_type_impl< writable_wrapper<TBase> >
+            : get_vector_type_impl< TBase >
+        {};
 
-        //! A specialisation for vector_traits. If scalar types and number of components are equal then
-        //! two traits are compatible.
-        template <class T, class U>
-        struct are_traits_compatible< vector_traits<T>, vector_traits<U> >
+
+        template <class T, class U = nothing, class V = nothing>
+        struct get_vector_type;
+
+        template <class T>
+        struct get_vector_type<T, nothing, nothing>
         {
-            typedef vector_traits<T> traits_1 ;
-            typedef vector_traits<U> traits_2 ;
-
-            static const bool value = 
-                std::is_same< typename traits_1::scalar_type, typename traits_2::scalar_type >::value &&
-                traits_1::num_of_components == traits_2::num_of_components;
-
+            typedef typename swizzle::detail::get_vector_type_impl< typename remove_all<T>::type >::type type;
         };
+
+        template <class T, class U>
+        struct get_vector_type<T, U, nothing>
+        {
+            typedef typename get_vector_type<T>::type type_1;
+            typedef typename get_vector_type<U>::type type_2;
+
+            typedef typename type_1::scalar_type scalar_type_1;
+            typedef typename type_1::scalar_type scalar_type_2;
+            typedef typename std::common_type<scalar_type_1, scalar_type_2>::type common_scalar_type;
+
+            static const bool are_sizes_equal = type_1::num_of_components == type_2::num_of_components;
+            static const bool is_first_bigger = type_1::num_of_components > type_2::num_of_components;
+
+            // this may be confusing at first, but principle is simple
+            // sizes match -> type that scalars get promoted to gets chosen
+            // sizes don't match -> type that has bigger number of components wins
+            typedef typename std::conditional< 
+                // this may be confusing at first, but principle is simple; first vector type gets chosen if and only if either it has bigger number
+                // of components or if number is same, but scalar types' common type is equal to the first one
+                are_sizes_equal && std::is_same<scalar_type_1, common_scalar_type>::value || is_first_bigger,
+                type_1, 
+                type_2
+            >::type type;
+        };
+
+        template <class T, class U, class V>
+        struct get_vector_type
+        {
+            typedef typename get_vector_type< typename get_vector_type<T, U>::type, V >::type type;
+        };
+
+        template <class T, class U = nothing, class V = nothing>
+        struct get_vector_type_no_scalars : 
+            std::conditional< 
+            !std::is_arithmetic<typename remove_all<T>::type>::value && 
+            !std::is_arithmetic<typename remove_all<U>::type>::value &&
+            !std::is_arithmetic<typename remove_all<V>::type>::value, 
+            get_vector_type<T, U, V>, 
+            nothing 
+            >::type
+        {};
+
+
     }
 }
 
