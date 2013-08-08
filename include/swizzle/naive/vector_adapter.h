@@ -292,7 +292,7 @@ namespace swizzle
             void compose( const vector_proxy<TVector, TOtherTraits, x, y, z, w>& v )
             {
                 typedef vector_proxy<TVector, TOtherTraits, x, y, z, w> proxy_type;
-                compose<N, TOtherTraits>( v );
+                compose<N>( v.operator typename proxy_type::vector_type() );
             }
 
         private:
