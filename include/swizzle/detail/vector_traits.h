@@ -8,20 +8,8 @@ namespace swizzle
 {
     namespace detail
     {
-        template <class T, class U=
-            typename std::remove_cv<
-                typename std::remove_pointer<
-                    typename std::remove_reference<
-                        typename std::remove_extent<T>::type
-                    >::type
-                >::type
-            >::type
-        > struct remove_all : remove_all<U> {};
-
-        template <class T> struct remove_all<T, T> 
-        { 
-            typedef T type; 
-        };
+        template <class T>
+        struct remove_reference_cv : std::remove_cv< typename std::remove_reference<T>::type > {};
 
         struct nothing {};
 
@@ -35,17 +23,17 @@ namespace swizzle
         {};
 
 
-        template <class T, class U = nothing, class V = nothing>
+        template <class T, class U = void, class V = void>
         struct get_vector_type;
 
         template <class T>
-        struct get_vector_type<T, nothing, nothing>
+        struct get_vector_type<T, void, void>
         {
-            typedef typename swizzle::detail::get_vector_type_impl< typename remove_all<T>::type >::type type;
+            typedef typename swizzle::detail::get_vector_type_impl< typename remove_reference_cv<T>::type >::type type;
         };
 
         template <class T, class U>
-        struct get_vector_type<T, U, nothing>
+        struct get_vector_type<T, U, void>
         {
             typedef typename get_vector_type<T>::type type_1;
             typedef typename get_vector_type<U>::type type_2;
@@ -75,14 +63,14 @@ namespace swizzle
             typedef typename get_vector_type< typename get_vector_type<T, U>::type, V >::type type;
         };
 
-        template <class T, class U = nothing, class V = nothing>
+        template <class T, class U = void, class V = void>
         struct get_vector_type_no_scalars : 
             std::conditional< 
-            !std::is_arithmetic<typename remove_all<T>::type>::value && 
-            !std::is_arithmetic<typename remove_all<U>::type>::value &&
-            !std::is_arithmetic<typename remove_all<V>::type>::value, 
+            !std::is_arithmetic<typename remove_reference_cv<T>::type>::value && 
+            !std::is_arithmetic<typename remove_reference_cv<U>::type>::value &&
+            !std::is_arithmetic<typename remove_reference_cv<V>::type>::value, 
             get_vector_type<T, U, V>, 
-            nothing 
+            nothing
             >::type
         {};
 

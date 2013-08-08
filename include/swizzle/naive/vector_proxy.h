@@ -17,7 +17,7 @@ namespace swizzle
         }
 
         template <template <class> class TVector, class TTraits, size_t Size>
-        struct vector_proxy_base : TTraits::tag_type
+        struct vector_proxy_base : private TTraits::tag_type
         {
             typedef typename TTraits::change_num_of_components<Size>::type traits_type;
             typedef TVector< traits_type > vector_type;

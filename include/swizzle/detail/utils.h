@@ -5,6 +5,8 @@ namespace swizzle
 {
     namespace detail
     {
+        //! Checks whether sum of sizes is greater/equal to VectorSize and whether it's the minimal
+        //! i.e. redundant components are only allowed in last required size
         template <size_t VectorSize, size_t Size1, size_t Size2, size_t Size3, size_t Size4>
         struct are_sizes_valid
         {

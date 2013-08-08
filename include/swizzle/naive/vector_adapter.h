@@ -19,8 +19,8 @@ namespace swizzle
     {
         template < class TTraits > 
         class vector_adapter : 
-            public naive_vector_data< vector_adapter, TTraits, TTraits::num_of_components >, 
-            public TTraits::tag_type
+            private TTraits::tag_type,
+            public naive_vector_data< vector_adapter, TTraits, TTraits::num_of_components >
         {
             typedef naive_vector_data< ::swizzle::naive::vector_adapter, TTraits, TTraits::num_of_components > base_type;
 
@@ -154,6 +154,23 @@ namespace swizzle
                 return reverse_iterator(begin());
             }
 
+            scalar_type& at(size_t i)
+            {
+                if ( i >= num_of_components )
+                {
+                    throw std::out_of_range("i");
+                }
+                return _components[i];
+            }
+
+            const scalar_type& at(size_t i) const
+            {
+                if ( i >= num_of_components )
+                {
+                    throw std::out_of_range("i");
+                }
+                return _components[i];
+            }
 
         public:
 
@@ -233,15 +250,6 @@ namespace swizzle
             //    return result;
             //}
 
-            scalar_type& at(size_t i)
-            {
-                return _components[i];
-            }
-
-            const scalar_type& at(size_t i) const
-            {
-                return _components[i];
-            }
 
         private:
             template <class Func>
@@ -282,7 +290,8 @@ namespace swizzle
             template <size_t N, template <class> class TVector, class TTraits, size_t x, size_t y, size_t z, size_t w>
             void compose( const vector_proxy<TVector, TTraits, x, y, z, w>& v )
             {
-                compose<N>( v.operator TVector<TTraits>() );
+                typedef vector_proxy<TVector, TTraits, x, y, z, w> proxy_type;
+                compose<N>( v.operator proxy_type::base_type::vector_type() );
             }
 
         private:
