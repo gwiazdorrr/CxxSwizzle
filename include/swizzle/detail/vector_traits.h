@@ -48,11 +48,11 @@ namespace swizzle
             // this may be confusing at first, but principle is simple
             // sizes match -> type that scalars get promoted to gets chosen
             // sizes don't match -> type that has bigger number of components wins
-            typedef typename std::conditional< 
+            typedef typename std::conditional<
                 // this may be confusing at first, but principle is simple; first vector type gets chosen if and only if either it has bigger number
                 // of components or if number is same, but scalar types' common type is equal to the first one
                 are_sizes_equal && std::is_same<scalar_type_1, common_scalar_type>::value || is_first_bigger,
-                type_1, 
+                type_1,
                 type_2
             >::type type;
         };
@@ -64,12 +64,12 @@ namespace swizzle
         };
 
         template <class T, class U = void, class V = void>
-        struct get_vector_type_no_scalars : 
-            std::conditional< 
-            !std::is_arithmetic<typename remove_reference_cv<T>::type>::value && 
+        struct get_vector_type_no_scalars :
+            std::conditional<
+            !std::is_arithmetic<typename remove_reference_cv<T>::type>::value &&
             !std::is_arithmetic<typename remove_reference_cv<U>::type>::value &&
-            !std::is_arithmetic<typename remove_reference_cv<V>::type>::value, 
-            get_vector_type<T, U, V>, 
+            !std::is_arithmetic<typename remove_reference_cv<V>::type>::value,
+            get_vector_type<T, U, V>,
             nothing
             >::type
         {};
@@ -78,4 +78,4 @@ namespace swizzle
     }
 }
 
-#endif  HEADER_GUARD_SWIZZLE_DETAIL_VECTOR_TRAITS
+#endif // HEADER_GUARD_SWIZZLE_DETAIL_VECTOR_TRAITS

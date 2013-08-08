@@ -45,7 +45,7 @@ namespace swizzle
         };
 
         template <template <class> class TVector, class TTraits, size_t x, size_t y, size_t z, size_t w>
-        struct get_vector_type_impl< naive::vector_proxy<TVector, TTraits, x, y, z, w> > 
+        struct get_vector_type_impl< naive::vector_proxy<TVector, TTraits, x, y, z, w> >
         {
             typedef typename naive::vector_proxy<TVector, TTraits, x, y, z, w>::vector_type type;
         };
@@ -54,4 +54,4 @@ namespace swizzle
 }
 
 
-#endif  HEADER_GUARD_SWIZZLE_NAIVE_VECTOR_TRAITS
+#endif // HEADER_GUARD_SWIZZLE_NAIVE_VECTOR_TRAITS

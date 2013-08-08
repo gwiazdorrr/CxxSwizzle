@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <iterator>
 #include <functional>
+#include <stdexcept>
 #define _USE_MATH_DEFINES
 #include <cmath>
 
@@ -17,8 +18,8 @@ namespace swizzle
 {
     namespace naive
     {
-        template < class TTraits > 
-        class vector_adapter : 
+        template < class TTraits >
+        class vector_adapter :
             private TTraits::tag_type,
             public naive_vector_data< vector_adapter, TTraits, TTraits::num_of_components >
         {
@@ -84,7 +85,7 @@ namespace swizzle
 
             //! A composite constructor variant with 1 argument
             template <class T1>
-            explicit vector_adapter( const T1& v1, 
+            explicit vector_adapter( const T1& v1,
                 typename std::enable_if< detail::are_sizes_valid<num_of_components, get_num_of_components<T1>::value, 0, 0, 0>::value, void>::type* = 0 )
             {
                 compose<0>(v1);
@@ -280,18 +281,18 @@ namespace swizzle
                 _components[N] = v;
             }
 
-            template <size_t N, class TTraits>
-            void compose( const vector_adapter<TTraits>& v )
+            template <size_t N, class TOtherTraits>
+            void compose( const vector_adapter<TOtherTraits>& v )
             {
-                const size_t limit = (N + TTraits::num_of_components > num_of_components) ? num_of_components : (N + TTraits::num_of_components);
+                const size_t limit = (N + TOtherTraits::num_of_components > num_of_components) ? num_of_components : (N + TOtherTraits::num_of_components);
                 iterate<N, limit>([&](size_t i) -> void { at(i) = v.at(i - N); });
             }
 
-            template <size_t N, template <class> class TVector, class TTraits, size_t x, size_t y, size_t z, size_t w>
-            void compose( const vector_proxy<TVector, TTraits, x, y, z, w>& v )
+            template <size_t N, template <class> class TVector, class TOtherTraits, size_t x, size_t y, size_t z, size_t w>
+            void compose( const vector_proxy<TVector, TOtherTraits, x, y, z, w>& v )
             {
-                typedef vector_proxy<TVector, TTraits, x, y, z, w> proxy_type;
-                compose<N>( v.operator proxy_type::base_type::vector_type() );
+                typedef vector_proxy<TVector, TOtherTraits, x, y, z, w> proxy_type;
+                compose<N, TOtherTraits>( v );
             }
 
         private:
@@ -375,32 +376,32 @@ namespace swizzle
 
             static result_type radians(vector_adapter degrees)
             {
-                return transform(degrees, [](scalar_type a) -> scalar_type { return scalar_type(M_PI * a / 180) } );
+                return transform(degrees, [](scalar_type a) -> scalar_type { return scalar_type(M_PI * a / 180); } );
             }
             static result_type degrees(vector_adapter radians)
             {
-                return transform(radians, [](scalar_type a) -> scalar_type { return scalar_type(180 * a / M_PI) } );
-            }   
+                return transform(radians, [](scalar_type a) -> scalar_type { return scalar_type(180 * a / M_PI); } );
+            }
             static result_type sin(vector_adapter x)
             {
                 return transform(x, std::sin);
-            }         
+            }
             static result_type cos(vector_adapter x)
             {
                 return transform(x, std::cos);
-            }         
+            }
             static result_type tan(vector_adapter x)
             {
                 return transform(x, std::tan);
-            }         
+            }
             static result_type asin(vector_adapter x)
             {
                 return transform(x, std::asin);
-            }            
+            }
             static result_type acos(vector_adapter x)
             {
                 return transform(x, std::acos);
-            }            
+            }
             static result_type atan(const vector_adapter& y, const vector_adapter& x)
             {
                 return atan(y / x);
@@ -408,9 +409,9 @@ namespace swizzle
             static result_type atan(vector_adapter y_over_x)
             {
                 return transform(y_over_x, std::atan);
-            } 
+            }
 
-            // Exponential Functions 
+            // Exponential Functions
             static result_type pow(vector_adapter x, const vector_adapter& y)
             {
                 return transform(x, y, std::pow );
@@ -418,73 +419,73 @@ namespace swizzle
             static result_type exp(vector_adapter x)
             {
                 return transform(x, std::exp );
-            }             
+            }
             static result_type log(vector_adapter x)
             {
                 return transform(x, std::log );
-            }             
+            }
             static result_type exp2(const vector_adapter& x)
             {
                 return pow( vector_adapter(2), x);
-            }            
+            }
             static result_type log2(vector_adapter x)
             {
                 return transform(x, [](scalar_type a) -> scalar_type { return scalar_type( std::log(a) / M_LOG2E); } );
-            }            
+            }
             static result_type sqrt(vector_adapter x)
             {
                 return transform(x, std::sqrt );
-            }            
+            }
             static result_type inversesqrt(vector_adapter x)
             {
                 return 1 / sqrt(x);
             }
-            
+
 
             static result_type abs(vector_adapter x)
             {
                 return transform(x, std::abs );
-            }                          
+            }
             static result_type sign(vector_adapter x)
             {
                 return transform(x,  [](scalar_type a) -> scalar_type { return ( scalar_type(0) < a ) - ( a < scalar_type(0) ); } );
-            }                                    
+            }
             static result_type floor(vector_adapter x)
             {
                 return transform(x, std::floor );
-            }                          
+            }
             static result_type ceil(vector_adapter x)
             {
                 return transform(x, std::ceil );
-            }                           
+            }
             static result_type fract(const vector_adapter& x)
             {
                 return as_result(x - floor(x));
-            }                          
+            }
             static result_type mod(vector_adapter x, scalar_type y)
             {
                 return mod(x, vector_adapter(y));
-            }                   
+            }
             static result_type mod(vector_adapter x, const vector_adapter& y)
             {
                 return transform(x, y, std::fmod);
-            }                 
+            }
             static result_type min(vector_adapter x, const vector_adapter& y)
             {
                 return transform(x, y, std::min<scalar_type>);
-            }                 
+            }
             static result_type min(vector_adapter x, scalar_type y)
             {
                 return min(x, vector_adapter(y));
-            }   
+            }
             static result_type max(vector_adapter x, const vector_adapter& y)
             {
                 return transform(x, y, std::max<scalar_type>);
-            }                 
+            }
             static result_type max(vector_adapter x, scalar_type y)
             {
                 return max(x, vector_adapter(y));
-            }   
+            }
             static result_type clamp(vector_adapter x, const vector_adapter& minVal, const vector_adapter& maxVal)
             {
                 return max( result_type(min(x, maxVal)), minVal);
@@ -506,11 +507,11 @@ namespace swizzle
             static result_type step(const vector_adapter& edge, vector_adapter x)
             {
                 return transform(x, edge, [](scalar_type a, scalar_type b) -> scalar_type { return a > b ? 1 : 0; });
-            }               
+            }
             static result_type step(scalar_type edge, vector_adapter x)
             {
                 return step(vector_adapter(edge), x);
-            }               
+            }
             static result_type smoothstep(const vector_adapter& edge0, const vector_adapter& edge1, vector_adapter x)
             {
                 auto t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
@@ -524,7 +525,7 @@ namespace swizzle
             static result_type reflect(const vector_adapter& I, const vector_adapter& N)
             {
                 return as_result(I - 2 * dot(I, N) * N);
-            }       
+            }
 
             // Geometric functions
             static fallback_scalar_type length(const vector_adapter& x)
@@ -533,7 +534,7 @@ namespace swizzle
                 x.iterate([&](size_t i) -> void { result += x.at(i) * x.at(i); } );
                 return std::sqrt(result);
             }
-                
+
             fallback_scalar_type distance (vector_adapter p0 , const vector_adapter& p1 )
             {
                 return length(p0 -= p1);
@@ -545,27 +546,27 @@ namespace swizzle
                 x.iterate( [&](size_t i) -> void { result += x.at(i) * y.at(i); } );
                 return result;
             }
-            
+
             static result_type normalize(vector_adapter x)
             {
                 x /= length(x);
                 return as_result(x);
-            }  
+            }
 
-                // vec3 cross (vec3 x , vec3 y )                      
-                                       
-                // vec4 ftransform()                                  
+                // vec3 cross (vec3 x , vec3 y )
+
+                // vec4 ftransform()
                 // genType faceforward(genType N, genType I, genType Nref )
 
 
         };
 
 
-       
+
 
 
     }
 }
 
 
-#endif  HEADER_GUARD_SWIZZLE_NAIVE_VECTOR_ADAPTER
+#endif // HEADER_GUARD_SWIZZLE_NAIVE_VECTOR_ADAPTER
