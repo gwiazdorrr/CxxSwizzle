@@ -10,9 +10,9 @@ namespace swizzle
         template <size_t VectorSize, size_t Size1, size_t Size2, size_t Size3, size_t Size4>
         struct are_sizes_valid
         {
-            static const bool value = 
-                (VectorSize > Size1 || !Size2 && !Size3 && !Size4) &&
-                (VectorSize > Size1 + Size2 || !Size3 && !Size4) &&
+            static const bool value =
+                (VectorSize > Size1 || (!Size2 && !Size3 && !Size4)) &&
+                (VectorSize > Size1 + Size2 || (!Size3 && !Size4)) &&
                 (VectorSize > Size1 + Size2 + Size3 || !Size4) &&
                 (VectorSize <= Size1 + Size2 + Size3 + Size4);
         };
