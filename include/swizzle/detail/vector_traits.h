@@ -8,9 +8,14 @@ namespace swizzle
 {
     namespace detail
     {
+        //! Removes reference and const/volatile
         template <class T>
         struct remove_reference_cv : std::remove_cv< typename std::remove_reference<T>::type > {};
 
+        //! A type to indicate that operation is not available for some combination of input types.
+        struct operation_not_available;
+
+        //! An empty type carrying no information, used whenever applicable.
         struct nothing {};
 
         template <class T>

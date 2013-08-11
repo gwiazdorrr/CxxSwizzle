@@ -56,6 +56,7 @@ namespace swizzle
             SWIZZLE_FORWARD_FUNC_2(dot)
             SWIZZLE_FORWARD_FUNC_1(normalize)
             SWIZZLE_FORWARD_FUNC_3(faceforward)
+            SWIZZLE_FORWARD_FUNC_2(cross)
 
 #undef SWIZZLE_FORWARD_FUNC_1
 #undef SWIZZLE_FORWARD_FUNC_2

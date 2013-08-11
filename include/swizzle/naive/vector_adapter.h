@@ -31,9 +31,10 @@ namespace swizzle
 
             typedef vector_adapter vector_type;
             typedef typename base_type::scalar_type scalar_type;
-            typedef double fallback_scalar_type;
 
             typedef typename std::conditional<num_of_components==1, scalar_type, vector_adapter>::type result_type;
+
+            static_assert( sizeof(base_type) == sizeof(scalar_type) * num_of_components, "EBO failed");
 
         public:
             typedef scalar_type* iterator;
@@ -46,11 +47,6 @@ namespace swizzle
             struct get_num_of_components
             {
                 static const size_t value = detail::get_vector_type<T>::type::num_of_components;
-            };
-
-            class not_available
-            {
-                not_available() {}
             };
 
         public:
@@ -73,12 +69,12 @@ namespace swizzle
             }
 
             //! Constructor from scalar for 1-component vector should be implicit
-            vector_adapter( typename std::conditional<num_of_components == 1, scalar_type, not_available>::type o )
+            vector_adapter( typename std::conditional<num_of_components == 1, scalar_type, swizzle::detail::operation_not_available>::type o )
             {
                 iterate( [&](size_t i) -> void { at(i) = o; } );
             }
             //! Constructor from scalar for 2 and more component vectors are explicit
-            explicit vector_adapter( typename std::conditional<num_of_components == 1, not_available, scalar_type>::type o )
+            explicit vector_adapter( typename std::conditional<num_of_components == 1, swizzle::detail::operation_not_available, scalar_type>::type o )
             {
                 iterate( [&](size_t i) -> void { at(i) = o; } );
             }
@@ -174,7 +170,6 @@ namespace swizzle
             }
 
         public:
-
             vector_type& operator=(const vector_type& o)
             {
                 iterate( [&](size_t i) -> void { at(i) = o.at(i); } );
@@ -230,27 +225,31 @@ namespace swizzle
                 return *this;
             }
 
-            typename std::conditional<num_of_components==1, vector_adapter, not_available>::type& operator++()
+            typename std::conditional<num_of_components==1, vector_adapter, swizzle::detail::operation_not_available>::type& operator++()
             {
                 ++_components[0];
                 return *this;
             }
 
-            typename std::conditional<num_of_components==1, vector_adapter, not_available>::type operator++(int)
+            typename std::conditional<num_of_components==1, vector_adapter, swizzle::detail::operation_not_available>::type operator++(int)
             {
                 auto copy = *this;
                 ++(*this);
                 return copy;
             }
 
-            //template <class TTraits>
-            //operator typename vector_adapter<TTag, T, num_of_components>() const
-            //{
-            //    vector_adapter<TTag, T, num_of_components> result;
-            //    result.iterate( [&](size_t i) -> void { result.at(i) = at(i); } );
-            //    return result;
-            //}
+            typename std::conditional<num_of_components==1, vector_adapter, swizzle::detail::operation_not_available>::type& operator--()
+            {
+                --_components[0];
+                return *this;
+            }
 
+            typename std::conditional<num_of_components==1, vector_adapter, swizzle::detail::operation_not_available>::type operator--(int)
+            {
+                auto copy = *this;
+                --(*this);
+                return copy;
+            }
 
         private:
             template <class Func>
@@ -268,12 +267,6 @@ namespace swizzle
                     func(i);
                 }
             }
-
-
-
-        private:
-
-
 
             template <size_t N>
             void compose(scalar_type v)
@@ -458,17 +451,20 @@ namespace swizzle
             {
                 return transform(x, std::ceil );
             }
-            static result_type fract(const vector_adapter& x)
+            static result_type fract(vector_adapter x)
             {
-                return as_result(x - floor(x));
+                return transform(x, [=](scalar_type a) -> scalar_type { return a - std::floor(a); } );
             }
             static result_type mod(vector_adapter x, scalar_type y)
             {
                 return mod(x, vector_adapter(y));
             }
-            static result_type mod(vector_adapter x, const vector_adapter& y)
+            static result_type mod(vector_adapter x, vector_adapter y)
             {
-                return transform(x, y, std::fmod);
+                auto x_div_y = x;
+                x_div_y /= y;
+                y *= floor(x_div_y);
+                return as_result(x -= y);
             }
             static result_type min(vector_adapter x, const vector_adapter& y)
             {
@@ -519,8 +515,10 @@ namespace swizzle
             }
             static result_type smoothstep(scalar_type edge0, scalar_type edge1, vector_adapter x)
             {
-                auto t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
-                return as_result(t * t * (3.0 - 2.0 * t));
+                x -= edge0;
+                x /= (edge1 - edge0);
+                auto t = clamp(x, 0, 1);
+                return t * t * (3.0 - 2.0 * t);
             }
             static result_type reflect(const vector_adapter& I, const vector_adapter& N)
             {
@@ -528,21 +526,21 @@ namespace swizzle
             }
 
             // Geometric functions
-            static fallback_scalar_type length(const vector_adapter& x)
+            static scalar_type length(const vector_adapter& x)
             {
-                fallback_scalar_type result = 0;
+                scalar_type result = 0;
                 x.iterate([&](size_t i) -> void { result += x.at(i) * x.at(i); } );
                 return std::sqrt(result);
             }
 
-            fallback_scalar_type distance (vector_adapter p0 , const vector_adapter& p1 )
+            static scalar_type distance (vector_adapter p0 , const vector_adapter& p1 )
             {
                 return length(p0 -= p1);
             }
 
-            static fallback_scalar_type dot(const vector_adapter& x, const vector_adapter& y)
+            static scalar_type dot(const vector_adapter& x, const vector_adapter& y)
             {
-                fallback_scalar_type result = 0.0;
+                scalar_type result = 0;
                 x.iterate( [&](size_t i) -> void { result += x.at(i) * y.at(i); } );
                 return result;
             }
@@ -553,8 +551,14 @@ namespace swizzle
                 return as_result(x);
             }
 
-                // vec3 cross (vec3 x , vec3 y )
 
+            static typename std::conditional<num_of_components==3, result_type, swizzle::detail::operation_not_available>::type cross(const vector_adapter& x, const vector_adapter& y)
+            {
+                auto rx = x.y*y.z - x.z*y.y;
+                auto ry = x.z*y.x - x.x*y.z;
+                auto rz = x.x*y.y - x.y*y.x;
+                return as_result( vector_adapter(rx, ry, rz) );
+            }
                 // vec4 ftransform()
                 // genType faceforward(genType N, genType I, genType Nref )
 
