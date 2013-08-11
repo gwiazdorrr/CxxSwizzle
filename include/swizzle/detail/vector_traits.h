@@ -56,7 +56,7 @@ namespace swizzle
             typedef typename std::conditional<
                 // this may be confusing at first, but principle is simple; first vector type gets chosen if and only if either it has bigger number
                 // of components or if number is same, but scalar types' common type is equal to the first one
-                are_sizes_equal && std::is_same<scalar_type_1, common_scalar_type>::value || is_first_bigger,
+                (are_sizes_equal && std::is_same<scalar_type_1, common_scalar_type>::value) || is_first_bigger,
                 type_1,
                 type_2
             >::type type;
