@@ -1,8 +1,7 @@
 #ifndef HEADER_GUARD_SWIZZLE_NAIVE_VECTOR_DATA
 #define HEADER_GUARD_SWIZZLE_NAIVE_VECTOR_DATA
 
-#include "../detail/vector_binary_operators.h"
-#include "../detail/writable_wrapper.h"
+#include "../detail/proxy_writable_wrapper.h"
 #include "vector_proxy.h"
 
 namespace swizzle
@@ -16,29 +15,23 @@ namespace swizzle
             typedef typename TTraits::tag_type tag_type;
             static const size_t num_of_components = TTraits::num_of_components;
 
-            template <size_t x>
-            struct proxy1_factory
-            {
-                typedef vector_proxy< TVector, TTraits, x> proxy_type;
-                typedef typename std::conditional < proxy_type::is_writable, detail::writable_wrapper<proxy_type>, proxy_type>::type type;
-            };
             template <size_t x, size_t y>
             struct proxy2_factory
             {
                 typedef vector_proxy< TVector, TTraits, x, y> proxy_type;
-                typedef typename std::conditional < proxy_type::is_writable, detail::writable_wrapper<proxy_type>, proxy_type>::type type;
+                typedef typename std::conditional < proxy_type::is_writable, detail::proxy_writable_wrapper<proxy_type>, proxy_type>::type type;
             };
             template <size_t x, size_t y, size_t z>
             struct proxy3_factory
             {
                 typedef vector_proxy< TVector, TTraits, x, y, z> proxy_type;
-                typedef typename std::conditional < proxy_type::is_writable, detail::writable_wrapper<proxy_type>, proxy_type>::type type;
+                typedef typename std::conditional < proxy_type::is_writable, detail::proxy_writable_wrapper<proxy_type>, proxy_type>::type type;
             };
             template <size_t x, size_t y, size_t z, size_t w>
             struct proxy4_factory
             {
                 typedef vector_proxy< TVector, TTraits, x, y, z, w> proxy_type;
-                typedef typename std::conditional < proxy_type::is_writable, detail::writable_wrapper<proxy_type>, proxy_type>::type type;
+                typedef typename std::conditional < proxy_type::is_writable, detail::proxy_writable_wrapper<proxy_type>, proxy_type>::type type;
             };
         };
 

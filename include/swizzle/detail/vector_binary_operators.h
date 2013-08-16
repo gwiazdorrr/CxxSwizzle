@@ -1,7 +1,5 @@
-#ifndef HEADER_GUARD_SWIZZLE_DETAIL_VECTOR_BINARY_OPERATORS
-#define HEADER_GUARD_SWIZZLE_DETAIL_VECTOR_BINARY_OPERATORS
+#pragma once
 
-#include <type_traits>
 #include "vector_traits.h"
 
 namespace swizzle
@@ -88,5 +86,3 @@ namespace swizzle
         }
     }
 }
-
-#endif // HEADER_GUARD_SWIZZLE_DETAIL_VECTOR_BINARY_OPERATORS
