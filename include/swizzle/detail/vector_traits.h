@@ -2,7 +2,6 @@
 
 #include <type_traits>
 #include "utils.h"
-#include "proxy_writable_wrapper.h"
 
 namespace swizzle
 {
@@ -12,12 +11,6 @@ namespace swizzle
         //! Non-specialised version does not define it, failing any function relying on it
         template <class T>
         struct get_vector_type_impl
-        {};
-
-        //! One and only stock provided specialisation for writable_wrapper, extracting base class
-        template <class TBase>
-        struct get_vector_type_impl< proxy_writable_wrapper<TBase> >
-            : get_vector_type_impl< TBase >
         {};
 
         //! Defines common vector for given combination of input types; should be done using variadic templates,

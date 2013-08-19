@@ -10,28 +10,40 @@
 #include <cmath>
 
 #include "vector_traits.h"
-#include "vector_data.h"
 #include "vector_adapter_traits.h"
+#include "vector_proxy.h"
 #include "../detail/utils.h"
+#include "../detail/vector_data.h"
 
 namespace swizzle
 {
     namespace naive
     {
+        template <template <class> class TVector, class TTraits>
+        struct vector_adapter_proxy_factory_factory
+        {
+            template <size_t x, size_t y, size_t z, size_t w>
+            struct proxy_factory
+            {
+                typedef vector_proxy< TVector, TTraits, x, y, z, w> type;
+            };
+        };
+
         template < class TTraits >
-        class vector_adapter :
-            private TTraits::tag_type,
-            public naive_vector_data< vector_adapter, TTraits, TTraits::num_of_components >
+        class vector_adapter : public detail::vector_data<
+            typename TTraits::scalar_type,
+            TTraits::num_of_components,
+            vector_adapter_proxy_factory_factory<vector_adapter, TTraits>::proxy_factory>
         {
             //! A convenient mnemonic for base type
-            typedef naive_vector_data< ::swizzle::naive::vector_adapter, TTraits, TTraits::num_of_components > base_type;
+            typedef detail::vector_data< typename TTraits::scalar_type, TTraits::num_of_components, vector_adapter_proxy_factory_factory<::swizzle::naive::vector_adapter, TTraits>::proxy_factory > base_type;
 
             //! Proxies can access private members.
             template <template <class> class, class, size_t, size_t, size_t, size_t>
             friend struct vector_proxy;
 
-            //! "Hide" _components
-            using base_type::_components;
+            //! "Hide" _data
+            using base_type::_data;
 
         public:
             //! Number of components of this vector.
@@ -56,24 +68,24 @@ namespace swizzle
             //! Default constructor.
             vector_adapter()
             {
-                iterate( [&](size_t i) -> void { _components[i] = 0; } );
+                iterate( [&](size_t i) -> void { _data[i] = 0; } );
             }
 
             //! Copy constructor
             vector_adapter( const vector_adapter& o )
             {
-                iterate( [&](size_t i) -> void { _components[i] = o[i]; } );
+                iterate( [&](size_t i) -> void { _data[i] = o[i]; } );
             }
 
             //! Constructor from scalar for 1-component vector should be implicit
             vector_adapter( typename std::conditional<num_of_components == 1, scalar_type, swizzle::detail::operation_not_available>::type o )
             {
-                iterate( [&](size_t i) -> void { _components[i] = o; } );
+                iterate( [&](size_t i) -> void { _data[i] = o; } );
             }
             //! Constructor from scalar for 2 and more component vectors are explicit
             explicit vector_adapter( typename std::conditional<num_of_components == 1, swizzle::detail::operation_not_available, scalar_type>::type o )
             {
-                iterate( [&](size_t i) -> void { _components[i] = o; } );
+                iterate( [&](size_t i) -> void { _data[i] = o; } );
             }
 
             //! A composite constructor variant with 1 argument
@@ -117,19 +129,19 @@ namespace swizzle
         public:
             iterator begin()
             {
-                return _components;
+                return _data;
             }
             const_iterator begin() const
             {
-                return _components;
+                return _data;
             }
             iterator end()
             {
-                return _components + num_of_components;
+                return _data + num_of_components;
             }
             const_iterator end() const
             {
-                return _components + num_of_components;
+                return _data + num_of_components;
             }
             reverse_iterator rbegin()
             {
@@ -150,12 +162,12 @@ namespace swizzle
 
             scalar_type& operator[](size_t i)
             {
-                return _components[i];
+                return _data[i];
             }
 
             const scalar_type& operator[](size_t i) const
             {
-                return _components[i];
+                return _data[i];
             }
 
             size_t size() const
@@ -169,7 +181,7 @@ namespace swizzle
                 {
                     throw std::out_of_range("i");
                 }
-                return _components[i];
+                return _data[i];
             }
 
             const scalar_type& at(size_t i) const
@@ -178,68 +190,68 @@ namespace swizzle
                 {
                     throw std::out_of_range("i");
                 }
-                return _components[i];
+                return _data[i];
             }
 
         public:
             vector_type& operator=(const vector_type& o)
             {
-                iterate( [&](size_t i) -> void { _components[i] = o[i]; } );
+                iterate( [&](size_t i) -> void { _data[i] = o[i]; } );
                 return *this;
             }
 
             vector_type operator-() const
             {
                 vector_type result;
-                iterate([&](size_t i) -> void { result[i] = -_components[i]; });
+                iterate([&](size_t i) -> void { result[i] = -_data[i]; });
                 return result;
             }
 
             vector_type& operator+=(const vector_type& o)
             {
-                iterate( [&](size_t i) -> void { _components[i] += o[i]; } );
+                iterate( [&](size_t i) -> void { _data[i] += o[i]; } );
                 return *this;
             }
             vector_type& operator-=(const vector_type& o)
             {
-                iterate( [&](size_t i) -> void { _components[i] -= o[i]; } );
+                iterate( [&](size_t i) -> void { _data[i] -= o[i]; } );
                 return *this;
             }
             vector_type& operator*=(const vector_type& o)
             {
-                iterate( [&](size_t i) -> void { _components[i] *= o[i]; } );
+                iterate( [&](size_t i) -> void { _data[i] *= o[i]; } );
                 return *this;
             }
             vector_type& operator/=(const vector_type& o)
             {
-                iterate( [&](size_t i) -> void { _components[i] /= o[i]; } );
+                iterate( [&](size_t i) -> void { _data[i] /= o[i]; } );
                 return *this;
             }
 
             vector_type& operator+=(const scalar_type& o)
             {
-                iterate( [&](size_t i) -> void { _components[i] += o; } );
+                iterate( [&](size_t i) -> void { _data[i] += o; } );
                 return *this;
             }
             vector_type& operator-=(const scalar_type& o)
             {
-                iterate( [&](size_t i) -> void { _components[i] -= o; } );
+                iterate( [&](size_t i) -> void { _data[i] -= o; } );
                 return *this;
             }
             vector_type& operator*=(const scalar_type& o)
             {
-                iterate( [&](size_t i) -> void { _components[i] *= o; } );
+                iterate( [&](size_t i) -> void { _data[i] *= o; } );
                 return *this;
             }
             vector_type& operator/=(const scalar_type& o)
             {
-                iterate( [&](size_t i) -> void { _components[i] /= o; } );
+                iterate( [&](size_t i) -> void { _data[i] /= o; } );
                 return *this;
             }
 
             typename std::conditional<num_of_components==1, vector_adapter, swizzle::detail::operation_not_available>::type& operator++()
             {
-                ++_components[0];
+                ++_data[0];
                 return *this;
             }
 
@@ -252,7 +264,7 @@ namespace swizzle
 
             typename std::conditional<num_of_components==1, vector_adapter, swizzle::detail::operation_not_available>::type& operator--()
             {
-                --_components[0];
+                --_data[0];
                 return *this;
             }
 
@@ -274,20 +286,20 @@ namespace swizzle
             void iterate(Func func, std::integral_constant<size_t, NStart> = std::integral_constant<size_t, NStart>(), std::integral_constant<size_t, NEnd> = std::integral_constant<size_t, NEnd>()) const
             {
                 static_assert( NStart >= 0 && NEnd <= num_of_components && NStart < NEnd, "Out of bounds" );
-                detail::compile_time_for(func, std::integral_constant<size_t, NStart>(), std::integral_constant<size_t, NEnd>());
+                detail::compile_time_for<NStart, NEnd>(func);
             }
 
             template <size_t N>
             void compose(scalar_type v)
             {
-                _components[N] = v;
+                _data[N] = v;
             }
 
             template <size_t N, class TOtherTraits>
             void compose( const vector_adapter<TOtherTraits>& v )
             {
                 const size_t limit = (N + TOtherTraits::num_of_components > num_of_components) ? num_of_components : (N + TOtherTraits::num_of_components);
-                iterate<N, limit>([&](size_t i) -> void { _components[i] = v[i - N]; });
+                iterate<N, limit>([&](size_t i) -> void { _data[i] = v[i - N]; });
             }
 
             template <size_t N, template <class> class TVector, class TOtherTraits, size_t x, size_t y, size_t z, size_t w>
@@ -305,7 +317,7 @@ namespace swizzle
 
             static scalar_type as_result_inner(vector_adapter& x, std::true_type)
             {
-                return x._components[0];
+                return x._data[0];
             }
 
             static auto as_result(vector_adapter& x)
@@ -549,6 +561,13 @@ namespace swizzle
                 // vec4 ftransform()
                 // genType faceforward(genType N, genType I, genType Nref )
 
+        public:
+
+            template <size_t x, size_t y, size_t z, size_t w> 
+            void swizzle()
+            {
+
+            }
 
         };
 

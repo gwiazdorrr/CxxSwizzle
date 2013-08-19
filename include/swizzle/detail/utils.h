@@ -31,7 +31,7 @@ namespace swizzle
 
         //! A chain of func calls with each value from [Begin, End) range.
         template <size_t Begin, size_t End, class Func>
-        inline void compile_time_for(Func func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, End>, typename std::enable_if< Begin != End, void>::type* = 0)
+        inline void compile_time_for(Func func, std::integral_constant<size_t, Begin> = std::integral_constant<size_t, Begin>(), std::integral_constant<size_t, End> = std::integral_constant<size_t, End>(), typename std::enable_if< Begin != End, void>::type* = 0)
         {
             func(Begin);
             compile_time_for( func, std::integral_constant<size_t, Begin+1>(), std::integral_constant<size_t, End>() );
@@ -39,7 +39,7 @@ namespace swizzle
 
         //! Loop terminator.
         template <size_t Begin, class Func>
-        inline void compile_time_for(Func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, Begin>)
+        inline void compile_time_for(Func, std::integral_constant<size_t, Begin> = std::integral_constant<size_t, Begin>(), std::integral_constant<size_t, Begin> = std::integral_constant<size_t, Begin>())
         {
             // do nothing
         }

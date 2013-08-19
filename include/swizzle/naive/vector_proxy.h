@@ -31,14 +31,14 @@ namespace swizzle
             //! The data.
             scalar_type data[TTraits::num_of_components];
 
-            template <size_t Index1, size_t Index2>
-            static typename std::enable_if<Index1 == -1 || Index2 == -1, void>::type set_component(scalar_type* a, const scalar_type* b, std::integral_constant<size_t, Index1>* = nullptr, std::integral_constant<size_t, Index2>* = nullptr)
+            template <size_t Index1, size_t Index2, class A, class B>
+            static typename std::enable_if<Index1 == -1 || Index2 == -1, void>::type set_component(A& a, const B& b, std::integral_constant<size_t, Index1>* = nullptr, std::integral_constant<size_t, Index2>* = nullptr)
             {
                 // do nothing
             }
 
-            template <size_t Index1, size_t Index2>
-            static typename std::enable_if<Index1 != -1 && Index2 != -1, void>::type set_component(scalar_type* a, const scalar_type* b, std::integral_constant<size_t, Index1>* = nullptr, std::integral_constant<size_t, Index2>* = nullptr)
+            template <size_t Index1, size_t Index2, class A, class B>
+            static typename std::enable_if<Index1 != -1 && Index2 != -1, void>::type set_component(A& a, const B& b, std::integral_constant<size_t, Index1>* = nullptr, std::integral_constant<size_t, Index2>* = nullptr)
             {
                 a[Index1] = b[Index2];
             }
@@ -46,21 +46,55 @@ namespace swizzle
 
             operator vector_type() const
             {
-                vector_type result;
-                set_component<0, x>(result._components, data);
-                set_component<1, y>(result._components, data);
-                set_component<2, z>(result._components, data);
-                set_component<3, w>(result._components, data);
-                return result;
+                return swizzle(data);
             }
 
             vector_proxy& operator=(const typename std::conditional<is_writable, vector_type, swizzle::detail::operation_not_available >::type& vec)
             {
-                set_component<x, 0>(data, result._components);
-                set_component<y, 1>(data, result._components);
-                set_component<z, 2>(data, result._components);
-                set_component<w, 3>(data, result._components);
+                auto swizzled = swizzle(vec);
+                detail::compile_time_for<0, num_of_components>([&](size_t i) -> void { data[i] = swizzled[i]; } );
+
+
+                //set_component<x, 0>(data, vec);
+                //set_component<y, 1>(data, vec);
+                //set_component<z, 2>(data, vec);
+                //set_component<w, 3>(data, vec);
                 return *this;
+            }
+
+            template <class A>
+            vector_type swizzle(const A& a) const
+            {
+                vector_type result;
+                set_component<0, x>(result, a);
+                set_component<1, y>(result, a);
+                set_component<2, z>(result, a);
+                set_component<3, w>(result, a);
+                return result;
+            }
+
+            template <class T>
+            vector_proxy& operator+=(T && o)
+            {
+                return operator=( operator vector_type() + std::forward<T>(o) );
+            }
+
+            template <class T>
+            vector_proxy& operator-=(T && o)
+            {
+                return operator=( operator vector_type() - std::forward<T>(o) );
+            }
+
+            template <class T>
+            vector_proxy& operator*=(T && o)
+            {
+                return operator=( operator vector_type() * std::forward<T>(o) );
+            }
+
+            template <class T>
+            vector_proxy& operator/=(T && o)
+            {
+                return operator=( operator vector_type() / std::forward<T>(o) );
             }
         };
     }
