@@ -20,78 +20,111 @@ namespace swizzle
     namespace naive
     {
         template <template <class> class TVector, class TTraits>
-        struct vector_adapter_proxy_factory_factory
+        struct vector_adapter_helper
         {
+            typedef TVector<typename TTraits::change_num_of_components<1>::type> vec1;
+            typedef TVector<typename TTraits::change_num_of_components<2>::type> vec2;
+            typedef TVector<typename TTraits::change_num_of_components<3>::type> vec3;
+            typedef TVector<typename TTraits::change_num_of_components<4>::type> vec4;
+            
+            typedef typename TTraits::scalar_type scalar_type;
+            typedef typename TTraits::tag_type tag_type;
+            static const size_t num_of_components = TTraits::num_of_components;
+
             template <size_t x, size_t y, size_t z, size_t w>
             struct proxy_factory
             {
-                typedef vector_proxy< TVector, TTraits, x, y, z, w> type;
+                typedef indexed_proxy< vec4, std::array<scalar_type, num_of_components>, tag_type, x, y, z, w> type;
             };
+            template <size_t x>
+            struct proxy_factory<x, -1, -1, -1>
+            {
+                typedef indexed_proxy< vec1, std::array<scalar_type, num_of_components>, tag_type, x > type;
+            };
+            template <size_t x, size_t y>
+            struct proxy_factory<x, y, -1, -1>
+            {
+                typedef indexed_proxy< vec2, std::array<scalar_type, num_of_components>, tag_type, x, y > type;
+            };
+            template <size_t x, size_t y, size_t z>
+            struct proxy_factory<x, y, z, -1>
+            {
+                typedef indexed_proxy< vec3, std::array<scalar_type, num_of_components>, tag_type, x, y, z > type;
+            };
+
         };
 
         template < class TTraits >
         class vector_adapter : public detail::vector_data<
             typename TTraits::scalar_type,
             TTraits::num_of_components,
-            vector_adapter_proxy_factory_factory<vector_adapter, TTraits>::proxy_factory>
+            vector_adapter_helper<vector_adapter, TTraits>::proxy_factory>
         {
-            //! A convenient mnemonic for base type
-            typedef detail::vector_data< typename TTraits::scalar_type, TTraits::num_of_components, vector_adapter_proxy_factory_factory<::swizzle::naive::vector_adapter, TTraits>::proxy_factory > base_type;
+            typedef vector_adapter_helper< ::swizzle::naive::vector_adapter, TTraits> helper_type;
 
-            //! Proxies can access private members.
-            template <template <class> class, class, size_t, size_t, size_t, size_t>
-            friend struct vector_proxy;
+            //! A convenient mnemonic for base type
+            typedef detail::vector_data< typename TTraits::scalar_type, TTraits::num_of_components, helper_type::proxy_factory > base_type;
 
             //! "Hide" _data
-            using base_type::_data;
+            using base_type::m_data;
+            
 
         public:
             //! Number of components of this vector.
             static const size_t num_of_components = base_type::num_of_components;
+            typedef TTraits traits_type;
             //! This type.
             typedef vector_adapter vector_type;
             //! Scalar type.
+            typedef typename base_type::data_type data_type;
+            //! Scalar type.
             typedef typename base_type::scalar_type scalar_type;
             //! Type static functions return; for single-component they decay to a scalar
-            typedef typename std::conditional<num_of_components==1, scalar_type, vector_adapter>::type result_type;
+            typedef typename std::conditional<num_of_components==1, scalar_type, vector_adapter>::type decay_type;
 
             //! Sanity checks
             static_assert( sizeof(base_type) == sizeof(scalar_type) * num_of_components, "Size of the base class is not equal to size of its components, most likely empty base class optimisation failed");
 
-            //! Typedefs for STLs algorithms
-            typedef scalar_type* iterator;
-            typedef const scalar_type* const_iterator;
-            typedef std::reverse_iterator<iterator> reverse_iterator;
-            typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+            //! Because this type is implicitly constructed of anything convertible to scalar_type if it has one component
+            //! this type needs to be used in overloaded functions to avoid ambiguity
+            typedef typename std::conditional<num_of_components==1, detail::operation_not_available, scalar_type>::type amiguity_protected_scalar_type;
+
 
         public:
             //! Default constructor.
             vector_adapter()
             {
-                iterate( [&](size_t i) -> void { _data[i] = 0; } );
+                iterate( [&](size_t i) -> void { at(i) = 0; } );
             }
 
             //! Copy constructor
             vector_adapter( const vector_adapter& o )
             {
-                iterate( [&](size_t i) -> void { _data[i] = o[i]; } );
+                iterate( [&](size_t i) -> void { at(i) = o[i]; } );
             }
 
-            //! Constructor from scalar for 1-component vector should be implicit
-            vector_adapter( typename std::conditional<num_of_components == 1, scalar_type, swizzle::detail::operation_not_available>::type o )
+            //! Implicit constructor from scalar-convertible only for one-component vector
+            //! The reason why this is done with a template is that if a type decays to a scalar it can not be 
+            //! passed directly to a function taking vector - implicit conversion to scalar then implicit construction
+            //! just won't happen.
+            template <class T>
+            vector_adapter( const T& t, typename std::enable_if<num_of_components == 1 && std::is_convertible<T, scalar_type>::value, void>::type* = 0)
             {
-                iterate( [&](size_t i) -> void { _data[i] = o; } );
+                iterate( [&](size_t i) -> void { at(i) = t; } );
             }
-            //! Constructor from scalar for 2 and more component vectors are explicit
-            explicit vector_adapter( typename std::conditional<num_of_components == 1, swizzle::detail::operation_not_available, scalar_type>::type o )
+
+            //! For vectors bigger than 1 conversion from scalar should be explicit.
+            template <class T>
+            explicit vector_adapter( const T& t, typename std::enable_if<num_of_components != 1 && std::is_convertible<T, scalar_type>::value, void>::type* = 0 )
             {
-                iterate( [&](size_t i) -> void { _data[i] = o; } );
+                iterate( [&](size_t i) -> void { at(i) = t; } );
             }
 
             //! A composite constructor variant with 1 argument
+            //! Note that for types convertibles to scalar type the instantiation will fail effectively falling back to one of previous two constructors
             template <class T1>
             explicit vector_adapter( T1&& v1,
-                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::get_num_of_components<T1>::value, 0, 0, 0>::value, void>::type* = 0 )
+                typename std::enable_if< !std::is_convertible<T1, scalar_type>::value && detail::are_sizes_valid<num_of_components, detail::get_num_of_components<T1>::value>::value, void>::type* = 0 )
             {
                 compose<0>(std::forward<T1>(v1));
             }
@@ -99,7 +132,7 @@ namespace swizzle
             //! A composite constructor variant with 2 arguments
             template <class T1, class T2>
             vector_adapter( T1&& v1, T2&& v2,
-                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::get_num_of_components<T1>::value, detail::get_num_of_components<T2>::value, 0, 0>::value, void>::type* = 0 )
+                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::get_num_of_components<T1>::value, detail::get_num_of_components<T2>::value>::value, void>::type* = 0 )
             {
                 compose<0>(std::forward<T1>(v1));
                 compose<detail::get_num_of_components<T1>::value>(std::forward<T2>(v2));
@@ -108,7 +141,7 @@ namespace swizzle
             //! A composite constructor variant with 3 arguments
             template <class T1, class T2, class T3>
             vector_adapter( T1&& v1, T2&& v2, T3&& v3,
-                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::get_num_of_components<T1>::value, detail::get_num_of_components<T2>::value, detail::get_num_of_components<T3>::value, 0>::value, void>::type* = 0 )
+                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::get_num_of_components<T1>::value, detail::get_num_of_components<T2>::value, detail::get_num_of_components<T3>::value>::value, void>::type* = 0 )
             {
                 compose<0>(std::forward<T1>(v1));
                 compose<detail::get_num_of_components<T1>::value>(std::forward<T2>(v2));
@@ -127,131 +160,95 @@ namespace swizzle
             }
 
         public:
-            iterator begin()
+            auto begin() -> decltype( std::begin(m_data) )
             {
-                return _data;
+                return std::begin(m_data);
             }
-            const_iterator begin() const
+            auto begin() const -> decltype( std::begin(m_data) )
             {
-                return _data;
+                return std::begin(m_data);
             }
-            iterator end()
+            auto end() -> decltype ( std::end(m_data) )
             {
-                return _data + num_of_components;
+                return std::end(m_data);
             }
-            const_iterator end() const
+            auto end() const -> decltype ( std::end(m_data) )
             {
-                return _data + num_of_components;
-            }
-            reverse_iterator rbegin()
-            {
-                return reverse_iterator(end());
-            }
-            const_reverse_iterator rbegin() const
-            {
-                return const_reverse_iterator(end());
-            }
-            reverse_iterator rend()
-            {
-                return reverse_iterator(begin());
-            }
-            const_reverse_iterator rend() const
-            {
-                return reverse_iterator(begin());
+                return std::end(m_data);
             }
 
             scalar_type& operator[](size_t i)
             {
-                return _data[i];
+                return at(i);
             }
-
             const scalar_type& operator[](size_t i) const
             {
-                return _data[i];
+                return at(i);
             }
-
             size_t size() const
             {
                 return num_of_components;
             }
 
-            scalar_type& at(size_t i)
-            {
-                if ( i >= num_of_components )
-                {
-                    throw std::out_of_range("i");
-                }
-                return _data[i];
-            }
-
-            const scalar_type& at(size_t i) const
-            {
-                if ( i >= num_of_components )
-                {
-                    throw std::out_of_range("i");
-                }
-                return _data[i];
-            }
-
         public:
             vector_type& operator=(const vector_type& o)
             {
-                iterate( [&](size_t i) -> void { _data[i] = o[i]; } );
+                iterate( [&](size_t i) -> void { at(i) = o[i]; } );
                 return *this;
             }
 
             vector_type operator-() const
             {
                 vector_type result;
-                iterate([&](size_t i) -> void { result[i] = -_data[i]; });
+                iterate([&](size_t i) -> void { result[i] = -at(i); });
                 return result;
             }
 
-            vector_type& operator+=(const vector_type& o)
+            vector_type& operator+=(const vector_adapter& o)
             {
-                iterate( [&](size_t i) -> void { _data[i] += o[i]; } );
+                iterate( [&](size_t i) -> void { at(i) += o[i]; } );
                 return *this;
             }
-            vector_type& operator-=(const vector_type& o)
+            vector_type& operator-=(const vector_adapter& o)
             {
-                iterate( [&](size_t i) -> void { _data[i] -= o[i]; } );
+                iterate( [&](size_t i) -> void { at(i) -= o[i]; } );
                 return *this;
             }
-            vector_type& operator*=(const vector_type& o)
+            vector_type& operator*=(const vector_adapter& o)
             {
-                iterate( [&](size_t i) -> void { _data[i] *= o[i]; } );
+                iterate( [&](size_t i) -> void { at(i) *= o[i]; } );
                 return *this;
             }
-            vector_type& operator/=(const vector_type& o)
+            vector_type& operator/=(const vector_adapter& o)
             {
-                iterate( [&](size_t i) -> void { _data[i] /= o[i]; } );
+                iterate( [&](size_t i) -> void { at(i) /= o[i]; } );
                 return *this;
             }
 
-            vector_type& operator+=(const scalar_type& o)
+            vector_type& operator+=(amiguity_protected_scalar_type o)
             {
-                iterate( [&](size_t i) -> void { _data[i] += o; } );
+                iterate( [&](size_t i) -> void { at(i) += o; } );
                 return *this;
             }
-            vector_type& operator-=(const scalar_type& o)
+            vector_type& operator-=(amiguity_protected_scalar_type o)
             {
-                iterate( [&](size_t i) -> void { _data[i] -= o; } );
+                iterate( [&](size_t i) -> void { at(i) -= o; } );
                 return *this;
             }
-            vector_type& operator*=(const scalar_type& o)
+            vector_type& operator*=(amiguity_protected_scalar_type o)
             {
-                iterate( [&](size_t i) -> void { _data[i] *= o; } );
+                iterate( [&](size_t i) -> void { at(i) *= o; } );
                 return *this;
             }
-            vector_type& operator/=(const scalar_type& o)
+            vector_type& operator/=(amiguity_protected_scalar_type o)
             {
-                iterate( [&](size_t i) -> void { _data[i] /= o; } );
+                iterate( [&](size_t i) -> void { at(i) /= o; } );
                 return *this;
             }
 
             typename std::conditional<num_of_components==1, vector_adapter, swizzle::detail::operation_not_available>::type& operator++()
             {
-                ++_data[0];
+                ++at(0);
                 return *this;
             }
 
@@ -264,7 +261,7 @@ namespace swizzle
 
             typename std::conditional<num_of_components==1, vector_adapter, swizzle::detail::operation_not_available>::type& operator--()
             {
-                --_data[0];
+                --at(0);
                 return *this;
             }
 
@@ -275,7 +272,23 @@ namespace swizzle
                 return copy;
             }
 
+            operator typename std::conditional<num_of_components==1, scalar_type, swizzle::detail::operation_not_available>::type()
+            {
+                return at(0);
+            }
+
         private:
+
+            const scalar_type& at(size_t i) const
+            {
+                return m_data[i];
+            }
+            scalar_type& at(size_t i)
+            {
+                return m_data[i];
+            }
+
+
             template <class Func>
             void iterate(Func func) const
             {
@@ -292,236 +305,239 @@ namespace swizzle
             template <size_t N>
             void compose(scalar_type v)
             {
-                _data[N] = v;
+                at(N) = v;
             }
 
             template <size_t N, class TOtherTraits>
             void compose( const vector_adapter<TOtherTraits>& v )
             {
                 const size_t limit = (N + TOtherTraits::num_of_components > num_of_components) ? num_of_components : (N + TOtherTraits::num_of_components);
-                iterate<N, limit>([&](size_t i) -> void { _data[i] = v[i - N]; });
+                iterate<N, limit>([&](size_t i) -> void { at(i) = v[i - N]; });
             }
 
-            template <size_t N, template <class> class TVector, class TOtherTraits, size_t x, size_t y, size_t z, size_t w>
-            void compose( const vector_proxy<TVector, TOtherTraits, x, y, z, w>& v )
+            template <size_t N, class TVector, class TData, class TTag, size_t x, size_t y, size_t z, size_t w>
+            void compose( const indexed_proxy<TVector, TData, TTag, x, y, z, w>& v )
             {
-                typedef vector_proxy<TVector, TOtherTraits, x, y, z, w> proxy_type;
-                compose<N>( v.operator typename proxy_type::vector_type() );
+                compose<N>(v.decay());
             }
 
         private:
-            static vector_adapter& as_result_inner(vector_adapter& x, std::false_type)
+
+            const decay_type& decay() const
             {
-                return x;
+                struct selector
+                {
+                    const vector_adapter& operator()(const vector_adapter& x, vector_adapter*)
+                    {
+                        return x;
+                    }
+                    const scalar_type& operator()(const vector_adapter& x, scalar_type*)
+                    {
+                        return x.at(0);
+                    }
+                };
+                return selector()( *this, static_cast<decay_type*>(nullptr) );
             }
 
-            static scalar_type as_result_inner(vector_adapter& x, std::true_type)
+            static decay_type transform_and_decay(vector_type& x, scalar_type (*func)(scalar_type))
             {
-                return x._data[0];
+                return transform_and_decay<scalar_type (*)(scalar_type)>(x, func);
             }
 
-            static auto as_result(vector_adapter& x)
-                -> decltype( as_result_inner(x, typename std::conditional<num_of_components==1, std::true_type, std::false_type>::type()) )
+            static decay_type transform_and_decay(vector_type& x, const vector_type& y, scalar_type (*func)(scalar_type, scalar_type))
             {
-                return as_result_inner(x, typename std::conditional<num_of_components==1, std::true_type, std::false_type>::type());
-            }
-
-            static result_type transform(vector_type& x, scalar_type (*func)(scalar_type))
-            {
-                return transform<scalar_type (*)(scalar_type)>(x, func);
-            }
-
-            static result_type transform(vector_type& x, const vector_type& y, scalar_type (*func)(scalar_type, scalar_type))
-            {
-                return transform<scalar_type (*)(scalar_type, scalar_type)>(x, y, func);
+                return transform_and_decay<scalar_type (*)(scalar_type, scalar_type)>(x, y, func);
             }
 
             template <class Func>
-            static result_type transform(vector_type& x, Func func)
+            static decay_type transform_and_decay(vector_type& x, Func func)
             {
                 x.iterate( [&](size_t i) -> void { x[i] = func(x[i]); } );
-                return as_result(x);
+                return x.decay();
             }
 
             template <class Func>
-            static result_type transform(vector_type& x, const vector_type& y, Func func)
+            static decay_type transform_and_decay(vector_type& x, const vector_type& y, Func func)
             {
                 x.iterate( [&](size_t i) -> void { x[i] = func(x[i], y[i]); } );
-                return as_result(x);
+                return x.decay();
             }
 
         public:
 
-            static result_type radians(vector_adapter degrees)
+            static decay_type radians(vector_adapter degrees)
             {
-                return transform(degrees, [](scalar_type a) -> scalar_type { return scalar_type(M_PI * a / 180); } );
+                return transform_and_decay(degrees, [](scalar_type a) -> scalar_type { return scalar_type(M_PI * a / 180); } );
             }
-            static result_type degrees(vector_adapter radians)
+            static decay_type degrees(vector_adapter radians)
             {
-                return transform(radians, [](scalar_type a) -> scalar_type { return scalar_type(180 * a / M_PI); } );
+                return transform_and_decay(radians, [](scalar_type a) -> scalar_type { return scalar_type(180 * a / M_PI); } );
             }
-            static result_type sin(vector_adapter x)
+            static decay_type sin(vector_adapter x)
             {
-                return transform(x, std::sin);
+                return transform_and_decay(x, std::sin);
             }
-            static result_type cos(vector_adapter x)
+            static decay_type cos(vector_adapter x)
             {
-                return transform(x, std::cos);
+                return transform_and_decay(x, std::cos);
             }
-            static result_type tan(vector_adapter x)
+            static decay_type tan(vector_adapter x)
             {
-                return transform(x, std::tan);
+                return transform_and_decay(x, std::tan);
             }
-            static result_type asin(vector_adapter x)
+            static decay_type asin(vector_adapter x)
             {
-                return transform(x, std::asin);
+                return transform_and_decay(x, std::asin);
             }
-            static result_type acos(vector_adapter x)
+            static decay_type acos(vector_adapter x)
             {
-                return transform(x, std::acos);
+                return transform_and_decay(x, std::acos);
             }
-            static result_type atan(const vector_adapter& y, const vector_adapter& x)
+            static decay_type atan(const vector_adapter& y, const vector_adapter& x)
             {
                 return atan(y / x);
             }
-            static result_type atan(vector_adapter y_over_x)
+            static decay_type atan(vector_adapter y_over_x)
             {
-                return transform(y_over_x, std::atan);
+                return transform_and_decay(y_over_x, std::atan);
             }
 
             // Exponential Functions
-            static result_type pow(vector_adapter x, const vector_adapter& y)
+            static decay_type pow(vector_adapter x, const vector_adapter& y)
             {
-                return transform(x, y, std::pow );
+                return transform_and_decay(x, y, std::pow );
             }
-            static result_type exp(vector_adapter x)
+            static decay_type exp(vector_adapter x)
             {
-                return transform(x, std::exp );
+                return transform_and_decay(x, std::exp );
             }
-            static result_type log(vector_adapter x)
+            static decay_type log(vector_adapter x)
             {
-                return transform(x, std::log );
+                return transform_and_decay(x, std::log );
             }
-            static result_type exp2(const vector_adapter& x)
+            static decay_type exp2(const vector_adapter& x)
             {
                 return pow( vector_adapter(2), x);
             }
-            static result_type log2(vector_adapter x)
+            static decay_type log2(vector_adapter x)
             {
-                return transform(x, [](scalar_type a) -> scalar_type { return scalar_type( std::log(a) / M_LOG2E); } );
+                return transform_and_decay(x, [](scalar_type a) -> scalar_type { return scalar_type( std::log(a) / M_LOG2E); } );
             }
-            static result_type sqrt(vector_adapter x)
+            static decay_type sqrt(vector_adapter x)
             {
-                return transform(x, std::sqrt );
+                return transform_and_decay(x, std::sqrt );
             }
-            static result_type inversesqrt(vector_adapter x)
+            static decay_type inversesqrt(vector_adapter x)
             {
                 return 1 / sqrt(x);
             }
 
 
-            static result_type abs(vector_adapter x)
+            static decay_type abs(vector_adapter x)
             {
-                return transform(x, std::abs );
+                return transform_and_decay(x, std::abs );
             }
-            static result_type sign(vector_adapter x)
+            static decay_type sign(vector_adapter x)
             {
-                return transform(x,  [](scalar_type a) -> scalar_type { return ( scalar_type(0) < a ) - ( a < scalar_type(0) ); } );
+                return transform_and_decay(x,  [](scalar_type a) -> scalar_type { return ( scalar_type(0) < a ) - ( a < scalar_type(0) ); } );
             }
-            static result_type floor(vector_adapter x)
+            static decay_type floor(vector_adapter x)
             {
-                return transform(x, std::floor );
+                return transform_and_decay(x, std::floor );
             }
-            static result_type ceil(vector_adapter x)
+            static decay_type ceil(vector_adapter x)
             {
-                return transform(x, std::ceil );
+                return transform_and_decay(x, std::ceil );
             }
-            static result_type fract(vector_adapter x)
+            static decay_type fract(vector_adapter x)
             {
-                return transform(x, [=](scalar_type a) -> scalar_type { return a - std::floor(a); } );
+                return transform_and_decay(x, [=](scalar_type a) -> scalar_type { return a - std::floor(a); } );
             }
-            static result_type mod(vector_adapter x, scalar_type y)
+            static decay_type mod(vector_adapter x, amiguity_protected_scalar_type y)
             {
                 return mod(x, vector_adapter(y));
             }
-            static result_type mod(vector_adapter x, vector_adapter y)
+            static decay_type mod(vector_adapter x, vector_adapter y)
             {
                 auto x_div_y = x;
                 x_div_y /= y;
                 y *= floor(x_div_y);
-                return as_result(x -= y);
+                x -= y;
+                return x.decay();
             }
-            static result_type min(vector_adapter x, const vector_adapter& y)
+            static decay_type min(vector_adapter x, const vector_adapter& y)
             {
-                return transform(x, y, std::min<scalar_type>);
+                return transform_and_decay(x, y, std::min<scalar_type>);
             }
-            static result_type min(vector_adapter x, scalar_type y)
+            static decay_type min(vector_adapter x, amiguity_protected_scalar_type y)
             {
-                return min(x, vector_adapter(y));
+                return transform_and_decay(x, [=](scalar_type a) -> scalar_type { return std::min(a, y); } );
             }
-            static result_type max(vector_adapter x, const vector_adapter& y)
+            static decay_type max(vector_adapter x, const vector_adapter& y)
             {
-                return transform(x, y, std::max<scalar_type>);
+                return transform_and_decay(x, y, std::max<scalar_type>);
             }
-            static result_type max(vector_adapter x, scalar_type y)
+            static decay_type max(vector_adapter x, amiguity_protected_scalar_type y)
             {
-                return max(x, vector_adapter(y));
+                return transform_and_decay(x, [=](scalar_type a) -> scalar_type { return std::max(a, y); } );
             }
-            static result_type clamp(vector_adapter x, const vector_adapter& minVal, const vector_adapter& maxVal)
-            {
-                return max( min(x, maxVal), minVal);
-            }
-            static result_type clamp(vector_adapter x, scalar_type minVal, scalar_type maxVal)
+            static decay_type clamp(vector_adapter x, const vector_adapter& minVal, const vector_adapter& maxVal)
             {
                 return max( min(x, maxVal), minVal);
             }
-            static result_type mix(vector_adapter x, const vector_adapter& y, const vector_adapter& a)
+            static decay_type clamp(vector_adapter x, amiguity_protected_scalar_type minVal, amiguity_protected_scalar_type maxVal)
+            {
+                return max( min(x, maxVal), minVal);
+            }
+            static decay_type mix(vector_adapter x, const vector_adapter& y, const vector_adapter& a)
             {
                 x.iterate([&](size_t i) -> void { x[i] = x[i] + a[i] * (y[i] - x[i]); } );
-                return as_result(x);
+                return x.decay();
             }
-            static result_type mix(vector_adapter x, const vector_adapter& y, scalar_type a)
+            static decay_type mix(vector_adapter x, const vector_adapter& y, amiguity_protected_scalar_type a)
             {
                 x.iterate([&](size_t i) -> void { x[i] = x[i] + a * (y[i] - x[i]); } );
-                return as_result(x);
+                return x.decay();
             }
-            static result_type step(const vector_adapter& edge, vector_adapter x)
+            static decay_type step(const vector_adapter& edge, vector_adapter x)
             {
-                return transform(x, edge, [](scalar_type a, scalar_type b) -> scalar_type { return a > b ? 1 : 0; });
+                return transform_and_decay(x, edge, [](scalar_type a, scalar_type b) -> scalar_type { return a > b ? 1 : 0; });
             }
-            static result_type step(scalar_type edge, vector_adapter x)
+            static decay_type step(scalar_type edge, vector_adapter x)
             {
                 return step(vector_adapter(edge), x);
             }
-            static result_type smoothstep(const vector_adapter& edge0, const vector_adapter& edge1, vector_adapter x)
+            static decay_type smoothstep(const vector_adapter& edge0, const vector_adapter& edge1, vector_adapter x)
             {
-                auto a = x - edge0;
-                auto b = edge1 - edge0;
+                auto a = x;
+                a -= edge0;
+
+                auto b = edge1;
+                b -= edge0;
+
                 auto t = clamp( a /= b, 0, 1 );
                 
                 a = vector_adapter( scalar_type(3) );
-
-                b = t;
-                b *= 2;
-                a -= b;
+                a -= t;
+                a -= t;
                 
                 a *= t;
                 a *= t;
 
-                return as_result(a);
+                return a.decay();
                 //auto t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
                 //return as_result(t * t * (3 - 2 * t));
             }
-            static result_type smoothstep(scalar_type edge0, scalar_type edge1, vector_adapter x)
+            static decay_type smoothstep(amiguity_protected_scalar_type edge0, amiguity_protected_scalar_type edge1, vector_adapter x)
             {
                 x -= edge0;
                 x /= (edge1 - edge0);
                 auto t = clamp(x, 0, 1);
                 return t * t * (3.0 - 2.0 * t);
             }
-            static result_type reflect(const vector_adapter& I, const vector_adapter& N)
+            static decay_type reflect(const vector_adapter& I, const vector_adapter& N)
             {
-                return as_result(I - 2 * dot(I, N) * N);
+                return (I - 2 * dot(I, N) * N).decay();
             }
 
             // Geometric functions
@@ -544,31 +560,22 @@ namespace swizzle
                 return result;
             }
 
-            static result_type normalize(vector_adapter x)
+            static decay_type normalize(vector_adapter x)
             {
                 x /= length(x);
-                return as_result(x);
+                return x.decay();
             }
 
 
-            static typename std::conditional<num_of_components==3, result_type, swizzle::detail::operation_not_available>::type cross(const vector_adapter& x, const vector_adapter& y)
+            static typename std::conditional<num_of_components==3, decay_type, swizzle::detail::operation_not_available>::type cross(const vector_adapter& x, const vector_adapter& y)
             {
                 auto rx = x.y*y.z - x.z*y.y;
                 auto ry = x.z*y.x - x.x*y.z;
                 auto rz = x.x*y.y - x.y*y.x;
-                return as_result( vector_adapter(rx, ry, rz) );
+                return vector_adapter(rx, ry, rz).decay();
             }
                 // vec4 ftransform()
                 // genType faceforward(genType N, genType I, genType Nref )
-
-        public:
-
-            template <size_t x, size_t y, size_t z, size_t w> 
-            void swizzle()
-            {
-
-            }
-
         };
 
 

@@ -10,8 +10,7 @@ namespace swizzle
         //! Type to specialise; it should define a nested type 'type' being a vector
         //! Non-specialised version does not define it, failing any function relying on it
         template <class T>
-        struct get_vector_type_impl
-        {};
+        struct get_vector_type_impl;
 
         //! Defines common vector for given combination of input types; should be done using variadic templates,
         //! but MSVC does not support them
@@ -63,15 +62,28 @@ namespace swizzle
         //! Defines a common vector type ONLY if none of type arguments is a scalar, i.e. no implic conversion scalar->vector takes place;
         //! Useful when defining operators
         template <class T, class U = void, class V = void>
-        struct get_vector_type_no_scalars :
+        struct get_vector_type_no_scalars_strong :
             std::conditional<
                 !std::is_arithmetic<typename remove_reference_cv<T>::type>::value &&
                 !std::is_arithmetic<typename remove_reference_cv<U>::type>::value &&
-                !std::is_arithmetic<typename remove_reference_cv<V>::type>::value,
+                !std::is_arithmetic<typename remove_reference_cv<V>::type>::value &&
+                get_vector_type<T, U, V>::type::num_of_components != 1,
                 get_vector_type<T, U, V>,
                 nothing
             >::type
         {};
+
+        template <class T, class U = void, class V = void>
+        struct get_vector_type_no_scalars :
+            std::conditional<
+            !std::is_arithmetic<typename remove_reference_cv<T>::type>::value &&
+            !std::is_arithmetic<typename remove_reference_cv<U>::type>::value &&
+            !std::is_arithmetic<typename remove_reference_cv<V>::type>::value,
+            get_vector_type<T, U, V>,
+            nothing
+            >::type
+        {};
+
 
         //! A shortcut for getting the number of vector's components.
         template <class T>

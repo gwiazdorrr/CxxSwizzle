@@ -6,9 +6,13 @@ namespace swizzle
 {
     namespace naive
     {
-        template <template <class> class TVector, class TTraits, size_t x, size_t y = -1, size_t z = -1, size_t w = -1>
-        struct vector_proxy : private TTraits::tag_type
+        template <class TVector, class TData, class TTag, size_t x, size_t y = -1, size_t z = -1, size_t w = -1>
+        class indexed_proxy : private TTag
         {
+            //! The data.
+            TData m_data;
+
+        public:
             // Make sure -1 are always trailing, not in the middle
             static_assert ( (x!=-1) && (y!=-1 || (z==-1 && w==-1)) && (z!=-1 || w==-1 ), "Must be continuous" );
 
@@ -21,80 +25,93 @@ namespace swizzle
                 (y == -1 || y != z && y != w) && 
                 (z == -1 || z != w );
 
-            // Change the number of components for the vector
-            typedef typename TTraits::template change_num_of_components<num_of_components>::type traits_type;
-
             // Use the traits to define vector and scalar
-            typedef TVector< traits_type > vector_type;
-            typedef typename traits_type::scalar_type scalar_type;
+            typedef TVector vector_type;
 
-            //! The data.
-            scalar_type data[TTraits::num_of_components];
-
-            template <size_t Index1, size_t Index2, class A, class B>
-            static typename std::enable_if<Index1 == -1 || Index2 == -1, void>::type set_component(A& a, const B& b, std::integral_constant<size_t, Index1>* = nullptr, std::integral_constant<size_t, Index2>* = nullptr)
+            //! Since this is an indexed proxy, scalar type can be acquired straight from data's indexing operator.
+            typedef typename detail::remove_reference_cv< decltype((*(TData*)0)[0]) >::type  scalar_type;
+            //! If only one component, decay to the scalar
+            typedef typename std::conditional<num_of_components==1, scalar_type, vector_type>::type decay_type;
+          
+        public:
+            decay_type decay() const
             {
-                // do nothing
+                return decay( static_cast<decay_type*>(nullptr) );
             }
 
-            template <size_t Index1, size_t Index2, class A, class B>
-            static typename std::enable_if<Index1 != -1 && Index2 != -1, void>::type set_component(A& a, const B& b, std::integral_constant<size_t, Index1>* = nullptr, std::integral_constant<size_t, Index2>* = nullptr)
+            operator decay_type() const
             {
-                a[Index1] = b[Index2];
+                return decay();
             }
 
-
-            operator vector_type() const
+            indexed_proxy& operator=(const typename std::conditional<is_writable, decay_type, swizzle::detail::operation_not_available >::type& vec)
             {
-                return swizzle(data);
-            }
-
-            vector_proxy& operator=(const typename std::conditional<is_writable, vector_type, swizzle::detail::operation_not_available >::type& vec)
-            {
-                auto swizzled = swizzle(vec);
-                detail::compile_time_for<0, num_of_components>([&](size_t i) -> void { data[i] = swizzled[i]; } );
-
-
-                //set_component<x, 0>(data, vec);
-                //set_component<y, 1>(data, vec);
-                //set_component<z, 2>(data, vec);
-                //set_component<w, 3>(data, vec);
+                assign(vec);
                 return *this;
             }
 
-            template <class A>
-            vector_type swizzle(const A& a) const
+            template <class T>
+            indexed_proxy& operator+=(T && o)
+            {
+                return operator=( operator decay_type() + std::forward<T>(o) );
+            }
+
+            template <class T>
+            indexed_proxy& operator-=(T && o)
+            {
+                return operator=( operator decay_type() - std::forward<T>(o) );
+            }
+
+            template <class T>
+            indexed_proxy& operator*=(T && o)
+            {
+                return operator=( operator decay_type() * std::forward<T>(o) );
+            }
+
+            template <class T>
+            indexed_proxy& operator/=(T && o)
+            {
+                return operator=( operator decay_type() / std::forward<T>(o) );
+            }
+
+        private:
+            static const size_t get_index(size_t i)
+            {
+                /*static const size_t s_indices[] = { x, y, z, w };
+                return s_indices[i];*/
+                switch (i)
+                {
+                case 0:
+                    return x;
+                case 1:
+                    return y;
+                case 2:
+                    return z;
+                default:
+                    return w;
+                }
+            }
+
+            void assign(const vector_type& vec)
+            {
+                detail::compile_time_for<0, num_of_components>([&](size_t i) -> void { m_data[get_index(i)] = vec[i]; } );
+            }
+
+            vector_type decay(vector_type*) const
             {
                 vector_type result;
-                set_component<0, x>(result, a);
-                set_component<1, y>(result, a);
-                set_component<2, z>(result, a);
-                set_component<3, w>(result, a);
+                detail::compile_time_for<0, num_of_components>([&](size_t i) -> void { result[i] = m_data[get_index(i)]; } );
                 return result;
             }
 
-            template <class T>
-            vector_proxy& operator+=(T && o)
+            void assign(scalar_type value)
             {
-                return operator=( operator vector_type() + std::forward<T>(o) );
+                m_data[x] = value;
             }
 
-            template <class T>
-            vector_proxy& operator-=(T && o)
+            scalar_type decay(scalar_type*) const
             {
-                return operator=( operator vector_type() - std::forward<T>(o) );
-            }
-
-            template <class T>
-            vector_proxy& operator*=(T && o)
-            {
-                return operator=( operator vector_type() * std::forward<T>(o) );
-            }
-
-            template <class T>
-            vector_proxy& operator/=(T && o)
-            {
-                return operator=( operator vector_type() / std::forward<T>(o) );
+                return m_data[x];
             }
         };
     }

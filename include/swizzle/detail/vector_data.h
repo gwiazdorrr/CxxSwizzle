@@ -1,49 +1,55 @@
 #pragma once
 
+#include <array>
+
 namespace swizzle
 {
     namespace detail
     {
-        template <class TScalar, size_t Size, template <size_t, size_t, size_t, size_t> class TProxyFactory, class TData=TScalar[Size]>
+        template <class TScalar, size_t Size, template <size_t, size_t, size_t, size_t> class TProxyFactory, class TData=std::array<TScalar,Size> >
         struct vector_data;
 
-        template <class TScalar, template <size_t, size_t, size_t=-1, size_t=-1> class TProxyFactory, class TData>
+        template <class TScalar, template <size_t, size_t=-1, size_t=-1, size_t=-1> class TProxyFactory, class TData>
         struct vector_data<TScalar, 1, TProxyFactory, TData>
         {
             typedef TScalar scalar_type;
+            typedef TData data_type;
+
             static const size_t num_of_components = 1;
 
             union
             {
-                TData _data;
+                TData m_data;
 
-                struct
-                {
-                    scalar_type x;
-                };
+                /*scalar_type x;*/
 
+                typename TProxyFactory<0>::type x;
                 typename TProxyFactory<0,0>::type xx;
                 typename TProxyFactory<0,0,0>::type xxx;
                 typename TProxyFactory<0,0,0,0>::type xxxx;
             };
         };
 
-        template <class TScalar, template <size_t, size_t, size_t=-1, size_t=-1> class TProxyFactory, class TData>
+        template <class TScalar, template <size_t, size_t=-1, size_t=-1, size_t=-1> class TProxyFactory, class TData>
         struct vector_data<TScalar, 2, TProxyFactory, TData>
         {
             typedef TScalar scalar_type;
+            typedef TData data_type;
+
             static const size_t num_of_components = 2;
 
             union
             {
-                TData _data;
+                TData m_data;
 
-                struct
+                /*struct
                 {
                     scalar_type x;
                     scalar_type y;
-                };
+                };*/
 
+                typename TProxyFactory<0>::type x;
+                typename TProxyFactory<1>::type y;
                 typename TProxyFactory<0,0>::type xx;
                 typename TProxyFactory<0,1>::type xy;
                 typename TProxyFactory<1,0>::type yx;
@@ -75,23 +81,28 @@ namespace swizzle
             };
         };
 
-        template <class TScalar, template <size_t, size_t, size_t=-1, size_t=-1> class TProxyFactory, class TData>
+        template <class TScalar, template <size_t, size_t=-1, size_t=-1, size_t=-1> class TProxyFactory, class TData>
         struct vector_data<TScalar, 3, TProxyFactory, TData>
         {
             typedef TScalar scalar_type;
+            typedef TData data_type;
+
             static const size_t num_of_components = 3;
 
             union
             {
-                TData _data;
+                TData m_data;
 
-                struct
+                /*struct
                 {
                     scalar_type x;
                     scalar_type y;
                     scalar_type z;
-                };
+                };*/
 
+                typename TProxyFactory<0>::type x;
+                typename TProxyFactory<1>::type y;
+                typename TProxyFactory<2>::type z;
                 typename TProxyFactory<0,0>::type xx;
                 typename TProxyFactory<0,1>::type xy;
                 typename TProxyFactory<0,2>::type xz;
@@ -212,25 +223,30 @@ namespace swizzle
             };
         };
 
-        template <class TScalar, template <size_t, size_t, size_t=-1, size_t=-1> class TProxyFactory, class TData>
+        template <class TScalar, template <size_t, size_t=-1, size_t=-1, size_t=-1> class TProxyFactory, class TData>
         struct vector_data<TScalar, 4, TProxyFactory, TData>
         {
             typedef TScalar scalar_type;
+            typedef TData data_type;
+
             static const size_t num_of_components = 4;
 
             union
             {
-                TData _data;
-                scalar_type _components[num_of_components];
+                TData m_data;
 
-                struct
+                /*struct
                 {
                     scalar_type x;
                     scalar_type y;
                     scalar_type z;
                     scalar_type w;
-                };
+                };*/
 
+                typename TProxyFactory<0>::type x;
+                typename TProxyFactory<1>::type y;
+                typename TProxyFactory<2>::type z;
+                typename TProxyFactory<3>::type w;
                 typename TProxyFactory<0,0>::type xx;
                 typename TProxyFactory<0,1>::type xy;
                 typename TProxyFactory<0,2>::type xz;

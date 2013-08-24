@@ -17,18 +17,6 @@ namespace swizzle
             {
                 typedef ::swizzle::naive::vector_adapter_traits<TScalar, NewNumComponents, TTag> type;
             };
-
-            template <class TTraits>
-            struct is_compatible
-            {
-                static const bool value = false;
-            };
-
-            template <class TTag2>
-            struct is_compatible< vector_adapter_traits<scalar_type, num_of_components, TTag2> >
-            {
-                static const bool value = true;
-            };
         };
     }
 }
