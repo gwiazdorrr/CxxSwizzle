@@ -15,7 +15,7 @@ namespace swizzle
         class vector_adapter;
 
         template <class TVector, class TData, class TTag, size_t x, size_t y, size_t z, size_t w>
-        struct indexed_proxy;
+        class indexed_proxy;
     }
 
     namespace detail

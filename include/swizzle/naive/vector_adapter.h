@@ -6,7 +6,6 @@
 #include <iterator>
 #include <functional>
 #include <stdexcept>
-#define _USE_MATH_DEFINES
 #include <cmath>
 
 #include "vector_traits.h"
@@ -68,6 +67,8 @@ namespace swizzle
             //! "Hide" _data
             using base_type::m_data;
             
+            template <class TOtherTraits>
+            friend std::ostream & operator<<(std::ostream &os, const ::swizzle::naive::vector_adapter<TOtherTraits>& p);
 
         public:
             //! Number of components of this vector.
@@ -204,6 +205,8 @@ namespace swizzle
                 return result;
             }
 
+            // vector operators
+
             vector_type& operator+=(const vector_adapter& o)
             {
                 iterate( [&](size_t i) -> void { at(i) += o[i]; } );
@@ -224,6 +227,8 @@ namespace swizzle
                 iterate( [&](size_t i) -> void { at(i) /= o[i]; } );
                 return *this;
             }
+
+            // scalar operators
 
             vector_type& operator+=(amiguity_protected_scalar_type o)
             {
@@ -246,32 +251,7 @@ namespace swizzle
                 return *this;
             }
 
-            typename std::conditional<num_of_components==1, vector_adapter, swizzle::detail::operation_not_available>::type& operator++()
-            {
-                ++at(0);
-                return *this;
-            }
-
-            typename std::conditional<num_of_components==1, vector_adapter, swizzle::detail::operation_not_available>::type operator++(int)
-            {
-                auto copy = *this;
-                ++(*this);
-                return copy;
-            }
-
-            typename std::conditional<num_of_components==1, vector_adapter, swizzle::detail::operation_not_available>::type& operator--()
-            {
-                --at(0);
-                return *this;
-            }
-
-            typename std::conditional<num_of_components==1, vector_adapter, swizzle::detail::operation_not_available>::type operator--(int)
-            {
-                auto copy = *this;
-                --(*this);
-                return copy;
-            }
-
+            //! Decays into scalar_type for a single component vector
             operator typename std::conditional<num_of_components==1, scalar_type, swizzle::detail::operation_not_available>::type()
             {
                 return at(0);
@@ -367,11 +347,13 @@ namespace swizzle
 
             static decay_type radians(vector_adapter degrees)
             {
-                return transform_and_decay(degrees, [](scalar_type a) -> scalar_type { return scalar_type(M_PI * a / 180); } );
+                static const scalar_type pi = scalar_type(3.14159265358979323846);
+                return transform_and_decay(degrees, [](scalar_type a) -> scalar_type { return (pi * a / 180); } );
             }
             static decay_type degrees(vector_adapter radians)
             {
-                return transform_and_decay(radians, [](scalar_type a) -> scalar_type { return scalar_type(180 * a / M_PI); } );
+                static const scalar_type pi = scalar_type(3.14159265358979323846);
+                return transform_and_decay(radians, [](scalar_type a) -> scalar_type { return scalar_type(180 * a / pi); } );
             }
             static decay_type sin(vector_adapter x)
             {
@@ -393,9 +375,9 @@ namespace swizzle
             {
                 return transform_and_decay(x, std::acos);
             }
-            static decay_type atan(const vector_adapter& y, const vector_adapter& x)
+            static decay_type atan(vector_adapter y, const vector_adapter& x)
             {
-                return atan(y / x);
+                return transform_and_decay(y, x, std::atan2);
             }
             static decay_type atan(vector_adapter y_over_x)
             {
@@ -429,7 +411,8 @@ namespace swizzle
             }
             static decay_type inversesqrt(vector_adapter x)
             {
-                return 1 / sqrt(x);
+                vector_adapter one( scalar_type(1) );
+                return one /= sqrt(x);
             }
 
 
@@ -579,7 +562,13 @@ namespace swizzle
         };
 
 
-
+        template < class TTraits >
+        std::ostream & operator<<(std::ostream &os, const vector_adapter<TTraits>& vec)
+        {
+            os << '[';
+            vec.iterate( [&](size_t i) -> void { os << vec[i] << (i == vec.size() - 1 ? "]" : ","); } );
+            return os;
+        }
 
 
     }
