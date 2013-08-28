@@ -1,7 +1,3 @@
-#include <iostream>
-#include <SDL.h>
-
-
 #include "swizzle/naive/vector_adapter.h"
 #include "swizzle/detail/glsl_functions.h"
 #include "swizzle/detail/vector_binary_operators.h"
@@ -15,41 +11,62 @@ namespace glsl_sandbox
 {
     using namespace swizzle::detail::glsl_functions;
 
-    vec2 gl_FragCoord;
-    vec4 gl_FragColor;
-
-    #define uniform extern
-    #define in
-
+    // constants shaders are using
     float time;
     vec2 mouse;
     vec2 resolution(320.0f, 240.0f);
 
+    // constants some shaders from shader toy are using
     vec2& iResolution = resolution;
     float& iGlobalTime = time;
+
+    struct fragment_shader
+    {
+        vec2 gl_FragCoord;
+        vec4 gl_FragColor;
+        void operator()(void);
+    };
+
+    // change meaning of glsl keywords to match sandbox
+    #define uniform extern
+    #define in
+    #define main fragment_shader::operator()
 
     #pragma warning(push)
     #pragma warning(disable: 4244) // disable return implicit conversion warning
     #pragma warning(disable: 4305) // disable truncation warning
 
-    //#include "shaders/water_turbulence.frag"
+    #include "shaders/water_turbulence.frag"
     //#include "shaders/leadlight.frag"
     //#include "shaders/complex.frag"
     //#include "shaders/road.frag"
-    #include "shaders/gears.frag"
+    //#include "shaders/gears.frag"
 
+    // be a dear a clean up
     #pragma warning(pop)
+    #undef main
+    #undef in
+    #undef uniform
 }
 
+// these headers, especially SDL.h & time.h set up names that are in conflict with sandbox'es;
+// sandbox should be moved to a separate h/cpp pair, but out of laziness... including them
+// *after* sandbox solves it too
+
+#include <iostream>
+#include <SDL.h>
 #include <time.h>
+#if OMP_ENABLED
+#include <omp.h>
+#endif
 
 extern C_LINKAGE int main(int argc, char* argv[])
 {
     SDL_Surface* screen = nullptr;
     SDL_Surface* bmp = nullptr;
 
-    using namespace glsl_sandbox;
     using namespace std;
+    using namespace glsl_sandbox;
 
     try {
         
@@ -59,9 +76,9 @@ extern C_LINKAGE int main(int argc, char* argv[])
         SDL_Rect rect;
         rect.x = 0;
         rect.y = 0;
-        rect.w = static_cast<Uint16>(iResolution.x);
-        rect.h = static_cast<Uint16>(iResolution.y);
-        screen = SDL_SetVideoMode( rect.w, rect.h, 24, SDL_HWSURFACE | SDL_ASYNCBLIT | SDL_HWACCEL ); 
+        rect.w = static_cast<Uint16>(glsl_sandbox::resolution.x);
+        rect.h = static_cast<Uint16>(glsl_sandbox::resolution.y);
+        screen = SDL_SetVideoMode( rect.w, rect.h, 24, SDL_SWSURFACE ); 
         bmp = SDL_CreateRGBSurface(SDL_SWSURFACE, rect.w, rect.h, 24, 0x000000ff, 0x0000ff00, 0x00ff0000, 0 );
 
         float time = 0;
@@ -77,22 +94,39 @@ extern C_LINKAGE int main(int argc, char* argv[])
 
             SDL_LockSurface(bmp);
 
-            iGlobalTime = time;
+            glsl_sandbox::time = time;
 
-            for ( int y = 0; y < bmp->h; ++y )
+#if OMP_ENABLED
+            #pragma omp parallel
             {
-                uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch;
-                for (int x = 0; x < bmp->w; ++x )
+                int thredsCount = omp_get_num_threads();
+                int threadNum = omp_get_thread_num();
+
+                int heightPerThread = bmp->h / thredsCount;
+                int heightStart = threadNum * heightPerThread;
+                int heightEnd = (threadNum == thredsCount - 1) ? bmp->h : heightPerThread;
+#else
+            {
+                int heightStart = 0;
+                int heightEnd = bmp->h;
+#endif
+
+                glsl_sandbox::fragment_shader shader;
+                for ( int y = heightStart; y < heightEnd; ++y )
                 {
-                    gl_FragCoord = vec2(static_cast<float>(x) , bmp->h - 1.0f - y);
+                    uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch;
+                    for (int x = 0; x < bmp->w; ++x )
+                    {
+                        shader.gl_FragCoord = vec2(static_cast<float>(x) , bmp->h - 1.0f - y);
                     
-                    glsl_sandbox::main();
+                        shader();
 
-                    gl_FragColor = clamp(gl_FragColor, 0.0f, 1.0f);
+                        auto color = glsl_sandbox::clamp(shader.gl_FragColor, 0.0f, 1.0f);
 
-                    *ptr++ = static_cast<uint8_t>(255 * gl_FragColor.x + 0.5f);
-                    *ptr++ = static_cast<uint8_t>(255 * gl_FragColor.y + 0.5f);
-                    *ptr++ = static_cast<uint8_t>(255 * gl_FragColor.z + 0.5f);
+                        *ptr++ = static_cast<uint8_t>(255 * color.x + 0.5f);
+                        *ptr++ = static_cast<uint8_t>(255 * color.y + 0.5f);
+                        *ptr++ = static_cast<uint8_t>(255 * color.z + 0.5f);
+                    }
                 }
             }
 
@@ -100,7 +134,7 @@ extern C_LINKAGE int main(int argc, char* argv[])
             SDL_BlitSurface( bmp, NULL, screen, NULL );
             SDL_Flip( screen );
 
-            // zajmujemy siê eventami
+            // process events
             while (SDL_PollEvent(&event)) {
                 switch ( event.type ) {
                 case SDL_QUIT:
@@ -123,8 +157,8 @@ extern C_LINKAGE int main(int argc, char* argv[])
                     }
                     break;
                 case SDL_MOUSEBUTTONDOWN:
-                    mouse.x = static_cast<float>(event.button.x);
-                    mouse.y = static_cast<float>(event.button.y);
+                    glsl_sandbox::mouse.x = static_cast<float>(event.button.x);
+                    glsl_sandbox::mouse.y = static_cast<float>(event.button.y);
                     break;
                 default:
                     break;
@@ -140,7 +174,7 @@ extern C_LINKAGE int main(int argc, char* argv[])
     } catch ( exception& error ) {
         cerr << "ERROR: " << error.what() << endl;
     } catch (...) {
-        cerr << "Unknown error" << endl;
+        cerr << "ERROR: Unknown error" << endl;
     }
 
 
