@@ -14,7 +14,7 @@ namespace glsl_sandbox
     // constants shaders are using
     float time;
     vec2 mouse;
-    vec2 resolution(320.0f, 240.0f);
+    vec2 resolution(100.0f, 100.0f);
 
     // constants some shaders from shader toy are using
     vec2& iResolution = resolution;
@@ -36,8 +36,8 @@ namespace glsl_sandbox
     #pragma warning(disable: 4244) // disable return implicit conversion warning
     #pragma warning(disable: 4305) // disable truncation warning
 
-    #include "shaders/water_turbulence.frag"
-    //#include "shaders/leadlight.frag"
+    //#include "shaders/water_turbulence.frag"
+    #include "shaders/leadlight.frag"
     //#include "shaders/complex.frag"
     //#include "shaders/road.frag"
     //#include "shaders/gears.frag"
@@ -54,6 +54,7 @@ namespace glsl_sandbox
 // *after* sandbox solves it too
 
 #include <iostream>
+#include <sstream>
 #include <SDL.h>
 #include <time.h>
 #if OMP_ENABLED
@@ -66,7 +67,21 @@ extern C_LINKAGE int main(int argc, char* argv[])
     SDL_Surface* bmp = nullptr;
 
     using namespace std;
-    using namespace glsl_sandbox;
+
+    if (argc == 2)
+    {
+        vec2 resolution;
+        std::stringstream s;
+        s << argv[1];
+        s >> resolution;
+        glsl_sandbox::resolution = resolution;
+    }
+
+    if ( glsl_sandbox::resolution.x <= 0.0f || glsl_sandbox::resolution.y <= 0.0f )
+    {
+        cerr << "ERROR: invalid resolution: " << glsl_sandbox::resolution  << endl;
+        return 1;
+    }
 
     try {
         
@@ -76,8 +91,8 @@ extern C_LINKAGE int main(int argc, char* argv[])
         SDL_Rect rect;
         rect.x = 0;
         rect.y = 0;
-        rect.w = static_cast<Uint16>(glsl_sandbox::resolution.x);
-        rect.h = static_cast<Uint16>(glsl_sandbox::resolution.y);
+        rect.w = static_cast<Uint16>(glsl_sandbox::resolution.x + 0.5f);
+        rect.h = static_cast<Uint16>(glsl_sandbox::resolution.y + 0.5f);
         screen = SDL_SetVideoMode( rect.w, rect.h, 24, SDL_SWSURFACE ); 
         bmp = SDL_CreateRGBSurface(SDL_SWSURFACE, rect.w, rect.h, 24, 0x000000ff, 0x0000ff00, 0x00ff0000, 0 );
 

@@ -7,6 +7,7 @@
 #include <functional>
 #include <stdexcept>
 #include <cmath>
+#include <iosfwd>
 
 #include "vector_traits.h"
 #include "vector_adapter_traits.h"
@@ -68,7 +69,9 @@ namespace swizzle
             using base_type::m_data;
             
             template <class TOtherTraits>
-            friend std::ostream & operator<<(std::ostream &os, const ::swizzle::naive::vector_adapter<TOtherTraits>& p);
+            friend std::ostream& operator<<(std::ostream&, const ::swizzle::naive::vector_adapter<TOtherTraits>&);
+            template <class TOtherTraits>
+            friend std::istream& operator>>(std::istream&, ::swizzle::naive::vector_adapter<TOtherTraits>&);
 
         public:
             //! Number of components of this vector.
@@ -563,14 +566,25 @@ namespace swizzle
 
 
         template < class TTraits >
-        std::ostream & operator<<(std::ostream &os, const vector_adapter<TTraits>& vec)
+        std::ostream& operator<<(std::ostream& os, const vector_adapter<TTraits>& vec)
         {
-            os << '[';
-            vec.iterate( [&](size_t i) -> void { os << vec[i] << (i == vec.size() - 1 ? "]" : ","); } );
+            vec.iterate( [&](size_t i) -> void { os << vec[i] << (i == vec.size() - 1 ? "" : ","); } );
             return os;
         }
 
-
+        template < class TTraits >
+        std::istream& operator>>(std::istream& is, vector_adapter<TTraits>& vec)
+        {
+            vec.iterate( [&](size_t i) -> void 
+            { 
+                is >> vec[i];
+                if ( i < vec.size() - 1 && is.peek() == ',')
+                {
+                    is.ignore(1);
+                }
+            });
+            return is;
+        }
     }
 }
 

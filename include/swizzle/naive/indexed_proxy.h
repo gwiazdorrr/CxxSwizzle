@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include <iosfwd>
 
 namespace swizzle
 {
@@ -114,5 +115,20 @@ namespace swizzle
                 return m_data[x];
             }
         };
+
+        template <class TVector, class TData, class TTag, size_t x, size_t y, size_t z, size_t w>
+        std::ostream& operator<<(std::ostream& os, const indexed_proxy<TVector, TData, TTag, x, y, z, w>& vec)
+        {
+            return os << vec.decay();
+        }
+
+        template <class TVector, class TData, class TTag, size_t x, size_t y, size_t z, size_t w>
+        std::istream & operator>>(std::istream& is, indexed_proxy<TVector, TData, TTag, x, y, z, w>& vec)
+        {
+            TVector v;
+            is >> v;
+            vec = v;
+            return is;
+        }
     }
 }
