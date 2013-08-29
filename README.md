@@ -6,7 +6,7 @@ CxxSwizzle is a header-only extensible library bringing shader language's (GLSL,
 	vec4 foo(0);		 		        // 0,0,0,0
 	foo.yx = vec2(2, 1); 		        // 1,2,0,0
 	foo.zw = foo.xy * 2; 				// 1,2,2,4
-	vec2 bar = max(foo.xw, foo.yz).yx   // 4,2
+	vec2 bar = max(foo.xw, foo.yz).yx;  // 4,2
 	bar = clamp(foo.xw, 0, 2);			// 1,2	
 	// etc.
 

@@ -11,7 +11,7 @@
 
 #include "vector_traits.h"
 #include "vector_adapter_traits.h"
-#include "vector_proxy.h"
+#include "indexed_proxy.h"
 #include "../detail/utils.h"
 #include "../detail/vector_data.h"
 
