@@ -3,9 +3,9 @@
 #include "swizzle/detail/vector_binary_operators.h"
 
 typedef swizzle::detail::binary_operators::tag tag;
-typedef swizzle::naive::vector_adapter< swizzle::naive::vector_adapter_traits<float, 2, tag> > vec2;
-typedef swizzle::naive::vector_adapter< swizzle::naive::vector_adapter_traits<float, 3, tag> > vec3;
-typedef swizzle::naive::vector_adapter< swizzle::naive::vector_adapter_traits<float, 4, tag> > vec4;
+typedef swizzle::naive::vector_adapter< float, 2 > vec2;
+typedef swizzle::naive::vector_adapter< float, 3 > vec3;
+typedef swizzle::naive::vector_adapter< float, 4 > vec4;
 
 namespace glsl_sandbox
 {
@@ -19,6 +19,7 @@ namespace glsl_sandbox
     // constants some shaders from shader toy are using
     vec2& iResolution = resolution;
     float& iGlobalTime = time;
+    vec2& iMouse = mouse;
 
     struct fragment_shader
     {
@@ -38,6 +39,7 @@ namespace glsl_sandbox
 
     //#include "shaders/water_turbulence.frag"
     #include "shaders/leadlight.frag"
+    //#include "shaders/terrain.frag"
     //#include "shaders/complex.frag"
     //#include "shaders/road.frag"
     //#include "shaders/gears.frag"
@@ -95,7 +97,7 @@ extern C_LINKAGE int main(int argc, char* argv[])
         rect.h = static_cast<Uint16>(glsl_sandbox::resolution.y + 0.5f);
         screen = SDL_SetVideoMode( rect.w, rect.h, 24, SDL_SWSURFACE ); 
         bmp = SDL_CreateRGBSurface(SDL_SWSURFACE, rect.w, rect.h, 24, 0x000000ff, 0x0000ff00, 0x00ff0000, 0 );
-
+        
         float time = 0;
         float timeScale = 1;
 

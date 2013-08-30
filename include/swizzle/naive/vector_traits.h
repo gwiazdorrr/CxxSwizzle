@@ -8,10 +8,7 @@ namespace swizzle
 {
     namespace naive
     {
-        template <class TScalar, size_t NumComponents, class TTag>
-        struct vector_adapter_traits;
-
-        template <class TTraits>
+        template <class TScalar, size_t Size>
         class vector_adapter;
 
         template <class TVector, class TData, class TTag, size_t x, size_t y, size_t z, size_t w>
@@ -23,7 +20,7 @@ namespace swizzle
         template <class T>
         struct get_vector_type_impl_for_scalar
         {
-            typedef naive::vector_adapter< naive::vector_adapter_traits<T, 1, nothing> > type;
+            typedef naive::vector_adapter< T, 1 > type;
         };
 
         template <>
@@ -42,10 +39,10 @@ namespace swizzle
         struct get_vector_type_impl<unsigned short> : get_vector_type_impl_for_scalar<unsigned short>
         {};
 
-        template <class TTraits>
-        struct get_vector_type_impl< naive::vector_adapter<TTraits> >
+        template <class TScalar, size_t Size>
+        struct get_vector_type_impl< naive::vector_adapter<TScalar, Size> >
         {
-            typedef naive::vector_adapter<TTraits> type;
+            typedef naive::vector_adapter<TScalar, Size> type;
         };
 
         template <class TVector, class TData, class TTag, size_t x, size_t y, size_t z, size_t w>

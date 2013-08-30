@@ -10,26 +10,26 @@
 #include <iosfwd>
 
 #include "vector_traits.h"
-#include "vector_adapter_traits.h"
 #include "indexed_proxy.h"
 #include "../detail/utils.h"
 #include "../detail/vector_data.h"
+#include "../detail/vector_binary_operators.h"
 
 namespace swizzle
 {
     namespace naive
     {
-        template <template <class> class TVector, class TTraits>
+        template <template <class, size_t> class TVector, class TScalar, size_t Size>
         struct vector_adapter_helper
         {
-            typedef TVector<typename TTraits::change_num_of_components<1>::type> vec1;
-            typedef TVector<typename TTraits::change_num_of_components<2>::type> vec2;
-            typedef TVector<typename TTraits::change_num_of_components<3>::type> vec3;
-            typedef TVector<typename TTraits::change_num_of_components<4>::type> vec4;
+            typedef TVector<TScalar, 1> vec1;
+            typedef TVector<TScalar, 2> vec2;
+            typedef TVector<TScalar, 3> vec3;
+            typedef TVector<TScalar, 4> vec4;
             
-            typedef typename TTraits::scalar_type scalar_type;
-            typedef typename TTraits::tag_type tag_type;
-            static const size_t num_of_components = TTraits::num_of_components;
+            typedef TScalar scalar_type;
+            typedef detail::binary_operators::tag tag_type;
+            static const size_t num_of_components = Size;
 
             template <size_t x, size_t y, size_t z, size_t w>
             struct proxy_factory
@@ -54,29 +54,27 @@ namespace swizzle
 
         };
 
-        template < class TTraits >
-        class vector_adapter : public detail::vector_data<
-            typename TTraits::scalar_type,
-            TTraits::num_of_components,
-            vector_adapter_helper<vector_adapter, TTraits>::proxy_factory>
+        template < class TScalar, size_t Size >
+        class vector_adapter : 
+            private detail::binary_operators::tag,
+            public detail::vector_data< TScalar, Size, vector_adapter_helper<vector_adapter, TScalar, Size>::proxy_factory>
         {
-            typedef vector_adapter_helper< ::swizzle::naive::vector_adapter, TTraits> helper_type;
+            typedef vector_adapter_helper< ::swizzle::naive::vector_adapter, TScalar, Size> helper_type;
 
             //! A convenient mnemonic for base type
-            typedef detail::vector_data< typename TTraits::scalar_type, TTraits::num_of_components, helper_type::proxy_factory > base_type;
+            typedef detail::vector_data< TScalar, Size, helper_type::proxy_factory > base_type;
 
             //! "Hide" _data
             using base_type::m_data;
             
-            template <class TOtherTraits>
-            friend std::ostream& operator<<(std::ostream&, const ::swizzle::naive::vector_adapter<TOtherTraits>&);
-            template <class TOtherTraits>
-            friend std::istream& operator>>(std::istream&, ::swizzle::naive::vector_adapter<TOtherTraits>&);
+            template <class TOtherScalar, size_t OtherSize>
+            friend std::ostream& operator<<(std::ostream&, const ::swizzle::naive::vector_adapter<TOtherScalar, OtherSize>&);
+            template <class TOtherScalar, size_t OtherSize>
+            friend std::istream& operator>>(std::istream&, ::swizzle::naive::vector_adapter<TOtherScalar, OtherSize>&);
 
         public:
             //! Number of components of this vector.
             static const size_t num_of_components = base_type::num_of_components;
-            typedef TTraits traits_type;
             //! This type.
             typedef vector_adapter vector_type;
             //! Scalar type.
@@ -291,10 +289,10 @@ namespace swizzle
                 at(N) = v;
             }
 
-            template <size_t N, class TOtherTraits>
-            void compose( const vector_adapter<TOtherTraits>& v )
+            template <size_t N, class TOtherScalar, size_t OtherSize>
+            void compose( const vector_adapter<TOtherScalar, OtherSize>& v )
             {
-                const size_t limit = (N + TOtherTraits::num_of_components > num_of_components) ? num_of_components : (N + TOtherTraits::num_of_components);
+                const size_t limit = (N + OtherSize > num_of_components) ? num_of_components : (N + OtherSize);
                 iterate<N, limit>([&](size_t i) -> void { at(i) = v[i - N]; });
             }
 
@@ -565,15 +563,15 @@ namespace swizzle
         };
 
 
-        template < class TTraits >
-        std::ostream& operator<<(std::ostream& os, const vector_adapter<TTraits>& vec)
+        template < class TScalar, size_t Size >
+        std::ostream& operator<<(std::ostream& os, const vector_adapter<TScalar, Size>& vec)
         {
             vec.iterate( [&](size_t i) -> void { os << vec[i] << (i == vec.size() - 1 ? "" : ","); } );
             return os;
         }
 
-        template < class TTraits >
-        std::istream& operator>>(std::istream& is, vector_adapter<TTraits>& vec)
+        template < class TScalar, size_t Size >
+        std::istream& operator>>(std::istream& is, vector_adapter<TScalar, Size>& vec)
         {
             vec.iterate( [&](size_t i) -> void 
             { 
