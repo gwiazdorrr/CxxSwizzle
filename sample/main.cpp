@@ -1,11 +1,14 @@
 #include "swizzle/naive/vector_adapter.h"
 #include "swizzle/detail/glsl_functions.h"
 #include "swizzle/detail/vector_binary_operators.h"
+#include <swizzle/naive/matrix.h>
 
 typedef swizzle::detail::binary_operators::tag tag;
 typedef swizzle::naive::vector_adapter< float, 2 > vec2;
 typedef swizzle::naive::vector_adapter< float, 3 > vec3;
 typedef swizzle::naive::vector_adapter< float, 4 > vec4;
+typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 2, 2> mat2;
+typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 3, 3> mat3;
 
 namespace glsl_sandbox
 {
@@ -38,8 +41,8 @@ namespace glsl_sandbox
     #pragma warning(disable: 4305) // disable truncation warning
 
     //#include "shaders/water_turbulence.frag"
-    #include "shaders/leadlight.frag"
-    //#include "shaders/terrain.frag"
+    //#include "shaders/leadlight.frag"
+    #include "shaders/terrain.frag"
     //#include "shaders/complex.frag"
     //#include "shaders/road.frag"
     //#include "shaders/gears.frag"
@@ -69,6 +72,14 @@ extern C_LINKAGE int main(int argc, char* argv[])
     SDL_Surface* bmp = nullptr;
 
     using namespace std;
+
+    {
+        vec2 a(10, 20);
+        //mat2 m(a, a);
+        //vec2 b = m * a;
+        //mat3(1,2,3,4,5,6,7,8,9);
+        //mat2(a, a, a);
+    }
 
     if (argc == 2)
     {

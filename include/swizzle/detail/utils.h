@@ -22,12 +22,32 @@ namespace swizzle
         template <class T>
         struct remove_reference_cv : std::remove_cv< typename std::remove_reference<T>::type > {};
 
-        // is a > b?
+        //! Detects presence of nested "typedef <something> type"
+        template <typename T>
+        struct has_type_helper {
+        private:
+            template <typename T1>
+            static typename T1::type test(int);
+            template <typename>
+            static void test(...);
+        public:
+            static const bool value = !std::is_void<decltype(test<T>(0))>::value;
+        };
+
+        template <typename T>
+        struct has_type : std::integral_constant< bool, has_type_helper<T>::value >
+        {};
+
         template <size_t a, size_t b>
-        struct is_greater
+        struct is_greater_helper
         {
             static const bool value = a > b;
         };
+
+        // is a > b?
+        template <size_t a, size_t b>
+        struct is_greater : std::integral_constant<bool, is_greater_helper<a, b>::value>
+        {};
 
         //! A type to indicate that operation is not available for some combination of input types.
         struct operation_not_available;

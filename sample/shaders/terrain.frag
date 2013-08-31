@@ -43,15 +43,15 @@ float noise( in vec2 x )
     return res;
 }
 
-//const mat2 m2; = mat2(1.6,-1.2,1.2,1.6);
+const mat2 m2 = mat2(1.6,-1.2,1.2,1.6);
 	
 float fbm( vec2 p )
 {
     float f = 0.0;
 
-    f += 0.5000*noise( p );// p = m2*p*2.02;
-    f += 0.2500*noise( p );// p = m2*p*2.03;
-    f += 0.1250*noise( p );// p = m2*p*2.01;
+    f += 0.5000*noise( p ); p = m2*p*2.02;
+    f += 0.2500*noise( p ); p = m2*p*2.03;
+    f += 0.1250*noise( p ); p = m2*p*2.01;
     f += 0.0625*noise( p );
 
     return f/0.9375;
@@ -69,7 +69,7 @@ float terrain( in vec2 x )
         d += n.yz;
         a += b*n.x/(1.0+dot(d,d));
 		b *= 0.5;
-        //p = m2*p;
+        p = m2*p;
     }
 
     return 140.0*a;
@@ -87,7 +87,7 @@ float terrain2( in vec2 x )
         d += n.yz;
         a += b*n.x/(1.0+dot(d,d));
 		b *= 0.5;
-        //p=m2*p;
+        p=m2*p;
     }
 
     return 140.0*a;
@@ -105,7 +105,7 @@ float terrain3( in vec2 x )
         d += n.yz;
         a += b*n.x/(1.0+dot(d,d));
 		b *= 0.5;
-        //p = m2*p;
+        p = m2*p;
     }
 
     return 140.0*a;
