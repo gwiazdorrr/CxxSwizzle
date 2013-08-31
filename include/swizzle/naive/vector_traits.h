@@ -51,6 +51,34 @@ namespace swizzle
             typedef TVector type;
         };
 
+        //! Rules are following:
+        //! - if either of vector for input types has more components it is considered a result
+        //! - if sizes are same then vector that defines "broader" scalar type is considered a result
+        //! - otherwise they are considered same and makes no difference which is returned
+        template <class TScalar1, size_t Size1, class TScalar2, size_t Size2>
+        struct common_vector_type< naive::vector_adapter<TScalar1, Size1>, naive::vector_adapter<TScalar2, Size2> > :
+            std::enable_if<
+                Size1 == 1 || Size2 == 1 || Size1 == Size2,
+                typename std::conditional<
+                    is_greater<Size1, Size2>::value ||
+                    std::is_same<
+                        typename std::common_type<TScalar1, TScalar2>::type, 
+                        TScalar1
+                    >::value && Size1 == Size2,
+                    // use the first one if it has more components or sizes are same but common type is equal to its scalar type;
+                    naive::vector_adapter<TScalar1, Size1>,
+                    // use second vector if its bigger or same, but only if common scalar is its scalar
+                    typename std::enable_if< 
+                        std::is_same<
+                            typename std::common_type<TScalar1, TScalar2>::type, 
+                            TScalar2
+                        >::value, 
+                        naive::vector_adapter<TScalar2, Size2> 
+                    >::type
+                >::type
+            >
+        {};
+
     }
 }
 

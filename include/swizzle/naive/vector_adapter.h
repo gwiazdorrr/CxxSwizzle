@@ -126,7 +126,7 @@ namespace swizzle
             //! Note that for types convertibles to scalar type the instantiation will fail effectively falling back to one of previous two constructors
             template <class T1>
             explicit vector_adapter( T1&& v1,
-                typename std::enable_if< !std::is_convertible<T1, scalar_type>::value && detail::are_sizes_valid<num_of_components, detail::get_num_of_components<T1>::value>::value, void>::type* = 0 )
+                typename std::enable_if< !std::is_convertible<T1, scalar_type>::value && detail::are_sizes_valid<num_of_components, detail::get_vector_size<T1>::value>::value, void>::type* = 0 )
             {
                 compose<0>(std::forward<T1>(v1));
             }
@@ -134,31 +134,31 @@ namespace swizzle
             //! A composite constructor variant with 2 arguments
             template <class T1, class T2>
             vector_adapter( T1&& v1, T2&& v2,
-                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::get_num_of_components<T1>::value, detail::get_num_of_components<T2>::value>::value, void>::type* = 0 )
+                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::get_vector_size<T1>::value, detail::get_vector_size<T2>::value>::value, void>::type* = 0 )
             {
                 compose<0>(std::forward<T1>(v1));
-                compose<detail::get_num_of_components<T1>::value>(std::forward<T2>(v2));
+                compose<detail::get_vector_size<T1>::value>(std::forward<T2>(v2));
             }
 
             //! A composite constructor variant with 3 arguments
             template <class T1, class T2, class T3>
             vector_adapter( T1&& v1, T2&& v2, T3&& v3,
-                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::get_num_of_components<T1>::value, detail::get_num_of_components<T2>::value, detail::get_num_of_components<T3>::value>::value, void>::type* = 0 )
+                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::get_vector_size<T1>::value, detail::get_vector_size<T2>::value, detail::get_vector_size<T3>::value>::value, void>::type* = 0 )
             {
                 compose<0>(std::forward<T1>(v1));
-                compose<detail::get_num_of_components<T1>::value>(std::forward<T2>(v2));
-                compose<detail::get_num_of_components<T1>::value + detail::get_num_of_components<T2>::value>(std::forward<T3>(v3));
+                compose<detail::get_vector_size<T1>::value>(std::forward<T2>(v2));
+                compose<detail::get_vector_size<T1>::value + detail::get_vector_size<T2>::value>(std::forward<T3>(v3));
             }
 
             //! A composite constructor variant with 4 arguments
             template <class T1, class T2, class T3, class T4>
             vector_adapter( T1&& v1, T2&& v2, T3&& v3, T4&& v4,
-                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::get_num_of_components<T1>::value, detail::get_num_of_components<T2>::value, detail::get_num_of_components<T3>::value, detail::get_num_of_components<T4>::value>::value, void>::type* = 0 )
+                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::get_vector_size<T1>::value, detail::get_vector_size<T2>::value, detail::get_vector_size<T3>::value, detail::get_vector_size<T4>::value>::value, void>::type* = 0 )
             {
                 compose<0>(std::forward<T1>(v1));
-                compose<detail::get_num_of_components<T1>::value>(std::forward<T2>(v2));
-                compose<detail::get_num_of_components<T1>::value + detail::get_num_of_components<T2>::value>(std::forward<T3>(v3));
-                compose<detail::get_num_of_components<T1>::value + detail::get_num_of_components<T2>::value + detail::get_num_of_components<T3>::value>(std::forward<T4>(v4));
+                compose<detail::get_vector_size<T1>::value>(std::forward<T2>(v2));
+                compose<detail::get_vector_size<T1>::value + detail::get_vector_size<T2>::value>(std::forward<T3>(v3));
+                compose<detail::get_vector_size<T1>::value + detail::get_vector_size<T2>::value + detail::get_vector_size<T3>::value>(std::forward<T4>(v4));
             }
 
         public:

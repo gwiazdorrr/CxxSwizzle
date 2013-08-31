@@ -22,6 +22,13 @@ namespace swizzle
         template <class T>
         struct remove_reference_cv : std::remove_cv< typename std::remove_reference<T>::type > {};
 
+        // is a > b?
+        template <size_t a, size_t b>
+        struct is_greater
+        {
+            static const bool value = a > b;
+        };
+
         //! A type to indicate that operation is not available for some combination of input types.
         struct operation_not_available;
 
