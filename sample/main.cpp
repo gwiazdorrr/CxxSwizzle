@@ -132,7 +132,7 @@ extern C_LINKAGE int main(int argc, char* argv[])
 
                 int heightPerThread = bmp->h / thredsCount;
                 int heightStart = threadNum * heightPerThread;
-                int heightEnd = (threadNum == thredsCount - 1) ? bmp->h : heightPerThread;
+                int heightEnd = (threadNum == thredsCount - 1) ? bmp->h : (heightStart + heightPerThread);
 #else
             {
                 int heightStart = 0;

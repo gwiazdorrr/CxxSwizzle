@@ -13,10 +13,22 @@ namespace swizzle
         struct get_vector_type_impl
         {};
 
+        
+        template <class T>
+        struct is_vector : std::integral_constant<bool, has_type< get_vector_type_impl< typename remove_reference_cv<T>::type > >::value >
+        {};
+
+        //! Defines common vector for given combination of input types; should be done using variadic templates,
+        //! but MSVC does not support them
+        template <class T, class U = void, class V = void, class = std::true_type >
+        struct get_vector_type
+        {};
+
+ 
         //! Type needs specializing for custom vectors
         template <class T, class U>
-        struct common_vector_type {};
-/*
+        struct common_vector_type //{};
+
         {
             typedef typename get_vector_type<T>::type type_1;
             typedef typename get_vector_type<U>::type type_2;
@@ -37,17 +49,9 @@ namespace swizzle
                 type_1,
                 type_2
             >::type type;
-        };*/
+        };
 
-        template <class T>
-        struct is_vector : std::integral_constant<bool, has_type< get_vector_type_impl< typename remove_reference_cv<T>::type > >::value >
-        {};
 
-        //! Defines common vector for given combination of input types; should be done using variadic templates,
-        //! but MSVC does not support them
-        template <class T, class U = void, class V = void, class = std::true_type >
-        struct get_vector_type
-        {};
 
         //! A specialisation for one type; redirects to get_vector_type_impl<T>
         template <class T>
