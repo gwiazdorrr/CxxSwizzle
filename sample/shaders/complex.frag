@@ -48,7 +48,7 @@ vec4 map( vec3 p )
 	float an = -1.0*sin(0.1*time + 1.0*length(p.xz)  + 1.0*p.y);
 	float co = cos(an);
 	float si = sin(an);
-//	p.xz = mat2(co,-si,si,co)*p.xz;
+	p.xz = mat2(co,-si,si,co)*p.xz;
 
      // distort	
 	p.xz += 1.0*(-1.0+2.0*noise( p*1.1 ));

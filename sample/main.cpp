@@ -42,8 +42,8 @@ namespace glsl_sandbox
 
     //#include "shaders/water_turbulence.frag"
     //#include "shaders/leadlight.frag"
-    #include "shaders/terrain.frag"
-    //#include "shaders/complex.frag"
+    //#include "shaders/terrain.frag"
+    #include "shaders/complex.frag"
     //#include "shaders/road.frag"
     //#include "shaders/gears.frag"
 
@@ -74,11 +74,19 @@ extern C_LINKAGE int main(int argc, char* argv[])
     using namespace std;
 
     {
-        vec2 a(10, 20);
+        //vec2 a(argc * 5, argc * 10);
         //mat2 m(a, a);
+        //vec3 d;
+        //m * a.xy;
         //vec2 b = m * a;
-        //mat3(1,2,3,4,5,6,7,8,9);
-        //mat2(a, a, a);
+        ////mat2 m2(a / 2, a / 5);
+        //mat2 m2(a, a);
+        ////mat3 m3;
+        ////m2 * m3;
+
+        //mat2 res = m * m2;
+        //cout << res[0][0] << res[0][1] << res[1][0] << res[1][1] << endl;
+        //b.x = 0;
     }
 
     if (argc == 2)
