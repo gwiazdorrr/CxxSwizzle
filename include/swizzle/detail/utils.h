@@ -55,6 +55,12 @@ namespace swizzle
         //! An empty type carrying no information, used whenever applicable.
         struct nothing {};
 
+        //! Loop terminator.
+        template <size_t Begin, class Func>
+        inline void compile_time_for_(Func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, Begin>)
+        {
+            // do nothing
+        }
 
         //! A chain of func calls with each value from [Begin, End) range.
         template <size_t Begin, size_t End, class Func>
@@ -62,13 +68,6 @@ namespace swizzle
         {
             func(Begin);
             compile_time_for_( func, std::integral_constant<size_t, Begin+1>(), std::integral_constant<size_t, End>() );
-        }
-
-        //! Loop terminator.
-        template <size_t Begin, class Func>
-        inline void compile_time_for_(Func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, Begin>)
-        {
-            // do nothing
         }
 
         template <size_t Begin, size_t End, class Func>

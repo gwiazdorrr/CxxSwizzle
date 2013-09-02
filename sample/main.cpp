@@ -4,11 +4,16 @@
 #include <swizzle/naive/matrix.h>
 
 typedef swizzle::detail::binary_operators::tag tag;
+typedef swizzle::naive::vector_adapter< float, 1 > vec1;
 typedef swizzle::naive::vector_adapter< float, 2 > vec2;
 typedef swizzle::naive::vector_adapter< float, 3 > vec3;
 typedef swizzle::naive::vector_adapter< float, 4 > vec4;
+
 typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 2, 2> mat2;
 typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 3, 3> mat3;
+typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 2, 3> mat3x2;
+typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 3, 2> mat2x3;
+typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 4, 4> mat4;
 
 namespace glsl_sandbox
 {
@@ -43,9 +48,9 @@ namespace glsl_sandbox
     //#include "shaders/water_turbulence.frag"
     //#include "shaders/leadlight.frag"
     //#include "shaders/terrain.frag"
-    #include "shaders/complex.frag"
+    //#include "shaders/complex.frag"
     //#include "shaders/road.frag"
-    //#include "shaders/gears.frag"
+    #include "shaders/gears.frag"
 
     // be a dear a clean up
     #pragma warning(pop)
@@ -72,22 +77,6 @@ extern C_LINKAGE int main(int argc, char* argv[])
     SDL_Surface* bmp = nullptr;
 
     using namespace std;
-
-    {
-        //vec2 a(argc * 5, argc * 10);
-        //mat2 m(a, a);
-        //vec3 d;
-        //m * a.xy;
-        //vec2 b = m * a;
-        ////mat2 m2(a / 2, a / 5);
-        //mat2 m2(a, a);
-        ////mat3 m3;
-        ////m2 * m3;
-
-        //mat2 res = m * m2;
-        //cout << res[0][0] << res[0][1] << res[1][0] << res[1][1] << endl;
-        //b.x = 0;
-    }
 
     if (argc == 2)
     {

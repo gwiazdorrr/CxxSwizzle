@@ -57,12 +57,12 @@ namespace swizzle
         template < class TScalar, size_t Size >
         class vector_adapter : 
             private detail::binary_operators::tag,
-            public detail::vector_data< TScalar, Size, vector_adapter_helper<vector_adapter, TScalar, Size>::proxy_factory>
+            public detail::vector_data< TScalar, Size, vector_adapter_helper<vector_adapter, TScalar, Size>::template proxy_factory>
         {
             typedef vector_adapter_helper< ::swizzle::naive::vector_adapter, TScalar, Size> helper_type;
 
             //! A convenient mnemonic for base type
-            typedef detail::vector_data< TScalar, Size, helper_type::proxy_factory > base_type;
+            typedef detail::vector_data< TScalar, Size, helper_type::template proxy_factory > base_type;
 
             //! "Hide" _data
             using base_type::m_data;
@@ -105,12 +105,17 @@ namespace swizzle
                 iterate( [&](size_t i) -> void { at(i) = o[i]; } );
             }
 
+            //! The reason why this is here is that the enable_if in implicit constructor seemed to confuse g++ (4.8.1) with message "sorry, unimplemented: mangling error_mark".
+            //! Sneaking the enable if in a static function works, strangely.
+            template <class T>
+            static void* enable_if_workaround( typename std::enable_if<num_of_components==1 && std::is_convertible<T, scalar_type>::value, void>::type* = 0 );
+
             //! Implicit constructor from scalar-convertible only for one-component vector
             //! The reason why this is done with a template is that if a type decays to a scalar it can not be 
             //! passed directly to a function taking vector - implicit conversion to scalar then implicit construction
             //! just won't happen.
             template <class T>
-            vector_adapter( const T& t, typename std::enable_if<num_of_components == 1 && std::is_convertible<T, scalar_type>::value, void>::type* = 0)
+            vector_adapter( const T& t, decltype( enable_if_workaround<T>() ) = 0 )
             {
                 iterate( [&](size_t i) -> void { at(i) = t; } );
             }
@@ -404,7 +409,8 @@ namespace swizzle
             }
             static decay_type log2(vector_adapter x)
             {
-                return transform_and_decay(x, [](scalar_type a) -> scalar_type { return scalar_type( std::log(a) / M_LOG2E); } );
+                const scalar_type c_log2e = 1.44269504088896340736;
+                return transform_and_decay(x, [=](scalar_type a) -> scalar_type { return scalar_type( std::log(a) / c_log2e); } );
             }
             static decay_type sqrt(vector_adapter x)
             {
@@ -451,7 +457,8 @@ namespace swizzle
             }
             static decay_type min(vector_adapter x, const vector_adapter& y)
             {
-                return transform_and_decay(x, y, std::min<scalar_type>);
+                const scalar_type& (*func)(const scalar_type&, const scalar_type&) = std::min<scalar_type>;
+                return transform_and_decay(x, y, func);
             }
             static decay_type min(vector_adapter x, amiguity_protected_scalar_type y)
             {
@@ -459,7 +466,8 @@ namespace swizzle
             }
             static decay_type max(vector_adapter x, const vector_adapter& y)
             {
-                return transform_and_decay(x, y, std::max<scalar_type>);
+                const scalar_type& (*func)(const scalar_type&, const scalar_type&) = std::max<scalar_type>;
+                return transform_and_decay(x, y, func);
             }
             static decay_type max(vector_adapter x, amiguity_protected_scalar_type y)
             {

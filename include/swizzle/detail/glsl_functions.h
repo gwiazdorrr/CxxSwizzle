@@ -11,16 +11,16 @@ namespace swizzle
             struct tag {};
 
             #define SWIZZLE_FORWARD_FUNC_1(name)\
-            template <class T> auto name(T&& t) -> decltype(typename get_vector_type<T>::type::name(t))\
-            { return typename get_vector_type<T>::type::name(std::forward<T>(t)); }      
+            template <class T> auto name(T&& t) -> decltype(get_vector_type<T>::type::name(t))\
+            { return get_vector_type<T>::type::name(std::forward<T>(t)); }      
 
             #define SWIZZLE_FORWARD_FUNC_2(name)\
-            template <class T, class U> auto name(T&& t, U&& u) -> decltype(typename get_vector_type<T, U>::type::name(t, u))\
-            { return typename get_vector_type<T, U>::type::name(std::forward<T>(t), std::forward<U>(u)); }                      
+            template <class T, class U> auto name(T&& t, U&& u) -> decltype(get_vector_type<T, U>::type::name(t, u))\
+            { return get_vector_type<T, U>::type::name(std::forward<T>(t), std::forward<U>(u)); }                      
 
             #define SWIZZLE_FORWARD_FUNC_3(name)\
-            template <class T, class U, class V> auto name(T&& t, U&& u, V&& v) ->  decltype( typename get_vector_type<T, U, V>::type::name(t, u, v)  )\
-            { return typename get_vector_type<T, U, V>::type::name(std::forward<T>(t), std::forward<U>(u), std::forward<V>(v)); }
+            template <class T, class U, class V> auto name(T&& t, U&& u, V&& v) ->  decltype( get_vector_type<T, U, V>::type::name(t, u, v)  )\
+            { return get_vector_type<T, U, V>::type::name(std::forward<T>(t), std::forward<U>(u), std::forward<V>(v)); }
 
             SWIZZLE_FORWARD_FUNC_1(radians)
             SWIZZLE_FORWARD_FUNC_1(degrees)

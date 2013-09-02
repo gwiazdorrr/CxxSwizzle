@@ -24,11 +24,10 @@ namespace swizzle
         struct get_vector_type
         {};
 
- 
+
         //! Type needs specializing for custom vectors
         template <class T, class U>
-        struct common_vector_type //{};
-
+        struct common_vector_type
         {
             typedef typename get_vector_type<T>::type type_1;
             typedef typename get_vector_type<U>::type type_2;
