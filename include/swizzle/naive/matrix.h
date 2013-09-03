@@ -1,8 +1,8 @@
 #pragma once
 
 #include <array>
-#include "../detail/utils.h"
-#include "vector_adapter.h"
+#include <swizzle/detail/utils.h>
+#include <swizzle/naive/vector_adapter.h>
 
 namespace swizzle
 {

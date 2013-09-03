@@ -1,5 +1,4 @@
-#ifndef HEADER_GUARD_SWIZZLE_NAIVE_VECTOR_ADAPTER
-#define HEADER_GUARD_SWIZZLE_NAIVE_VECTOR_ADAPTER
+#pragma once
 
 #include <type_traits>
 #include <algorithm>
@@ -9,11 +8,11 @@
 #include <cmath>
 #include <iosfwd>
 
-#include "vector_traits.h"
-#include "indexed_proxy.h"
-#include "../detail/utils.h"
-#include "../detail/vector_data.h"
-#include "../detail/vector_binary_operators.h"
+#include <swizzle/detail/utils.h>
+#include <swizzle/detail/vector_binary_operators.h>
+#include <swizzle/detail/vector_data.h>
+#include <swizzle/naive/vector_traits_impl.h>
+#include <swizzle/naive/indexed_proxy.h>
 
 namespace swizzle
 {
@@ -592,6 +591,3 @@ namespace swizzle
         }
     }
 }
-
-
-#endif // HEADER_GUARD_SWIZZLE_NAIVE_VECTOR_ADAPTER

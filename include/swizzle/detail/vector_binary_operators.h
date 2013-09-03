@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vector_traits.h"
+#include <swizzle/detail/vector_traits.h>
 
 namespace swizzle
 {

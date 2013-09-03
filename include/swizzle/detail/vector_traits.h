@@ -1,7 +1,7 @@
 #pragma once
 
 #include <type_traits>
-#include "utils.h"
+#include <swizzle/detail/utils.h>
 
 namespace swizzle
 {

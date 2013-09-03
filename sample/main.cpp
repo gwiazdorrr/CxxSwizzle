@@ -1,6 +1,6 @@
-#include "swizzle/naive/vector_adapter.h"
-#include "swizzle/detail/glsl_functions.h"
-#include "swizzle/detail/vector_binary_operators.h"
+#include <swizzle/detail/glsl_functions.h>
+#include <swizzle/detail/vector_binary_operators.h>
+#include <swizzle/naive/vector_adapter.h>
 #include <swizzle/naive/matrix.h>
 
 typedef swizzle::detail::binary_operators::tag tag;

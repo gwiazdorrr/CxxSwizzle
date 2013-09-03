@@ -1,8 +1,7 @@
-#ifndef HEADER_GUARD_SWIZZLE_NAIVE_VECTOR_TRAITS
-#define HEADER_GUARD_SWIZZLE_NAIVE_VECTOR_TRAITS
+#pragma once
 
 #include <type_traits>
-#include "../detail/vector_traits.h"
+#include <swizzle/detail/vector_traits.h>
 
 namespace swizzle
 {
@@ -122,6 +121,3 @@ namespace swizzle
 
     }
 }
-
-
-#endif // HEADER_GUARD_SWIZZLE_NAIVE_VECTOR_TRAITS
