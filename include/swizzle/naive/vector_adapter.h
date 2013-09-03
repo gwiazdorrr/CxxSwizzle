@@ -121,10 +121,9 @@ namespace swizzle
             }
 
             //! For vectors bigger than 1 conversion from scalar should be explicit.
-            template <class T>
-            explicit vector_adapter( const T& t, typename std::enable_if<num_of_components != 1 && std::is_convertible<T, scalar_type>::value, void>::type* = 0 )
+            explicit vector_adapter( typename std::conditional<num_of_components!=1, scalar_type, detail::operation_not_available>::type s )
             {
-                iterate( [&](size_t i) -> void { at(i) = t; } );
+                iterate( [&](size_t i) -> void { at(i) = s; } );
             }
 
             //! A composite constructor variant with 1 argument
@@ -171,7 +170,7 @@ namespace swizzle
             {
                 return std::begin(m_data);
             }
-            auto begin() const -> decltype( std::begin(m_data) )
+            auto begin() const -> decltype( std::begin(*((const data_type*)0)) )
             {
                 return std::begin(m_data);
             }
@@ -179,7 +178,7 @@ namespace swizzle
             {
                 return std::end(m_data);
             }
-            auto end() const -> decltype ( std::end(m_data) )
+            auto end() const -> decltype ( std::end(*((const data_type*)0)) )
             {
                 return std::end(m_data);
             }

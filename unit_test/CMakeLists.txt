@@ -7,7 +7,7 @@ if(Boost_FOUND)
 
 	source_group("" FILES ${source} ${headers})
 	
-	include_directories(${BOOST_INCLUDE_DIR} ${CxxSwizzle_SOURCE_DIR}/include)
+	include_directories(${Boost_INCLUDE_DIR} ${CxxSwizzle_SOURCE_DIR}/include)
 	
 	add_executable (unit_test ${source} ${headers})
 endif(Boost_FOUND)
