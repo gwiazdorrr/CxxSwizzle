@@ -10,7 +10,7 @@ uniform vec2 mouse;
 uniform vec2 resolution;
 //varying vec2 surfacePosition;
 
-#define MAX_ITER 32
+#define MAX_ITER 16
 void main( void ) {
     //vec2 p = surfacePosition*8.0;
 	vec2 uv = gl_FragCoord.xy / resolution.xy;
@@ -28,8 +28,8 @@ void main( void ) {
 	}
 	c /= float(MAX_ITER);
 	float pulse = abs(sin(time*5.));
-	float pulse2 = pow(sin(time*3.),.25);
-	float pulse3 = pow(sin(time*5.),2.);
+	float pulse2 = pow(abs(sin(time*3.)),.25);
+	float pulse3 = pow(abs(sin(time*5.)),2.);
 	gl_FragColor = vec4(vec3(pow(c,1.5+pulse2/2.))*vec3(1.0+pulse2, 2.0-pulse2, 1.5+pulse3)*(1.+pulse2)/2., 1.0);
 
 }

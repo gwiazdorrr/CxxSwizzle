@@ -2,6 +2,7 @@
 #include <swizzle/detail/vector_binary_operators.h>
 #include <swizzle/naive/vector_adapter.h>
 #include <swizzle/naive/matrix.h>
+#include <swizzle/naive/sampler_adapter.h>
 
 typedef swizzle::detail::binary_operators::tag tag;
 typedef swizzle::naive::vector_adapter< float, 1 > vec1;
@@ -15,6 +16,32 @@ typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 2, 3> mat
 typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 3, 2> mat2x3;
 typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 4, 4> mat4;
 
+//! A really, really simplistic sampler using SDLImage
+struct SDL_Surface;
+class sampler2D : public swizzle::naive::sampler_base< vec2 >
+{
+public:
+    enum WrapMode
+    {
+        Clamp,
+        Repeat,
+        MirrorRepeat
+    };
+
+    sampler2D(const char* path, WrapMode wrapMode);
+    ~sampler2D();
+    vec4 sample(vec2 coord);
+
+private:
+    SDL_Surface *m_image;
+    WrapMode m_wrapMode;
+
+    // do not allow copies to be made
+    sampler2D(const sampler2D&);
+    sampler2D& operator=(const sampler2D&);
+};
+
+// this where the magic happens...
 namespace glsl_sandbox
 {
     using namespace swizzle::detail::glsl_functions;
@@ -28,6 +55,9 @@ namespace glsl_sandbox
     vec2& iResolution = resolution;
     float& iGlobalTime = time;
     vec2& iMouse = mouse;
+
+    sampler2D diffuse("diffuse.png", sampler2D::Repeat);
+    sampler2D specular("specular.png", sampler2D::Repeat);
 
     struct fragment_shader
     {
@@ -45,12 +75,12 @@ namespace glsl_sandbox
     #pragma warning(disable: 4244) // disable return implicit conversion warning
     #pragma warning(disable: 4305) // disable truncation warning
 
-    //#include "shaders/water_turbulence.frag"
+    #include "shaders/sampler.frag"
     //#include "shaders/leadlight.frag"
     //#include "shaders/terrain.frag"
     //#include "shaders/complex.frag"
     //#include "shaders/road.frag"
-    #include "shaders/gears.frag"
+    //#include "shaders/gears.frag"
 
     // be a dear a clean up
     #pragma warning(pop)
@@ -66,6 +96,7 @@ namespace glsl_sandbox
 #include <iostream>
 #include <sstream>
 #include <SDL.h>
+#include <SDL_image.h>
 #include <time.h>
 #if OMP_ENABLED
 #include <omp.h>
@@ -73,10 +104,17 @@ namespace glsl_sandbox
 
 extern C_LINKAGE int main(int argc, char* argv[])
 {
+    using namespace std;
+
+    // initialise SDLImage
+    int flags = IMG_INIT_JPG | IMG_INIT_PNG;
+    int initted = IMG_Init(flags);
+    if ((initted & flags) != flags) {
+        cerr << "WARNING: failed to initialise required jpg and png support: " << IMG_GetError() << endl;
+    }
+
     SDL_Surface* screen = nullptr;
     SDL_Surface* bmp = nullptr;
-
-    using namespace std;
 
     if (argc == 2)
     {
@@ -93,6 +131,11 @@ extern C_LINKAGE int main(int argc, char* argv[])
         return 1;
     }
 
+    cout << "\n";
+    cout << "+/-  - increase/decrease time scale\n";
+    cout << "lmb  - update glsl_sandbox::mouse\n";
+    cout << "esc  - quit\n\n";
+
     try {
         
         SDL_Init( SDL_INIT_VIDEO );
@@ -108,12 +151,14 @@ extern C_LINKAGE int main(int argc, char* argv[])
         
         float time = 0;
         float timeScale = 1;
+        int frame = 0;
 
         SDL_Event event;
         bool quit = false;
 
         clock_t begin = clock();
         double bufferedTimeScale = 0.0f;
+        
 
         while (!quit) {
 
@@ -183,13 +228,14 @@ extern C_LINKAGE int main(int argc, char* argv[])
                     break;
                 case SDL_MOUSEBUTTONDOWN:
                     glsl_sandbox::mouse.x = static_cast<float>(event.button.x);
-                    glsl_sandbox::mouse.y = static_cast<float>(event.button.y);
+                    glsl_sandbox::mouse.y = static_cast<float>(bmp->h - 1 - event.button.y);
                     break;
                 default:
                     break;
                 }
             }
 
+            cout << "frame: " << frame++ << "\t time: " << time << "\t timescale: " << timeScale << "         \r";
             cout.flush();
 
             clock_t delta = clock() - begin;
@@ -211,4 +257,77 @@ extern C_LINKAGE int main(int argc, char* argv[])
     }
     SDL_Quit();
     return 0; 
+}
+
+sampler2D::sampler2D( const char* path, WrapMode wrapMode ) : m_wrapMode(wrapMode)
+{
+    m_image = IMG_Load(path);
+    if (!m_image)
+    {
+        std::cerr << "WARNING: Failed to load texture " << path << "\n";
+        std::cerr << "  SDL_Image message: " << IMG_GetError() << "\n";
+    }
+}
+
+sampler2D::~sampler2D()
+{
+    if ( m_image )
+    {
+        SDL_FreeSurface(m_image);
+        m_image = nullptr;
+    }
+}
+
+vec4 sampler2D::sample( vec2 coord )
+{
+    using namespace swizzle::detail::glsl_functions;
+
+    switch (m_wrapMode)
+    {
+    case Repeat:
+        coord = mod(coord, 1);
+        break;
+    case MirrorRepeat:
+        coord = abs(mod(coord-1, 2)-1);
+        break;
+    case Clamp:
+    default:
+        coord = clamp(coord, 0, 1);
+        break;
+    }
+
+    // OGL uses left-bottom corner as origin...
+    coord.y = 1 - coord.y;
+
+    if ( !m_image )
+    {
+        // checkers
+        if ( coord.x < 0.5 && coord.y < 0.5 || coord.x > 0.5 && coord.y > 0.5 )
+        {
+            return vec4(1, 0, 0, 1);
+        }
+        else
+        {
+            return vec4(0, 1, 0, 1);
+        }
+    }
+    else
+    {
+        int x = static_cast<int>(coord.x * (m_image->w - 1) + 0.5);
+        int y = static_cast<int>(coord.y * (m_image->h - 1) + 0.5);
+
+        auto& format = *m_image->format;
+        auto pixelPtr = static_cast<uint8_t*>(m_image->pixels) + (y * m_image->pitch + x * format.BytesPerPixel);
+        uint32_t pixel = 0;
+        for (size_t i = 0; i < format.BytesPerPixel; ++i )
+        {
+            pixel |= (pixelPtr[i] << (i*8));
+        }
+
+        int r = (pixel & format.Rmask) >> format.Rshift;
+        int g = (pixel & format.Gmask) >> format.Gshift;
+        int b = (pixel & format.Bmask) >> format.Bshift;
+        int a = format.Amask ? ((pixel & format.Amask) >> format.Ashift) : 255;
+        return clamp(vec4(r, g, b, a) / 255.0f, 0.0f, 1.0f);
+    }
 }
