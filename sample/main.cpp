@@ -1,8 +1,8 @@
-#include <swizzle/detail/glsl_functions.h>
 #include <swizzle/detail/vector_binary_operators.h>
 #include <swizzle/naive/vector_adapter.h>
 #include <swizzle/naive/matrix.h>
-#include <swizzle/naive/sampler_adapter.h>
+#include <swizzle/glsl/vector_functions.h>
+#include <swizzle/glsl/texture_functions.h>
 
 typedef swizzle::detail::binary_operators::tag tag;
 typedef swizzle::naive::vector_adapter< float, 1 > vec1;
@@ -18,7 +18,7 @@ typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 4, 4> mat
 
 //! A really, really simplistic sampler using SDLImage
 struct SDL_Surface;
-class sampler2D : public swizzle::naive::sampler_base< vec2 >
+class sampler2D : public swizzle::glsl::texture_functions::tag
 {
 public:
     enum WrapMode
@@ -27,6 +27,8 @@ public:
         Repeat,
         MirrorRepeat
     };
+
+    typedef vec2 tex_coord_type;
 
     sampler2D(const char* path, WrapMode wrapMode);
     ~sampler2D();
@@ -44,7 +46,7 @@ private:
 // this where the magic happens...
 namespace glsl_sandbox
 {
-    using namespace swizzle::detail::glsl_functions;
+    using namespace swizzle::glsl::vector_functions;
 
     // constants shaders are using
     float time;
@@ -280,7 +282,7 @@ sampler2D::~sampler2D()
 
 vec4 sampler2D::sample( vec2 coord )
 {
-    using namespace swizzle::detail::glsl_functions;
+    using namespace swizzle::glsl::vector_functions;
 
     switch (m_wrapMode)
     {

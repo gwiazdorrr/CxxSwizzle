@@ -1,7 +1,7 @@
 #pragma once
 
 #include <type_traits>
-#include <iosfwd>
+#include <iostream>
 
 namespace swizzle
 {

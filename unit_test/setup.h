@@ -1,6 +1,6 @@
 #include <swizzle/naive/vector_adapter.h>
 #include <swizzle/detail/vector_binary_operators.h>
-#include <swizzle/detail/glsl_functions.h>
+#include <swizzle/glsl/vector_functions.h>
 
 typedef swizzle::naive::vector_adapter< float, 1 > vec1;
 typedef swizzle::naive::vector_adapter< float, 2 > vec2;
