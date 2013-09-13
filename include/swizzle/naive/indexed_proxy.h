@@ -30,45 +30,49 @@ namespace swizzle
             typedef TVector vector_type;
 
             //! Since this is an indexed proxy, scalar type can be acquired straight from data's indexing operator.
-            typedef typename detail::remove_reference_cv< decltype((*(TData*)0)[0]) >::type  scalar_type;
+            typedef typename detail::remove_reference_cv< decltype((*static_cast<TData*>(nullptr))[0]) >::type scalar_type;
             //! If only one component, decay to the scalar
             typedef typename std::conditional<num_of_components==1, scalar_type, vector_type>::type decay_type;
           
         public:
+            //! Depending on size, converts proxy into scalar or vector
             decay_type decay() const
             {
-                return decay( static_cast<decay_type*>(nullptr) );
+                // select correct decay_impl based on decay type
+                return decay_impl( static_cast<decay_type*>(nullptr) );
             }
-
+            //! Auto-decaying where possible.
             operator decay_type() const
             {
                 return decay();
             }
 
+            //! Assignment only enabled if proxy is writable -> has unique indexes
             indexed_proxy& operator=(const typename std::conditional<is_writable, decay_type, swizzle::detail::operation_not_available >::type& vec)
             {
-                assign(vec);
+                assign_impl(vec);
                 return *this;
             }
 
+            //! Forwarding operator. Global non-assignment operators depend on it.
             template <class T>
             indexed_proxy& operator+=(T && o)
             {
                 return operator=( operator decay_type() + std::forward<T>(o) );
             }
-
+            //! Forwarding operator. Global non-assignment operators depend on it.
             template <class T>
             indexed_proxy& operator-=(T && o)
             {
                 return operator=( operator decay_type() - std::forward<T>(o) );
             }
-
+            //! Forwarding operator. Global non-assignment operators depend on it.
             template <class T>
             indexed_proxy& operator*=(T && o)
             {
                 return operator=( operator decay_type() * std::forward<T>(o) );
             }
-
+            //! Forwarding operator. Global non-assignment operators depend on it.
             template <class T>
             indexed_proxy& operator/=(T && o)
             {
@@ -76,6 +80,33 @@ namespace swizzle
             }
 
         private:
+            
+            //! Decays to scalar. Used in decay and conversion operator.
+            scalar_type decay_impl(scalar_type*) const
+            {
+                return m_data[x];
+            }
+            //! Decays to vector. Used in decay and conversion operator.
+            vector_type decay_impl(vector_type*) const
+            {
+                vector_type result;
+                detail::compile_time_for<0, num_of_components>([&](size_t i) -> void { result[i] = m_data[get_index(i)]; } );
+                return result;
+            }
+
+            //! Assigns data from vector. Used in assignment operator.
+            void assign_impl(const vector_type& vec)
+            {
+                detail::compile_time_for<0, num_of_components>([&](size_t i) -> void { m_data[get_index(i)] = vec[i]; } );
+            }
+            //! Assigns data from scalar. Used in assignment operator.
+            void assign_impl(scalar_type value)
+            {
+                m_data[x] = value;
+            }
+
+            //! Translates 0..3 into x..w. Had doubts how to do it, but MSVC seems to inline and compile-time optimise this call,
+            //! regardless of whether it's a switch or a static array.
             static const size_t get_index(size_t i)
             {
                 /*static const size_t s_indices[] = { x, y, z, w };
@@ -91,28 +122,6 @@ namespace swizzle
                 default:
                     return w;
                 }
-            }
-
-            void assign(const vector_type& vec)
-            {
-                detail::compile_time_for<0, num_of_components>([&](size_t i) -> void { m_data[get_index(i)] = vec[i]; } );
-            }
-
-            vector_type decay(vector_type*) const
-            {
-                vector_type result;
-                detail::compile_time_for<0, num_of_components>([&](size_t i) -> void { result[i] = m_data[get_index(i)]; } );
-                return result;
-            }
-
-            void assign(scalar_type value)
-            {
-                m_data[x] = value;
-            }
-
-            scalar_type decay(scalar_type*) const
-            {
-                return m_data[x];
             }
         };
 

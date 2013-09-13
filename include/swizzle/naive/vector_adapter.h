@@ -7,10 +7,12 @@
 #include <stdexcept>
 #include <cmath>
 #include <iosfwd>
+#include <array>
+
 
 #include <swizzle/detail/utils.h>
 #include <swizzle/detail/vector_binary_operators.h>
-#include <swizzle/detail/vector_data.h>
+#include <swizzle/detail/vector_base.h>
 #include <swizzle/naive/vector_traits_impl.h>
 #include <swizzle/naive/indexed_proxy.h>
 
@@ -18,50 +20,53 @@ namespace swizzle
 {
     namespace naive
     {
-        template <template <class, size_t> class TVector, class TScalar, size_t Size>
+        template < class TScalar, size_t Size >
+        class vector_adapter;
+
+        template <class TScalar, size_t Size, class TTag>
         struct vector_adapter_helper
         {
-            typedef TVector<TScalar, 1> vec1;
-            typedef TVector<TScalar, 2> vec2;
-            typedef TVector<TScalar, 3> vec3;
-            typedef TVector<TScalar, 4> vec4;
-            
-            typedef TScalar scalar_type;
-            typedef detail::binary_operators::tag tag_type;
-            static const size_t num_of_components = Size;
+            //! It's all right, these can be incomplete types at this point.
+            typedef vector_adapter<TScalar, 1> vec1;
+            typedef vector_adapter<TScalar, 2> vec2;
+            typedef vector_adapter<TScalar, 3> vec3;
+            typedef vector_adapter<TScalar, 4> vec4;
 
+            //! The proxy factory. Had MSVC had full C++11 support this could be nicely done with
+            //! variadic templates, but since that's not the case... it falls back to specialisations
             template <size_t x, size_t y, size_t z, size_t w>
             struct proxy_factory
             {
-                typedef indexed_proxy< vec4, std::array<scalar_type, num_of_components>, tag_type, x, y, z, w> type;
-            };
-            template <size_t x>
-            struct proxy_factory<x, -1, -1, -1>
-            {
-                typedef indexed_proxy< vec1, std::array<scalar_type, num_of_components>, tag_type, x > type;
-            };
-            template <size_t x, size_t y>
-            struct proxy_factory<x, y, -1, -1>
-            {
-                typedef indexed_proxy< vec2, std::array<scalar_type, num_of_components>, tag_type, x, y > type;
+                typedef indexed_proxy< vec4, std::array<TScalar, Size>, TTag, x, y, z, w> type;
             };
             template <size_t x, size_t y, size_t z>
             struct proxy_factory<x, y, z, -1>
             {
-                typedef indexed_proxy< vec3, std::array<scalar_type, num_of_components>, tag_type, x, y, z > type;
+                typedef indexed_proxy< vec3, std::array<TScalar, Size>, TTag, x, y, z > type;
             };
-
+            template <size_t x, size_t y>
+            struct proxy_factory<x, y, -1, -1>
+            {
+                typedef indexed_proxy< vec2, std::array<TScalar, Size>, TTag, x, y > type;
+            };
+            template <size_t x>
+            struct proxy_factory<x, -1, -1, -1>
+            {
+                typedef indexed_proxy< vec1, std::array<TScalar, Size>, TTag, x > type;
+            };
+            
+            typedef detail::vector_base< Size, proxy_factory, std::array<TScalar, Size> > base_type;
         };
 
         template < class TScalar, size_t Size >
         class vector_adapter : 
             private detail::binary_operators::tag,
-            public detail::vector_data< TScalar, Size, vector_adapter_helper<vector_adapter, TScalar, Size>::template proxy_factory>
+            public vector_adapter_helper<TScalar, Size, detail::binary_operators::tag>::base_type
         {
-            typedef vector_adapter_helper< ::swizzle::naive::vector_adapter, TScalar, Size> helper_type;
+            typedef vector_adapter_helper<TScalar, Size, detail::binary_operators::tag> helper_type;
 
             //! A convenient mnemonic for base type
-            typedef detail::vector_data< TScalar, Size, helper_type::template proxy_factory > base_type;
+            typedef typename helper_type::base_type base_type;
 
             //! "Hide" _data
             using base_type::m_data;
@@ -73,13 +78,13 @@ namespace swizzle
 
         public:
             //! Number of components of this vector.
-            static const size_t num_of_components = base_type::num_of_components;
+            static const size_t num_of_components = Size;
             //! This type.
             typedef vector_adapter vector_type;
             //! Scalar type.
-            typedef typename base_type::data_type data_type;
+            typedef std::array<TScalar, Size> data_type;
             //! Scalar type.
-            typedef typename base_type::scalar_type scalar_type;
+            typedef TScalar scalar_type;
             //! Type static functions return; for single-component they decay to a scalar
             typedef typename std::conditional<num_of_components==1, scalar_type, vector_adapter>::type decay_type;
 
