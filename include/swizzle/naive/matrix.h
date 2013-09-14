@@ -15,19 +15,178 @@ namespace swizzle
         {
         public:
             typedef matrix matrix_type;
-            typedef TVector<TScalar, M> vector_type;
-            typedef vector_type row_type;
+            typedef TVector<TScalar, M> row_type;
             typedef TVector<TScalar, N> column_type;
             typedef TScalar scalar_type;
             static const size_t n_dimension = N;
             static const size_t m_dimension = M;
 
+        // CONSTRUCTION
+        public:
+
+            //! Default zeroing constructor.
+            matrix()
+            {}
+
+            //! Copying constructor
+            matrix(const matrix& other)
+            {
+                m_data = other.m_data;
+            }
+
+            //! Constructor for matrices smaller than current one
+            template <size_t OtherM, size_t OtherN>
+            matrix(const matrix<TVector, TScalar, OtherN, OtherM>& other, 
+                typename std::enable_if< !detail::is_greater<OtherM, M>::value && !detail::is_greater<OtherN, N>::value, void>::type* = 0)
+            {
+                detail::compile_time_for<0, OtherN>([&](size_t row) -> void 
+                {
+                    detail::compile_time_for<0, OtherM>([&](size_t col) -> void
+                    {
+                        m_data[row][col] = other[row][col];
+                    });
+                });
+                // fill rest with 1s
+                const size_t min_inner = OtherN > OtherM ? OtherM : OtherN;
+                const size_t min_outer = N > M ? M : N;
+                detail::compile_time_for<min_inner, min_outer>([&](size_t i) -> void { m_data[i][i] = 1; });
+            }
+
+            //! Init with s diagonally
+            matrix(scalar_type s)
+            {
+                const size_t min_dim = N > M ? M : N;
+                detail::compile_time_for<0, min_dim>([&](size_t i) -> void { m_data[i][i] = s; });
+            }
+
+            //! Construct matrix from rows.
+            //! This patter may not work everywhere, but was a fun to invent. Basically I didn't want to write separate
+            //! constructors/classes for each matrix with a different dimensions. The first argument is a vector,
+            //! the rest will be either a vector or invalid_number_of_parameters each, depending on the dimensions.
+            //! If you pass "too much" you'll get "can't convert to invalid_number_of_parameters" error. If to little,
+            //! you'll get linker error.
+            matrix(row_type row0,
+                   decltype(row_arg<1>()) row1 = row_arg<1>(),
+                   decltype(row_arg<2>()) row2 = row_arg<2>(),
+                   decltype(row_arg<3>()) row3 = row_arg<3>())
+            {
+                optional_init(0, row0);
+                optional_init(1, row1);
+                optional_init(2, row2);
+                optional_init(3, row3);
+            }
+
+            //! See comment for constructor out of rows.
+            matrix(scalar_type s0,
+                   scalar_type s1,
+                   decltype(scalar_arg<2>()) s2 = scalar_arg<2>(),
+                   decltype(scalar_arg<3>()) s3 = scalar_arg<3>(),
+                   decltype(scalar_arg<4>()) s4 = scalar_arg<4>(),
+                   decltype(scalar_arg<5>()) s5 = scalar_arg<5>(),
+                   decltype(scalar_arg<6>()) s6 = scalar_arg<6>(),
+                   decltype(scalar_arg<7>()) s7 = scalar_arg<7>(),
+                   decltype(scalar_arg<8>()) s8 = scalar_arg<8>(),
+                   decltype(scalar_arg<9>()) s9 = scalar_arg<9>(),
+                   decltype(scalar_arg<10>()) s10 = scalar_arg<10>(),
+                   decltype(scalar_arg<11>()) s11 = scalar_arg<11>(),
+                   decltype(scalar_arg<12>()) s12 = scalar_arg<12>(),
+                   decltype(scalar_arg<13>()) s13 = scalar_arg<13>(),
+                   decltype(scalar_arg<14>()) s14 = scalar_arg<14>(),
+                   decltype(scalar_arg<15>()) s15 = scalar_arg<15>())
+            {
+                optional_init(0, s0);
+                optional_init(1, s1);
+                optional_init(2, s2);
+                optional_init(3, s3);
+                optional_init(4, s4);
+                optional_init(5, s5);
+                optional_init(6, s6);
+                optional_init(7, s7);
+                optional_init(8, s8);
+                optional_init(9, s9);
+                optional_init(10, s10);
+                optional_init(11, s11);
+                optional_init(12, s12);
+                optional_init(13, s13);
+                optional_init(14, s14);
+                optional_init(15, s15);
+            }
+
+        // OPERATORS
+        public:
+
+            //! Row accessor.
+            row_type& operator[](size_t i)
+            {
+                return m_data[i];
+            }
+            //! Row accessor.
+            const row_type& operator[](size_t i) const
+            {
+                return m_data[i];
+            }
+
+            //! This needs to be a member rather than free function cause in latter case it would
+            //! fail to be applied in cases of multiplying a proxy
+            row_type operator*(const row_type& v) const
+            {
+                return mul(*this, v);
+            }
+
+            //! Multiplies entire matrix by a scalar.
+            matrix_type& operator*=(scalar_type v)
+            {
+                detail::compile_time_for<0, N>([&](size_t row) -> void { m_data[row] *= v; } );
+                return *this;
+            }
+
+        // UTILITY FUNCTIONS
+        public:
+
+            static row_type mul(const matrix_type& m, const typename std::conditional<M==N, row_type, detail::operation_not_available>::type& v)
+            {
+                row_type result;
+                detail::compile_time_for<0, M>([&](size_t col) -> void
+                {
+                    scalar_type s = 0;
+                    detail::compile_time_for<0, N>([&](size_t row) -> void 
+                    {
+                        s += m[row][col] * v[row];
+                    });
+                    result[col] = s;
+                });
+                return result;
+            }
+
+            template <size_t OtherM>
+            static matrix<TVector, TScalar, N, OtherM> mul(const matrix_type& m1, const matrix<TVector, TScalar, M, OtherM>& m2)
+            {
+                typedef matrix<TVector, TScalar, N, OtherM> result_type;
+                
+                result_type result;
+
+                // iterate over rows and columns and store a dot product for each m1.row-m2.column pair
+                detail::compile_time_for<0, N>([&](size_t row) -> void
+                {
+                    row_type row_data = m1[row];
+                    typename result_type::row_type result_row;
+                    detail::compile_time_for<0, OtherM>([&](size_t col) -> void
+                    {
+                        result_row[col] = row_data.dot(row_data, m2.column(col));
+                    });
+                    result[row] = result_row;
+                });
+
+                return result;
+            }
+
+
         private:
-            std::array< vector_type, N > m_data; 
+            std::array< row_type, N > m_data; 
 
             struct invalid_number_of_parameters {};
 
-            void optional_init(size_t i, vector_type row)
+            void optional_init(size_t i, row_type row)
             {
                 m_data[i] = std::move(row);
             }
@@ -77,153 +236,6 @@ namespace swizzle
                 return result;
             }
 
-
-        public:
-
-            //! Default zeroing constructor.
-            matrix()
-            {}
-
-            //! Copying constructor
-            matrix(const matrix& other)
-            {
-                m_data = other.m_data;
-            }
-
-            //! Constructor for matrices smaller than current one
-            template <size_t OtherM, size_t OtherN>
-            matrix(const matrix<TVector, TScalar, OtherN, OtherM>& other, 
-                typename std::enable_if< !detail::is_greater<OtherM, M>::value && !detail::is_greater<OtherN, N>::value, void>::type* = 0)
-            {
-                detail::compile_time_for<0, OtherN>([&](size_t row) -> void 
-                {
-                    detail::compile_time_for<0, OtherM>([&](size_t col) -> void
-                    {
-                        m_data[row][col] = other[row][col];
-                    });
-                });
-                // fill rest with 1s
-                const size_t min_inner = OtherN > OtherM ? OtherM : OtherN;
-                const size_t min_outer = N > M ? M : N;
-                detail::compile_time_for<min_inner, min_outer>([&](size_t i) -> void { m_data[i][i] = 1; });
-            }
-
-            //! Init with s diagonally
-            matrix(scalar_type s)
-            {
-                const size_t min_dim = N > M ? M : N;
-                detail::compile_time_for<0, min_dim>([&](size_t i) -> void { m_data[i][i] = s; });
-            }
-
-            //! Construct matrix from rows.
-            //! This patter may not work everywhere, but was a fun to invent. Basically I didn't want to write separate
-            //! constructors/classes for each matrix with a different dimensions. The first argument is a vector,
-            //! the rest will be either a vector or invalid_number_of_parameters each, depending on the dimensions.
-            //! If you pass "too much" you'll get "can't convert to invalid_number_of_parameters" error. If to little,
-            //! you'll get linker error.
-            matrix(vector_type row0,
-                   decltype(row_arg<1>()) row1 = row_arg<1>(),
-                   decltype(row_arg<2>()) row2 = row_arg<2>(),
-                   decltype(row_arg<3>()) row3 = row_arg<3>())
-            {
-                optional_init(0, row0);
-                optional_init(1, row1);
-                optional_init(2, row2);
-                optional_init(3, row3);
-            }
-
-            //! See comment for constructor out of rows.
-            matrix(scalar_type s0,
-                   scalar_type s1,
-                   decltype(scalar_arg<2>()) s2 = scalar_arg<2>(),
-                   decltype(scalar_arg<3>()) s3 = scalar_arg<3>(),
-                   decltype(scalar_arg<4>()) s4 = scalar_arg<4>(),
-                   decltype(scalar_arg<5>()) s5 = scalar_arg<5>(),
-                   decltype(scalar_arg<6>()) s6 = scalar_arg<6>(),
-                   decltype(scalar_arg<7>()) s7 = scalar_arg<7>(),
-                   decltype(scalar_arg<8>()) s8 = scalar_arg<8>(),
-                   decltype(scalar_arg<9>()) s9 = scalar_arg<9>(),
-                   decltype(scalar_arg<10>()) s10 = scalar_arg<10>(),
-                   decltype(scalar_arg<11>()) s11 = scalar_arg<11>(),
-                   decltype(scalar_arg<12>()) s12 = scalar_arg<12>(),
-                   decltype(scalar_arg<13>()) s13 = scalar_arg<13>(),
-                   decltype(scalar_arg<14>()) s14 = scalar_arg<14>(),
-                   decltype(scalar_arg<15>()) s15 = scalar_arg<15>())
-            {
-                optional_init(0, s0);
-                optional_init(1, s1);
-                optional_init(2, s2);
-                optional_init(3, s3);
-                optional_init(4, s4);
-                optional_init(5, s5);
-                optional_init(6, s6);
-                optional_init(7, s7);
-                optional_init(8, s8);
-                optional_init(9, s9);
-                optional_init(10, s10);
-                optional_init(11, s11);
-                optional_init(12, s12);
-                optional_init(13, s13);
-                optional_init(14, s14);
-                optional_init(15, s15);
-            }
-
-            //! Row accessor.
-            row_type& operator[](size_t i)
-            {
-                return m_data[i];
-            }
-            //! Row accessor.
-            const row_type& operator[](size_t i) const
-            {
-                return m_data[i];
-            }
-
-            //! This needs to be a member rather than free function cause in latter case it would
-            //! fail to be applied in cases of multiplying a proxy
-            vector_type operator*(const vector_type& v) const
-            {
-                return mul(*this, v);
-            }
-
-        public:
-
-            static vector_type mul(const matrix_type& m, const typename std::conditional<M==N, vector_type, detail::operation_not_available>::type& v)
-            {
-                vector_type result;
-                detail::compile_time_for<0, M>([&](size_t col) -> void
-                {
-                    scalar_type s = 0;
-                    detail::compile_time_for<0, N>([&](size_t row) -> void 
-                    {
-                        s += m[row][col] * v[row];
-                    });
-                    result[col] = s;
-                });
-                return result;
-            }
-
-            template <size_t OtherM>
-            static matrix<TVector, TScalar, N, OtherM> mul(const matrix_type& m1, const matrix<TVector, TScalar, M, OtherM>& m2)
-            {
-                typedef matrix<TVector, TScalar, N, OtherM> result_type;
-                
-                result_type result;
-
-                // iterate over rows and columns and store a dot product for each m1.row-m2.column pair
-                detail::compile_time_for<0, N>([&](size_t row) -> void
-                {
-                    row_type row_data = m1[row];
-                    typename result_type::row_type result_row;
-                    detail::compile_time_for<0, OtherM>([&](size_t col) -> void
-                    {
-                        result_row[col] = row_data.dot(row_data, m2.column(col));
-                    });
-                    result[row] = result_row;
-                });
-
-                return result;
-            }
 
 
         };
