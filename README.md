@@ -39,11 +39,10 @@ The library is written in C++11 subset supported by VS2010 - most notably the la
 Check out sample to see how GLSL shader can be used in a simplistic C++ application.
 
 
-What can't be done without chaning shader's source
-==================================================
+What can't be done without changing shader's source
+---------------------------------------------------
 
-HLSL Semantics 
---------------
+* HLSL Semantics 
 
 Colon following an identifier can't be removed by a preprocessor. One possible workaround:
 
