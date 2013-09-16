@@ -186,11 +186,13 @@ namespace swizzle
 
             struct invalid_number_of_parameters {};
 
+            //! Set i-th row
             void optional_init(size_t i, row_type row)
             {
                 m_data[i] = std::move(row);
             }
 
+            //! Set i-th cell
             void optional_init(size_t i, scalar_type cell)
             {
                 auto row = i / M;
@@ -198,6 +200,7 @@ namespace swizzle
                 m_data[row][col] = std::move(cell);
             }
 
+            //! Intentionally here, does nothing. Being called for not needed parameters.
             void optional_init(size_t i, invalid_number_of_parameters)
             {}
 
@@ -221,7 +224,7 @@ namespace swizzle
 
             template <size_t Row>
             static auto row_arg() -> decltype( too_few_args<row_type>( detail::is_greater<N, Row>() ) )
-            {
+            {row_type
                 return too_few_args<row_type>( detail::is_greater<N, Row>() );
             }
 

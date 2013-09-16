@@ -60,6 +60,16 @@ namespace swizzle
             SWIZZLE_FORWARD_FUNC_3(faceforward)
             SWIZZLE_FORWARD_FUNC_2(cross)
 
+            SWIZZLE_FORWARD_FUNC_2(lessThan)
+            SWIZZLE_FORWARD_FUNC_2(lessThanEqual)
+            SWIZZLE_FORWARD_FUNC_2(greaterThan)
+            SWIZZLE_FORWARD_FUNC_2(greaterThanEqual)
+            SWIZZLE_FORWARD_FUNC_2(equal)
+            SWIZZLE_FORWARD_FUNC_2(notEqual)
+            SWIZZLE_FORWARD_FUNC_1(any)
+            SWIZZLE_FORWARD_FUNC_1(all)
+            SWIZZLE_FORWARD_FUNC_1(not)
+
             #undef SWIZZLE_FORWARD_FUNC_1
             #undef SWIZZLE_FORWARD_FUNC_2
             #undef SWIZZLE_FORWARD_FUNC_3

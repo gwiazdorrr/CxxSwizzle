@@ -15,5 +15,5 @@ source_group("swizzle\\detail" FILES ${detail})
 source_group("swizzle\\naive" FILES ${naive})
 source_group("swizzle\\glsl" FILES ${glsl})
 
-add_library(headers STATIC ${naive} ${detail} ${glsl})
+add_library(headers STATIC ${naive} ${detail} ${glsl} Readme.md)
 set_target_properties(headers PROPERTIES LINKER_LANGUAGE CXX)

@@ -427,6 +427,63 @@ namespace swizzle
                 return vector_adapter(rx, ry, rz).decay();
             }
 
+            template <class T, class Func>
+            static vector_adapter<T, num_of_components> construct(Func func)
+            {
+                vector_adapter<T, num_of_components> result;
+                iterate([&](size_t i) -> void { result[i] = func(i); } );
+                return result;
+            }
+
+            static typename vector_adapter<bool, num_of_components>::decay_type lessThan(vector_adapter x, vector_adapter y)
+            {
+                return construct<bool>([&](size_t i) -> bool { return x[i] < y[i]; }).decay();
+            }
+
+            static typename vector_adapter<bool, num_of_components>::decay_type lessThanEqual(vector_adapter x, vector_adapter y)
+            {
+                return construct<bool>([&](size_t i) -> bool { return x[i] <= y[i]; }).decay();
+            }
+
+            static typename vector_adapter<bool, num_of_components>::decay_type greaterThan(vector_adapter x, vector_adapter y)
+            {
+                return construct<bool>([&](size_t i) -> bool { return x[i] > y[i]; }).decay();
+            }
+
+            static typename vector_adapter<bool, num_of_components>::decay_type greaterThanEqual(vector_adapter x, vector_adapter y)
+            {
+                return construct<bool>([&](size_t i) -> bool { return x[i] >= y[i]; }).decay();
+            }
+
+            static typename vector_adapter<bool, num_of_components>::decay_type equal(vector_adapter x, vector_adapter y)
+            {
+                return construct<bool>([&](size_t i) -> bool { return x[i] == y[i]; }).decay();
+            }
+
+            static typename vector_adapter<bool, num_of_components>::decay_type notEqual(vector_adapter x, vector_adapter y)
+            {
+                return construct<bool>([&](size_t i) -> bool { return x[i] != y[i]; }).decay();
+            }
+
+            static bool any( typename std::conditional< std::is_same<scalar_type, bool>::value, vector_adapter, detail::operation_not_available>::type x )
+            {
+                bool result = false;
+                iterate([&](size_t i) -> void { result |= x[i]; } );
+                return result;
+            }
+
+            static bool all( typename std::conditional< std::is_same<scalar_type, bool>::value, vector_adapter, detail::operation_not_available>::type x )
+            {
+                bool result = true;
+                iterate([&](size_t i) -> void { result &= x[i]; } );
+                return result;
+            }
+
+            static decay_type not( typename std::conditional< std::is_same<scalar_type, bool>::value, vector_adapter, detail::operation_not_available>::type x )
+            {
+                return construct<bool>([&](size_t i) -> bool { return !x[i]; }).decay();
+            }
+
         public:
             auto begin() -> decltype( std::begin(m_data) )
             {
@@ -493,14 +550,14 @@ namespace swizzle
 
             //! Iterates over the vector, firing Func for each index
             template <class Func>
-            void iterate(Func func) const
+            static void iterate(Func func)
             {
                 iterate<0, num_of_components>(func);
             }
 
             //! Iterates over the vector, firing Func for each index
             template <size_t NStart, size_t NEnd, class Func>
-            void iterate(Func func, std::integral_constant<size_t, NStart> = std::integral_constant<size_t, NStart>(), std::integral_constant<size_t, NEnd> = std::integral_constant<size_t, NEnd>()) const
+            static void iterate(Func func, std::integral_constant<size_t, NStart> = std::integral_constant<size_t, NStart>(), std::integral_constant<size_t, NEnd> = std::integral_constant<size_t, NEnd>())
             {
                 static_assert( NStart >= 0 && NEnd <= num_of_components && NStart < NEnd, "Out of bounds" );
                 detail::compile_time_for<NStart, NEnd>(func);
@@ -534,6 +591,7 @@ namespace swizzle
                 return transform<scalar_type (*)(scalar_type, scalar_type)>(x, y, func);
             }
 
+            public:
             //! Decays the vector. For Size==1 this is going to return a scalar, for all other sizes - same vector
             const decay_type& decay() const
             {
