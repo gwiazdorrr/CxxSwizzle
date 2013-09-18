@@ -21,6 +21,33 @@ namespace swizzle
             static const size_t n_dimension = N;
             static const size_t m_dimension = M;
 
+        private:
+            //! Not defined on purpose. It will be only linked against if an argument is missing,
+            //! generating error.
+            template <class T>
+            static T too_few_args( std::true_type );
+            
+            struct invalid_number_of_parameters {};
+
+            //! 
+            template <class T>
+            static invalid_number_of_parameters too_few_args(std::false_type)
+            {
+                return invalid_number_of_parameters();
+            }
+
+            template <size_t Cell>
+            static auto scalar_arg() -> decltype( too_few_args<scalar_type>( detail::is_greater<N*M, Cell>() ) )
+            {
+                return too_few_args<scalar_type>( detail::is_greater<N*M, Cell>() );
+            }
+
+            template <size_t Row>
+            static auto row_arg() -> decltype( too_few_args<row_type>( detail::is_greater<N, Row>() ) )
+            {
+                return too_few_args<row_type>( detail::is_greater<N, Row>() );
+            }
+
         // CONSTRUCTION
         public:
 
@@ -184,8 +211,6 @@ namespace swizzle
         private:
             std::array< row_type, N > m_data; 
 
-            struct invalid_number_of_parameters {};
-
             //! Set i-th row
             void optional_init(size_t i, row_type row)
             {
@@ -203,30 +228,6 @@ namespace swizzle
             //! Intentionally here, does nothing. Being called for not needed parameters.
             void optional_init(size_t i, invalid_number_of_parameters)
             {}
-
-
-            //! Not defined on purpose. It will be only linked against if an argument is missing,
-            //! generating error.
-            template <class T>
-            static T too_few_args( std::true_type );
-            //! 
-            template <class T>
-            static invalid_number_of_parameters too_few_args(std::false_type)
-            {
-                return invalid_number_of_parameters();
-            }
-
-            template <size_t Cell>
-            static auto scalar_arg() -> decltype( too_few_args<scalar_type>( detail::is_greater<N*M, Cell>() ) )
-            {
-                return too_few_args<scalar_type>( detail::is_greater<N*M, Cell>() );
-            }
-
-            template <size_t Row>
-            static auto row_arg() -> decltype( too_few_args<row_type>( detail::is_greater<N, Row>() ) )
-            {row_type
-                return too_few_args<row_type>( detail::is_greater<N, Row>() );
-            }
 
             //! \return Column
             column_type column(size_t i) const

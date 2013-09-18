@@ -38,6 +38,16 @@ The library is written in C++11 subset supported by VS2010 - most notably the la
 
 Check out sample to see how GLSL shader can be used in a simplistic C++ application.
 
+Compability
+---------------------------------------------------
+
+All the code compiles both using MSVC 10 and g++ 4.8.1. When using the latter, following flags must be added to the compiler command line:
+
+	-std=c++11 -fno-operator-names
+
+The less obvious second flag disables alterantive operators names, such as `and` ar `not` which, coincentally, are also the names of some GLSL functions.
+
+If using CMake, just set CMAKE_CXX_FLAGS variable.
 
 What can't be done without changing shader's source
 ---------------------------------------------------

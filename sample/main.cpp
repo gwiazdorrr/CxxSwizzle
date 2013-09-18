@@ -181,7 +181,7 @@ extern C_LINKAGE int main(int argc, char* argv[])
             glsl_sandbox::time = time;
 
 #if OMP_ENABLED
-            #pragma omp parallel
+            #pragma omp parallel 
             {
                 int thredsCount = omp_get_num_threads();
                 int threadNum = omp_get_thread_num();

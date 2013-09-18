@@ -23,6 +23,10 @@ namespace swizzle
         template <class T>
         struct remove_reference_cv : std::remove_cv< typename std::remove_reference<T>::type > {};
 
+        //! MSVC does not come with this in the STL.
+        template< class T >
+        typename std::add_rvalue_reference<T>::type declval();
+
         //! Detects presence of nested "typedef <something> type"
         template <typename T>
         struct has_type_helper {

@@ -70,6 +70,11 @@ namespace swizzle
                 iterate( [&](size_t i) -> void { at(i) = o[i]; } );
             }
 
+            //! The reason why this is here is that the enable_if in implicit constructor seemed to confuse g++ (4.8.1) with message "sorry, unimplemented: mangling error_mark".
+            //! Sneaking the enable if in a static function works, strangely.
+            template <class T>
+            static void* enable_if_workaround( typename std::enable_if<num_of_components==1 && std::is_convertible<T, scalar_type>::value, void>::type* = 0 );
+
             //! Implicit constructor from scalar-convertible only for one-component vector
             //! The reason why this is done with a template is that if a type decays to a scalar it can not be 
             //! passed directly to a function taking vector - implicit conversion to scalar then implicit construction
@@ -489,7 +494,7 @@ namespace swizzle
             {
                 return std::begin(m_data);
             }
-            auto begin() const -> decltype(std::begin(*static_cast<const data_type*>(nullptr)))
+            auto begin() const -> decltype(std::begin( detail::declval<const data_type>() ))
             {
                 return std::begin(m_data);
             }
@@ -497,11 +502,10 @@ namespace swizzle
             {
                 return std::end(m_data);
             }
-            auto end() const -> decltype (std::end(*static_cast<const data_type*>(nullptr)))
+            auto end() const -> decltype (std::end( detail::declval<const data_type>() ))
             {
                 return std::end(m_data);
             }
-
 
             size_t size() const
             {
@@ -509,11 +513,6 @@ namespace swizzle
             }
 
         private:
-
-            //! The reason why this is here is that the enable_if in implicit constructor seemed to confuse g++ (4.8.1) with message "sorry, unimplemented: mangling error_mark".
-            //! Sneaking the enable if in a static function works, strangely.
-            template <class T>
-            static void* enable_if_workaround( typename std::enable_if<num_of_components==1 && std::is_convertible<T, scalar_type>::value, void>::type* = 0 );
 
             //! Helper accessor
             const scalar_type& at(size_t i) const
