@@ -1,7 +1,7 @@
 CxxSwizzle
 ==========
 
-CxxSwizzle is a header-only extensible library bringing shader languages' (GLSL, HSLS) vector "swizzle" syntax into C++. Basically, you can do this in C++ now:
+CxxSwizzle (a reality-friendly way of writing down "C++ Swizzle") is a header-only extensible library bringing shader languages' (GLSL, HSLS) vector "swizzle" syntax into C++. Basically, you can do this in C++ now:
 
 	vec4 foo(0);		 		        // 0,0,0,0
 	foo.yx = vec2(2, 1); 		        // 1,2,0,0
