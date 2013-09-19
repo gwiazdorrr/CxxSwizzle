@@ -70,7 +70,4 @@ Would have to become:
 
 	float4 position SEM(POSITION);
 
-Not pretty, but would work and the shader would compile both as C++ and HLSL>
-
-
-
+Not pretty, but would work and the shader would compile both as C++ and HLSL.
