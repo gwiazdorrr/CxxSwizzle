@@ -1,3 +1,5 @@
+//  CxxSwizzle
+//  Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.os@gmail.com>
 #pragma once
 
 #include <utility>
@@ -7,83 +9,60 @@ namespace swizzle
 {
     namespace detail
     {
-        namespace binary_operators
+        template <class VectorType, class ScalarType>
+        struct binary_operators
         {
-            struct tag {};
-
-            template <class T>
-            typename get_vector_type_no_scalars_strong<T>::type operator+(T&& t, typename get_vector_type<T>::type::scalar_type a)
+            friend VectorType operator+(VectorType v, ScalarType s)
             {
-                return typename get_vector_type<T>::type( std::forward<T>(t) ) += a;
+                return v += s;
+            }
+            friend VectorType operator+(ScalarType s, VectorType v)
+            {
+                return v += s;
+            }
+            friend VectorType operator+(VectorType v1, const VectorType& v2)
+            {
+                return v1 += v2;
             }
 
-            template <class T>
-            typename get_vector_type_no_scalars_strong<T>::type operator-(T&& t, typename get_vector_type<T>::type::scalar_type a)
+            friend VectorType operator*(VectorType v, ScalarType s)
             {
-                return typename get_vector_type<T>::type( std::forward<T>(t) ) -= a;
+                return v *= s;
+            }
+            friend VectorType operator*(ScalarType s, VectorType v)
+            {
+                return v *= s;
+            }
+            friend VectorType operator*(VectorType v1, const VectorType& v2)
+            {
+                return v1 *= v2;
             }
 
-            template <class T>
-            typename get_vector_type_no_scalars_strong<T>::type operator*(T&& t, typename get_vector_type<T>::type::scalar_type a)
+            friend VectorType operator-(VectorType v, ScalarType s)
             {
-                return typename get_vector_type<T>::type( std::forward<T>(t) ) *= a;
+                return v -= s;
+            }
+            friend VectorType operator-(ScalarType s, const VectorType& v)
+            {
+                return VectorType(s) -= v;
+            }
+            friend VectorType operator-(VectorType v1, const VectorType& v2)
+            {
+                return v1 -= v2;
             }
 
-            template <class T>
-            typename get_vector_type_no_scalars_strong<T>::type operator/(T&& t, typename get_vector_type<T>::type::scalar_type a)
+            friend VectorType operator/(VectorType v, ScalarType s)
             {
-                return typename get_vector_type<T>::type( std::forward<T>(t) ) /= a;
+                return v /= s;
             }
-
-
-            template <class T>
-            typename get_vector_type_no_scalars_strong<T>::type operator+(typename get_vector_type<T>::type::scalar_type a, T&& t)
+            friend VectorType operator/(ScalarType s, const VectorType& v)
             {
-                return std::forward<T>(t) + a;
+                return VectorType(s) /= v;
             }
-
-            template <class T>
-            typename get_vector_type_no_scalars_strong<T>::type operator-(typename get_vector_type<T>::type::scalar_type a, T&& t)
+            friend VectorType operator/(VectorType v1, const VectorType& v2)
             {
-                return typename get_vector_type<T>::type( a ) -= std::forward<T>(t);
+                return v1 /= v2;
             }
-
-            template <class T>
-            typename get_vector_type_no_scalars_strong<T>::type operator*(typename get_vector_type<T>::type::scalar_type a, T&& t)
-            {
-                return std::forward<T>(t) * a;
-            }
-
-            template <class T>
-            typename get_vector_type_no_scalars_strong<T>::type operator/(typename get_vector_type<T>::type::scalar_type a, T&& t)
-            {
-                return typename get_vector_type<T>::type( a ) /= std::forward<T>(t);
-            }
-
-
-            template <class T, class U>
-            typename get_vector_type_no_scalars<T, U>::type operator+(T&& t, U&& u)
-            {
-                return typename get_vector_type<T, U>::type( std::forward<T>(t) ) += std::forward<U>(u);
-            }
-
-            template <class T, class U>
-            typename get_vector_type_no_scalars<T, U>::type operator-(T&& t, U&& u)
-            {
-                return typename get_vector_type<T, U>::type( std::forward<T>(t) ) -= std::forward<U>(u);
-            }
-
-            template <class T, class U>
-            typename get_vector_type_no_scalars<T, U>::type operator*(T&& t, U&& u)
-            {
-                return typename get_vector_type<T, U>::type( std::forward<T>(t) ) *= std::forward<U>(u);
-            }
-
-            template <class T, class U>
-            typename get_vector_type_no_scalars<T, U>::type operator/(T&& t, U&& u)
-            {
-                return typename get_vector_type<T, U>::type( std::forward<T>(t) ) /= std::forward<U>(u);
-            }
-        }
+        };
     }
 }

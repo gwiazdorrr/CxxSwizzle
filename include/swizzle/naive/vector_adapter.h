@@ -1,3 +1,5 @@
+//  CxxSwizzle
+//  Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.os@gmail.com>
 #pragma once
 
 #include <type_traits>
@@ -24,21 +26,18 @@ namespace swizzle
         template < class TScalar, size_t Size >
         class vector_adapter : 
             // enable binary operators
-            private detail::binary_operators::tag,
+            private detail::binary_operators< vector_adapter<TScalar, Size>, typename std::conditional< Size==1, detail::operation_not_available, TScalar >::type >,
             // let the helper decide which base class to choose
-            public vector_adapter_helper<TScalar, Size, detail::binary_operators::tag>::base_type
+            public vector_adapter_helper<TScalar, Size>::base_type
         {
             //! A convenient mnemonic for base type
-            typedef typename vector_adapter_helper<TScalar, Size, detail::binary_operators::tag>::base_type base_type;
+            typedef typename vector_adapter_helper<TScalar, Size>::base_type base_type;
             //! "Hide" m_data from outside and make it locally visible
             using base_type::m_data;
-        
-            template <class TOtherScalar, size_t OtherSize>
-            friend std::ostream& operator<<(std::ostream&, const ::swizzle::naive::vector_adapter<TOtherScalar, OtherSize>&);
-            template <class TOtherScalar, size_t OtherSize>
-            friend std::istream& operator>>(std::istream&, ::swizzle::naive::vector_adapter<TOtherScalar, OtherSize>&);
 
         public:
+            struct not_available;
+
             //! Number of components of this vector.
             static const size_t num_of_components = Size;
             //! This type.
@@ -51,9 +50,11 @@ namespace swizzle
             typedef typename std::conditional<num_of_components==1, scalar_type, vector_adapter>::type decay_type;
             //! Because this type is implicitly constructed of anything convertible to scalar_type if it has one component
             //! this type needs to be used in overloaded functions to avoid ambiguity
-            typedef typename std::conditional<num_of_components==1, detail::operation_not_available, scalar_type>::type amiguity_protected_scalar_type;
+            typedef typename std::conditional<num_of_components==1, not_available, scalar_type>::type amiguity_protected_scalar_type;
             //! Sanity checks
             static_assert( sizeof(base_type) == sizeof(scalar_type) * num_of_components, "Size of the base class is not equal to size of its components, most likely empty base class optimisation failed");
+
+            
 
         // CONSTRUCTION
         public:
@@ -204,12 +205,6 @@ namespace swizzle
                 vector_type result;
                 iterate([&](size_t i) -> void { result[i] = -at(i); });
                 return result;
-            }
-
-            //! Decays into scalar_type for a single component vector
-            operator typename std::conditional<num_of_components==1, scalar_type, swizzle::detail::operation_not_available>::type()
-            {
-                return at(0);
             }
 
 
@@ -470,21 +465,21 @@ namespace swizzle
                 return construct<bool>([&](size_t i) -> bool { return x[i] != y[i]; }).decay();
             }
 
-            static bool any( typename std::conditional< std::is_same<scalar_type, bool>::value, vector_adapter, detail::operation_not_available>::type x )
+            static bool any( typename std::conditional< std::is_same<scalar_type, bool>::value, vector_adapter, not_available>::type x )
             {
                 bool result = false;
                 iterate([&](size_t i) -> void { result |= x[i]; } );
                 return result;
             }
 
-            static bool all( typename std::conditional< std::is_same<scalar_type, bool>::value, vector_adapter, detail::operation_not_available>::type x )
+            static bool all( typename std::conditional< std::is_same<scalar_type, bool>::value, vector_adapter, not_available>::type x )
             {
                 bool result = true;
                 iterate([&](size_t i) -> void { result &= x[i]; } );
                 return result;
             }
 
-            static decay_type not( typename std::conditional< std::is_same<scalar_type, bool>::value, vector_adapter, detail::operation_not_available>::type x )
+            static decay_type not( typename std::conditional< std::is_same<scalar_type, bool>::value, vector_adapter, not_available>::type x )
             {
                 return construct<bool>([&](size_t i) -> bool { return !x[i]; }).decay();
             }
@@ -541,8 +536,8 @@ namespace swizzle
             }
 
             //! Converts proxy into a vector and then composes. Used only during construction.
-            template <size_t N, class TVector, class TData, class TTag, size_t x, size_t y, size_t z, size_t w>
-            void compose( const indexed_proxy<TVector, TData, TTag, x, y, z, w>& v )
+            template <size_t N, class TVector, class TData, size_t x, size_t y, size_t z, size_t w>
+            void compose( const indexed_proxy<TVector, TData, x, y, z, w>& v )
             {
                 compose<N>(v.decay());
             }
@@ -590,7 +585,7 @@ namespace swizzle
                 return transform<scalar_type (*)(scalar_type, scalar_type)>(x, y, func);
             }
 
-            public:
+        public:
             //! Decays the vector. For Size==1 this is going to return a scalar, for all other sizes - same vector
             const decay_type& decay() const
             {
@@ -608,28 +603,27 @@ namespace swizzle
                 return selector()( *this, static_cast<decay_type*>(nullptr) );
             }
 
+            //! As an inline friend function, because thanks to that all convertibles will use same function.
+            friend std::ostream& operator<<(std::ostream& os, const vector_adapter& vec)
+            {
+                vec.iterate( [&](size_t i) -> void { os << vec[i] << (i == vec.size() - 1 ? "" : ","); } );
+                return os;
+            }
+
+            //! As an inline friend function, because thanks to that all convertibles will use same function.
+            friend std::istream& operator>>(std::istream& is, vector_adapter& vec)
+            {
+                vec.iterate( [&](size_t i) -> void 
+                { 
+                    is >> vec[i];
+                    if ( i < vec.size() - 1 && is.peek() == ',')
+                    {
+                        is.ignore(1);
+                    }
+                });
+                return is;
+            }
+
         };
-
-
-        template < class TScalar, size_t Size >
-        std::ostream& operator<<(std::ostream& os, const vector_adapter<TScalar, Size>& vec)
-        {
-            vec.iterate( [&](size_t i) -> void { os << vec[i] << (i == vec.size() - 1 ? "" : ","); } );
-            return os;
-        }
-
-        template < class TScalar, size_t Size >
-        std::istream& operator>>(std::istream& is, vector_adapter<TScalar, Size>& vec)
-        {
-            vec.iterate( [&](size_t i) -> void 
-            { 
-                is >> vec[i];
-                if ( i < vec.size() - 1 && is.peek() == ',')
-                {
-                    is.ignore(1);
-                }
-            });
-            return is;
-        }
     }
 }

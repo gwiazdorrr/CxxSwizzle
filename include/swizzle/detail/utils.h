@@ -1,3 +1,5 @@
+//  CxxSwizzle
+//  Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.os@gmail.com>
 #pragma once
 
 #include <type_traits>
@@ -31,10 +33,8 @@ namespace swizzle
         template <typename T>
         struct has_type_helper {
         private:
-            template <typename T1>
-            static typename T1::type test(int);
-            template <typename>
-            static void test(...);
+            template <typename T1> static typename T1::type test(int);
+            template <typename> static void test(...);
         public:
             static const bool value = !std::is_void<decltype(test<T>(0))>::value;
         };
@@ -60,25 +60,27 @@ namespace swizzle
         //! An empty type carrying no information, used whenever applicable.
         struct nothing {};
 
+
         //! Loop terminator.
         template <size_t Begin, class Func>
-        inline void compile_time_for_(Func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, Begin>)
+        inline void compile_time_for_impl(Func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, Begin>)
         {
             // do nothing
         }
 
         //! A chain of func calls with each value from [Begin, End) range.
         template <size_t Begin, size_t End, class Func>
-        inline typename std::enable_if<Begin != End, void>::type compile_time_for_(Func func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, End>)
+        inline typename std::enable_if<Begin != End, void>::type compile_time_for_impl(Func func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, End>)
         {
             func(Begin);
-            compile_time_for_( func, std::integral_constant<size_t, Begin+1>(), std::integral_constant<size_t, End>() );
+            compile_time_for_impl( func, std::integral_constant<size_t, Begin+1>(), std::integral_constant<size_t, End>() );
         }
 
+        //! Trigger Func for each value from [Begin, End) range.
         template <size_t Begin, size_t End, class Func>
-        inline void compile_time_for(Func func, std::integral_constant<size_t, Begin> begin = std::integral_constant<size_t, Begin>(), std::integral_constant<size_t, End> end = std::integral_constant<size_t, End>())
+        inline void compile_time_for(Func func)
         {
-            compile_time_for_( func, begin, end );
+            compile_time_for_impl( func, std::integral_constant<size_t, Begin>(), std::integral_constant<size_t, End>() );
         }
     }
 }

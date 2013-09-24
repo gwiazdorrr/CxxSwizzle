@@ -1,3 +1,5 @@
+//  CxxSwizzle
+//  Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.os@gmail.com>
 #pragma once
 
 #include <type_traits>
@@ -68,40 +70,6 @@ namespace swizzle
         template <class T, class U, class V>
         struct get_vector_type<T, U, V, std::integral_constant<bool, is_vector<T>::value && is_vector<U>::value && is_vector<V>::value> > 
             : get_vector_type< typename get_vector_type<T, U>::type, V >
-        {};
-
-
-
-        template <class T, class U = void, class = std::true_type>
-        struct get_vector_type_no_scalars
-        {};
-
-        template <class T, class U>
-        struct get_vector_type_no_scalars<
-            T, U,
-            std::integral_constant<
-                bool,
-                !std::is_arithmetic<typename remove_reference_cv<T>::type>::value &&
-                !std::is_arithmetic<typename remove_reference_cv<U>::type>::value
-            >
-        > : get_vector_type<T, U>
-        {};
-
-        //! Defines a common vector type ONLY if none of type arguments is a scalar, i.e. no implic conversion scalar->vector takes place;
-        //! Useful when defining operators
-        template <class T, class = std::true_type>
-        struct get_vector_type_no_scalars_strong
-        {};
-
-
-        template <class T>
-        struct get_vector_type_no_scalars_strong<
-            T,
-            std::integral_constant< 
-                bool,
-                get_vector_type<T>::type::num_of_components != 1
-            > 
-        > : get_vector_type<T>
         {};
 
 

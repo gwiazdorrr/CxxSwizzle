@@ -1,3 +1,5 @@
+//  CxxSwizzle
+//  Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.os@gmail.com>
 #pragma once
 
 #include <array>
@@ -21,27 +23,31 @@ namespace swizzle
             static const size_t n_dimension = N;
             static const size_t m_dimension = M;
 
+        // CONSTRUCTION HELPERS
         private:
             //! Not defined on purpose. It will be only linked against if an argument is missing,
             //! generating error.
             template <class T>
             static T too_few_args( std::true_type );
             
+            //! Well... if the name of this type appears somewhere in the error log it should be quite obvious what's going on :)
+            //! Important bit - this type is both private and not convertible, so using it explicitly in a constructor is doomed to fail
             struct invalid_number_of_parameters {};
 
-            //! 
             template <class T>
             static invalid_number_of_parameters too_few_args(std::false_type)
             {
                 return invalid_number_of_parameters();
             }
 
+            //! Will return scalar_type for valid cell number (i.e. less than N*M), invalid_number_of_paramters othewise
             template <size_t Cell>
             static auto scalar_arg() -> decltype( too_few_args<scalar_type>( detail::is_greater<N*M, Cell>() ) )
             {
                 return too_few_args<scalar_type>( detail::is_greater<N*M, Cell>() );
             }
 
+            //! Will return row_type for valid row number (i.e. less than N), invalid_number_of_paramters othewise
             template <size_t Row>
             static auto row_arg() -> decltype( too_few_args<row_type>( detail::is_greater<N, Row>() ) )
             {
@@ -170,6 +176,7 @@ namespace swizzle
         // UTILITY FUNCTIONS
         public:
 
+            //! Matrix-vector multiplication.
             static row_type mul(const matrix_type& m, const typename std::conditional<M==N, row_type, detail::operation_not_available>::type& v)
             {
                 row_type result;
@@ -185,6 +192,7 @@ namespace swizzle
                 return result;
             }
 
+            //! Matrix-matrix multiplication.
             template <size_t OtherM>
             static matrix<TVector, TScalar, N, OtherM> mul(const matrix_type& m1, const matrix<TVector, TScalar, M, OtherM>& m2)
             {
@@ -206,7 +214,6 @@ namespace swizzle
 
                 return result;
             }
-
 
         private:
             std::array< row_type, N > m_data; 
@@ -239,18 +246,12 @@ namespace swizzle
                 });
                 return result;
             }
-
-
-
         };
-
 
         template <template <class, size_t> class TVector, class TScalar, size_t M, size_t N, size_t OtherM>
         auto operator*(const matrix<TVector, TScalar, N, M>& m1, const matrix<TVector, TScalar, M, OtherM>& m2 ) -> decltype( m1.mul(m1, m2) )
         {
             return m1.mul(m1, m2);
         }
-        
-
     }
 }

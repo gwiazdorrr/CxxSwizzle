@@ -1,3 +1,5 @@
+//  CxxSwizzle
+//  Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.os@gmail.com>
 #pragma once
 
 #include <array>
@@ -10,7 +12,8 @@ namespace swizzle
         template < class TScalar, size_t Size >
         class vector_adapter;
 
-        template <class TScalar, size_t Size, class TTag>
+        //! A type that simplifies creating proxies factories for the vector_adapter.
+        template <class TScalar, size_t Size>
         struct vector_adapter_helper
         {
             //! It's all right, these can be incomplete types at this point.
@@ -24,25 +27,25 @@ namespace swizzle
             template <size_t x, size_t y, size_t z, size_t w>
             struct proxy_factory
             {
-                typedef indexed_proxy< vec4, std::array<TScalar, Size>, TTag, x, y, z, w> type;
+                typedef indexed_proxy< vec4, std::array<TScalar, Size>, x, y, z, w> type;
                 static_assert(sizeof(type) == Size * sizeof(TScalar), "Size of the proxy is not equal to the size of the data");
             };
             template <size_t x, size_t y, size_t z>
             struct proxy_factory<x, y, z, -1>
             {
-                typedef indexed_proxy< vec3, std::array<TScalar, Size>, TTag, x, y, z > type;
+                typedef indexed_proxy< vec3, std::array<TScalar, Size>, x, y, z > type;
                 static_assert(sizeof(type) == Size * sizeof(TScalar), "Size of the proxy is not equal to the size of the data");
             };
             template <size_t x, size_t y>
             struct proxy_factory<x, y, -1, -1>
             {
-                typedef indexed_proxy< vec2, std::array<TScalar, Size>, TTag, x, y > type;
+                typedef indexed_proxy< vec2, std::array<TScalar, Size>, x, y > type;
                 static_assert(sizeof(type) == Size * sizeof(TScalar), "Size of the proxy is not equal to the size of the data");
             };
             template <size_t x>
             struct proxy_factory<x, -1, -1, -1>
             {
-                typedef indexed_proxy< vec1, std::array<TScalar, Size>, TTag, x > type;
+                typedef indexed_proxy< vec1, std::array<TScalar, Size>, x > type;
                 static_assert(sizeof(type) == Size * sizeof(TScalar), "Size of the proxy is not equal to the size of the data");
             };
 

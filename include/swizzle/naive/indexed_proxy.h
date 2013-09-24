@@ -1,14 +1,17 @@
+//  CxxSwizzle
+//  Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.os@gmail.com>
 #pragma once
 
 #include <type_traits>
 #include <iostream>
+#include <swizzle/detail/utils.h>
 
 namespace swizzle
 {
     namespace naive
     {
-        template <class TVector, class TData, class TTag, size_t x, size_t y = -1, size_t z = -1, size_t w = -1>
-        class indexed_proxy : private TTag
+        template <class TVector, class TData, size_t x, size_t y = -1, size_t z = -1, size_t w = -1>
+        class indexed_proxy
         {
             //! The data.
             TData m_data;
@@ -30,7 +33,7 @@ namespace swizzle
             typedef TVector vector_type;
 
             //! Since this is an indexed proxy, scalar type can be acquired straight from data's indexing operator.
-            typedef typename detail::remove_reference_cv< decltype((*static_cast<TData*>(nullptr))[0]) >::type scalar_type;
+            typedef typename detail::remove_reference_cv< decltype(detail::declval<TData>()[0]) >::type scalar_type;
             //! If only one component, decay to the scalar
             typedef typename std::conditional<num_of_components==1, scalar_type, vector_type>::type decay_type;
           
@@ -124,20 +127,5 @@ namespace swizzle
                 }
             }
         };
-
-        template <class TVector, class TData, class TTag, size_t x, size_t y, size_t z, size_t w>
-        std::ostream& operator<<(std::ostream& os, const indexed_proxy<TVector, TData, TTag, x, y, z, w>& vec)
-        {
-            return os << vec.decay();
-        }
-
-        template <class TVector, class TData, class TTag, size_t x, size_t y, size_t z, size_t w>
-        std::istream & operator>>(std::istream& is, indexed_proxy<TVector, TData, TTag, x, y, z, w>& vec)
-        {
-            TVector v;
-            is >> v;
-            vec = v;
-            return is;
-        }
     }
 }

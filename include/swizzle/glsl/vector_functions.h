@@ -1,3 +1,5 @@
+//  CxxSwizzle
+//  Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.os@gmail.com>
 #pragma once
 
 #include <utility>
@@ -7,6 +9,13 @@ namespace swizzle
 {
     namespace glsl
     {
+        
+        template <class TVector, class TScalar, class TResult>
+        struct functions
+        {
+
+        };
+
         namespace vector_functions
         {
             //! Deriving from this struct will make sure all calls are going to be ADL resolved, without "using" this namespace.
