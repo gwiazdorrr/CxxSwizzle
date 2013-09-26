@@ -168,9 +168,9 @@ BOOST_AUTO_TEST_CASE(vec_proxy_test)
 
     // check if values make sense
 
-    BOOST_CHECK(  are_equal<vec1>(vec1(1), v1.x) );
-    BOOST_CHECK(  are_equal<vec1>(vec1(4), v1.w) );
-    BOOST_CHECK( !are_equal<vec1>(vec1(1), v1.w) );
+    BOOST_CHECK(  are_equal<vec1>(vec1(1), vec1(v1.x)) );
+    BOOST_CHECK(  are_equal<vec1>(vec1(4), vec1(v1.w)) );
+    BOOST_CHECK( !are_equal<vec1>(vec1(1), vec1(v1.w)) );
 
     BOOST_CHECK(  are_equal<vec2>(vec2(1, 2), v1.xy) );
     BOOST_CHECK(  are_equal<vec2>(vec2(4, 3), v1.wz) );

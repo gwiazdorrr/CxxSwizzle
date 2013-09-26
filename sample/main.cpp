@@ -3,17 +3,20 @@
 #include <swizzle/naive/matrix.h>
 #include <swizzle/glsl/vector_functions.h>
 #include <swizzle/glsl/texture_functions.h>
+#include <swizzle/glsl/naive_functions_adapter.h>
 
-typedef swizzle::detail::binary_operators::tag tag;
-typedef swizzle::naive::vector_adapter< float, 1 > vec1;
 typedef swizzle::naive::vector_adapter< float, 2 > vec2;
 typedef swizzle::naive::vector_adapter< float, 3 > vec3;
 typedef swizzle::naive::vector_adapter< float, 4 > vec4;
 
+//typedef swizzle::glsl::naive_functions_adapter< swizzle::detail::nothing, swizzle::naive::vector_adapter, float, 2 > test;
+
+static_assert(sizeof(vec2) == sizeof(float[2]), "Too big");
+static_assert(sizeof(vec3) == sizeof(float[3]), "Too big");
+static_assert(sizeof(vec4) == sizeof(float[4]), "Too big");
+
 typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 2, 2> mat2;
 typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 3, 3> mat3;
-typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 2, 3> mat3x2;
-typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 3, 2> mat2x3;
 typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 4, 4> mat4;
 
 //! A really, really simplistic sampler using SDLImage
@@ -87,12 +90,12 @@ namespace glsl_sandbox
     #pragma warning(disable: 4244) // disable return implicit conversion warning
     #pragma warning(disable: 4305) // disable truncation warning
 
-    #include "shaders/sampler.frag"
+    //#include "shaders/sampler.frag"
     //#include "shaders/leadlight.frag"
     //#include "shaders/terrain.frag"
     //#include "shaders/complex.frag"
     //#include "shaders/road.frag"
-    //#include "shaders/gears.frag"
+    #include "shaders/gears.frag"
 
     // be a dear a clean up
     #pragma warning(pop)
@@ -133,6 +136,7 @@ extern C_LINKAGE int main(int argc, char* argv[])
     if (argc == 2)
     {
         vec2 resolution;
+
         std::stringstream s;
         s << argv[1];
         s >> resolution;

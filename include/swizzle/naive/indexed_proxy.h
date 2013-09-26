@@ -10,11 +10,11 @@ namespace swizzle
 {
     namespace naive
     {
-        template <class TVector, class TData, size_t x, size_t y = -1, size_t z = -1, size_t w = -1>
+        template <class VectorType, class DataType, size_t x, size_t y = -1, size_t z = -1, size_t w = -1>
         class indexed_proxy
         {
             //! The data.
-            TData m_data;
+            DataType m_data;
 
         public:
             // Make sure -1 are always trailing, not in the middle
@@ -30,10 +30,10 @@ namespace swizzle
                 (z == -1 || z != w );
 
             // Use the traits to define vector and scalar
-            typedef TVector vector_type;
+            typedef VectorType vector_type;
 
             //! Since this is an indexed proxy, scalar type can be acquired straight from data's indexing operator.
-            typedef typename detail::remove_reference_cv< decltype(detail::declval<TData>()[0]) >::type scalar_type;
+            typedef typename detail::remove_reference_cv< decltype(detail::declval<DataType>()[0]) >::type scalar_type;
             //! If only one component, decay to the scalar
             typedef typename std::conditional<num_of_components==1, scalar_type, vector_type>::type decay_type;
           

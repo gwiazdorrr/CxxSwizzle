@@ -5,7 +5,7 @@ namespace swizzle
     namespace glsl
     {
         template <class Base, template <class, size_t> class VectorType, class ScalarType, size_t Size>
-        class functions_adapter : public Base
+        class naive_functions_adapter : public Base
         {
         public:
             typedef VectorType<ScalarType, Size> vector_type;
@@ -279,13 +279,11 @@ namespace swizzle
 
             static typename std::conditional<Size==3, vector_type, not_available>::type cross(const vector_type& x, const vector_type& y)
             {
-                auto rx = x.y*y.z - x.z*y.y;
-                auto ry = x.z*y.x - x.x*y.z;
-                auto rz = x.x*y.y - x.y*y.x;
+                auto rx = x[1]*y[2] - x[2]*y[1];
+                auto ry = x[2]*y[0] - x[0]*y[2];
+                auto rz = x[0]*y[1] - x[1]*y[0];
                 return vector_type(rx, ry, rz);
             }
-
-
 
             static bool_vector_type lessThan(vector_type x, vector_type y)
             {

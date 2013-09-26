@@ -83,5 +83,28 @@ namespace swizzle
             :  std::integral_constant< size_t, get_vector_type<T>::type::num_of_components >
         {
         };
+
+        template <class T>
+        auto decay(T&& t) -> decltype( t.decay() )
+        {
+            return t.decay();
+        }
+
+        template <class T>
+        typename std::enable_if< std::is_scalar< typename std::remove_reference<T>::type >::value, T&&>::type decay(T&& t)
+        {
+            return std::forward<T>(t);
+        }
+
+        template <class T>
+        auto decay_forward(typename std::remove_reference<T>::type& t) -> decltype(decay(static_cast<T&&>(t)))
+        {
+            return decay(static_cast<T&&>(t));
+        }
+        template <class T>
+        auto decay_forward(typename std::remove_reference<T>::type&& t) -> decltype(decay(static_cast<T&&>(t)))
+        {
+            return decay(static_cast<T&&>(t))
+        }
     }
 }
