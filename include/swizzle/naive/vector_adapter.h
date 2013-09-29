@@ -7,7 +7,6 @@
 #include <iterator>
 #include <functional>
 #include <stdexcept>
-#include <cmath>
 #include <iostream>
 #include <array>
 

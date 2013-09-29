@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 namespace swizzle
 {
     namespace glsl
@@ -212,21 +214,21 @@ namespace swizzle
                 return max( min(x, maxVal), minVal);
             }
 
-            static vector_type mix(vector_type x, const vector_type& y, const vector_type& a)
+            static vector_type mix(const vector_type& x, const vector_type& y, const vector_type& a)
             {
-                iterate([&](size_t i) -> void { x[i] = x[i] + a[i] * (y[i] - x[i]); } );
-                return x;
+                return x + a * (y - x);
             }
 
-            static vector_type mix(vector_type x, const vector_type& y, scalar_type a)
+            static vector_type mix(const vector_type& x, const vector_type& y, scalar_type a)
             {
-                iterate([&](size_t i) -> void { x[i] = x[i] + a * (y[i] - x[i]); } );
-                return x;
+                return x + a * (y - x);
             }
 
             static vector_type step(const vector_type& edge, vector_type x)
             {
-                return transform(x, edge, [](scalar_type a, scalar_type b) -> scalar_type { return a > b ? 1 : 0; });
+                const scalar_type one(1);
+                const scalar_type zero(0);
+                return transform(x, edge, [&](scalar_type a, scalar_type b) -> scalar_type { return a > b ? one : zero; });
             }
 
             static vector_type step(scalar_type edge, vector_type x)
