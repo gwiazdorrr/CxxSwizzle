@@ -9,7 +9,7 @@ namespace swizzle
 {
     namespace detail
     {
-        template <class VectorType, class ScalarType, bool EnableScalarOperators = true>
+        template <class VectorType, class ScalarType>
         struct binary_operators
         {
             friend VectorType operator+(VectorType v, ScalarType s)
@@ -58,27 +58,6 @@ namespace swizzle
             friend VectorType operator/(ScalarType s, const VectorType& v)
             {
                 return VectorType(s) /= v;
-            }
-            friend VectorType operator/(VectorType v1, const VectorType& v2)
-            {
-                return v1 /= v2;
-            }
-        };
-
-        template <class VectorType, class ScalarType>
-        struct binary_operators<VectorType, ScalarType, false>
-        {
-            friend VectorType operator+(VectorType v1, const VectorType& v2)
-            {
-                return v1 += v2;
-            }
-            friend VectorType operator*(VectorType v1, const VectorType& v2)
-            {
-                return v1 *= v2;
-            }
-            friend VectorType operator-(VectorType v1, const VectorType& v2)
-            {
-                return v1 -= v2;
             }
             friend VectorType operator/(VectorType v1, const VectorType& v2)
             {

@@ -1,7 +1,6 @@
 #include <swizzle/detail/vector_binary_operators.h>
 #include <swizzle/naive/vector_adapter.h>
 #include <swizzle/naive/matrix.h>
-#include <swizzle/glsl/vector_functions.h>
 #include <swizzle/glsl/texture_functions.h>
 #include <swizzle/glsl/naive_functions_adapter.h>
 
@@ -18,6 +17,7 @@ static_assert(sizeof(vec4) == sizeof(float[4]), "Too big");
 typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 2, 2> mat2;
 typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 3, 3> mat3;
 typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 4, 4> mat4;
+
 
 //! A really, really simplistic sampler using SDLImage
 struct SDL_Surface;
@@ -57,8 +57,9 @@ namespace glsl_sandbox
         typedef ::vec4& vec4;
     }
 
-    using namespace swizzle::glsl::vector_functions;
+    #include <swizzle/glsl/vector_functions.h>
 
+//    float wtf = clamp(0.0f, 1.0f);
     // constants shaders are using
     float time;
     vec2 mouse;
@@ -89,7 +90,7 @@ namespace glsl_sandbox
     #pragma warning(push)
     #pragma warning(disable: 4244) // disable return implicit conversion warning
     #pragma warning(disable: 4305) // disable truncation warning
-
+    
     //#include "shaders/sampler.frag"
     //#include "shaders/leadlight.frag"
     //#include "shaders/terrain.frag"
@@ -298,7 +299,7 @@ sampler2D::~sampler2D()
 
 vec4 sampler2D::sample( vec2 coord )
 {
-    using namespace swizzle::glsl::vector_functions;
+    using namespace glsl_sandbox;
 
     switch (m_wrapMode)
     {

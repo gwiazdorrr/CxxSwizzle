@@ -35,7 +35,7 @@ namespace swizzle
             typedef typename get_vector_type<U>::type type_2;
 
             typedef typename type_1::scalar_type scalar_type_1;
-            typedef typename type_1::scalar_type scalar_type_2;
+            typedef typename type_2::scalar_type scalar_type_2;
             typedef typename std::common_type<scalar_type_1, scalar_type_2>::type common_scalar_type;
 
             //! had to do comparisons outside std::conditional as using less than/greater than in templates confuses compiler
@@ -85,26 +85,15 @@ namespace swizzle
         };
 
         template <class T>
-        auto decay(T&& t) -> decltype( t.decay() )
+        inline auto decay(T&& t) -> decltype( t.decay() )
         {
             return t.decay();
         }
 
         template <class T>
-        typename std::enable_if< std::is_scalar< typename std::remove_reference<T>::type >::value, T&&>::type decay(T&& t)
+        inline typename std::enable_if< std::is_scalar< typename std::remove_reference<T>::type >::value, T&&>::type decay(T&& t)
         {
             return std::forward<T>(t);
-        }
-
-        template <class T>
-        auto decay_forward(typename std::remove_reference<T>::type& t) -> decltype(decay(static_cast<T&&>(t)))
-        {
-            return decay(static_cast<T&&>(t));
-        }
-        template <class T>
-        auto decay_forward(typename std::remove_reference<T>::type&& t) -> decltype(decay(static_cast<T&&>(t)))
-        {
-            return decay(static_cast<T&&>(t))
         }
     }
 }

@@ -30,8 +30,24 @@ namespace swizzle
             {
                 TData m_data;
 
-                typename TProxyFactory<0>::type x, r, s;
-                typename TProxyFactory<1>::type y, g, t;
+                struct
+                {
+                    typename TProxyFactory<0>::type x;
+                    typename TProxyFactory<1>::type y;
+                };
+
+                struct
+                {
+                    typename TProxyFactory<0>::type r;
+                    typename TProxyFactory<1>::type g;
+                };
+
+                struct
+                {
+                    typename TProxyFactory<0>::type s;
+                    typename TProxyFactory<1>::type t;
+                };
+
                 typename TProxyFactory<0,0>::type xx, rr, ss;
                 typename TProxyFactory<0,1>::type xy, rg, st;
                 typename TProxyFactory<1,0>::type yx, gr, ts;
@@ -70,9 +86,27 @@ namespace swizzle
             {
                 TData m_data;
 
-                typename TProxyFactory<0>::type x, r, s;
-                typename TProxyFactory<1>::type y, g, t;
-                typename TProxyFactory<2>::type z, b, p;
+                struct
+                {
+                    typename TProxyFactory<0>::type x;
+                    typename TProxyFactory<1>::type y;
+                    typename TProxyFactory<2>::type z;
+                };
+
+                struct
+                {
+                    typename TProxyFactory<0>::type r;
+                    typename TProxyFactory<1>::type g;
+                    typename TProxyFactory<2>::type b;
+                };
+
+                struct
+                {
+                    typename TProxyFactory<0>::type s;
+                    typename TProxyFactory<1>::type t;
+                    typename TProxyFactory<2>::type p;
+                };
+
                 typename TProxyFactory<0,0>::type xx, rr, ss;
                 typename TProxyFactory<0,1>::type xy, rg, st;
                 typename TProxyFactory<0,2>::type xz, rb, sp;
@@ -200,10 +234,31 @@ namespace swizzle
             {
                 TData m_data;
 
-                typename TProxyFactory<0>::type x, r, s;
-                typename TProxyFactory<1>::type y, g, t;
-                typename TProxyFactory<2>::type z, b, p;
-                typename TProxyFactory<3>::type w, a, q;
+
+                struct
+                {
+                    typename TProxyFactory<0>::type x;
+                    typename TProxyFactory<1>::type y;
+                    typename TProxyFactory<2>::type z;
+                    typename TProxyFactory<3>::type w;
+                };
+
+                struct
+                {
+                    typename TProxyFactory<0>::type r;
+                    typename TProxyFactory<1>::type g;
+                    typename TProxyFactory<2>::type b;
+                    typename TProxyFactory<3>::type a;
+                };
+
+                struct
+                {
+                    typename TProxyFactory<0>::type s;
+                    typename TProxyFactory<1>::type t;
+                    typename TProxyFactory<2>::type p;
+                    typename TProxyFactory<3>::type q;
+                };
+
                 typename TProxyFactory<0,0>::type xx, rr, ss;
                 typename TProxyFactory<0,1>::type xy, rg, st;
                 typename TProxyFactory<0,2>::type xz, rb, sp;

@@ -29,17 +29,20 @@ namespace swizzle
             public vector_adapter_helper<ScalarType, Size>::base_type,
             // add static glsl functions
             public swizzle::glsl::naive_functions_adapter<
-                // enable binary operators; if only one component "disable" scalar operators
-                detail::binary_operators< 
-                    vector_adapter<ScalarType, Size>, 
-                    ScalarType,
-                    Size!=1
-                >,
+                // enable binary operators; if there's only one component do not do it, because it would
+                // cause ambiguity due to conversion to scalar type operator
+                typename std::conditional< 
+                    Size == 1,
+                    detail::nothing,
+                    detail::binary_operators<vector_adapter<ScalarType, Size>, ScalarType>
+                >::type,
                 vector_adapter,
                 ScalarType,
                 Size
             >
         {
+            static_assert(Size >= 1, "Size must be >= 1");
+
             //! A convenient mnemonic for base type
             typedef typename vector_adapter_helper<ScalarType, Size>::base_type base_type;
             //! "Hide" m_data from outside and make it locally visible
@@ -55,12 +58,9 @@ namespace swizzle
             //! Scalar type.
             typedef ScalarType scalar_type;
             //! Type static functions return; for single-component they decay to a scalar
-            typedef typename std::conditional<num_of_components==1, scalar_type, vector_adapter>::type decay_type;
-            //! Because this type is implicitly constructed of anything convertible to scalar_type if it has one component
-            //! this type needs to be used in overloaded functions to avoid ambiguity
-            typedef typename std::conditional<num_of_components==1, detail::operation_not_available, scalar_type>::type amiguity_protected_scalar_type;
+            typedef typename std::conditional<Size==1, scalar_type, vector_adapter>::type decay_type;
             //! Sanity checks
-            static_assert( sizeof(base_type) == sizeof(scalar_type) * num_of_components, "Size of the base class is not equal to size of its components, most likely empty base class optimisation failed");
+            static_assert( sizeof(base_type) == sizeof(scalar_type) * Size, "Size of the base class is not equal to size of its components, most likely empty base class optimisation failed");
 
         // CONSTRUCTION
         public:
@@ -78,13 +78,13 @@ namespace swizzle
             }
 
             //! Implicit constructor from scalar-convertible only for one-component vector
-            vector_adapter( typename std::conditional<num_of_components==1, scalar_type, detail::operation_not_available>::type s )
+            vector_adapter( typename std::conditional<Size==1, scalar_type, detail::operation_not_available>::type s )
             {
                 iterate( [&](size_t i) -> void { at(i) = s; } );
             }
 
             //! For vectors bigger than 1 conversion from scalar should be explicit.
-            explicit vector_adapter( typename std::conditional<num_of_components!=1, scalar_type, detail::operation_not_available>::type s )
+            explicit vector_adapter( typename std::conditional<Size!=1, scalar_type, detail::operation_not_available>::type s )
             {
                 iterate( [&](size_t i) -> void { at(i) = s; } );
             }
@@ -93,7 +93,7 @@ namespace swizzle
             //! Note that for types convertibles to scalar type the instantiation will fail effectively falling back to one of previous two constructors
             template <class T1>
             explicit vector_adapter( const T1& v1,
-                typename std::enable_if< !std::is_convertible<T1, scalar_type>::value && detail::are_sizes_valid<num_of_components, detail::get_vector_size<T1>::value>::value, void>::type* = 0 )
+                typename std::enable_if< !std::is_convertible<T1, scalar_type>::value && detail::are_sizes_valid<Size, detail::get_vector_size<T1>::value>::value, void>::type* = 0 )
             {
                 compose<0>(detail::decay(v1));
             }
@@ -101,7 +101,7 @@ namespace swizzle
             //! A composite constructor variant with 2 arguments
             template <class T1, class T2>
             vector_adapter( const T1& v1, const T2& v2,
-                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::get_vector_size<T1>::value, detail::get_vector_size<T2>::value>::value, void>::type* = 0 )
+                typename std::enable_if< detail::are_sizes_valid<Size, detail::get_vector_size<T1>::value, detail::get_vector_size<T2>::value>::value, void>::type* = 0 )
             {
                 compose<0>(detail::decay(v1));
                 compose<detail::get_vector_size<T1>::value>(detail::decay(v2));
@@ -110,7 +110,7 @@ namespace swizzle
             //! A composite constructor variant with 3 arguments
             template <class T1, class T2, class T3>
             vector_adapter( const T1& v1, const T2& v2, const T3& v3,
-                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::get_vector_size<T1>::value, detail::get_vector_size<T2>::value, detail::get_vector_size<T3>::value>::value, void>::type* = 0 )
+                typename std::enable_if< detail::are_sizes_valid<Size, detail::get_vector_size<T1>::value, detail::get_vector_size<T2>::value, detail::get_vector_size<T3>::value>::value, void>::type* = 0 )
             {
                 compose<0>(detail::decay(v1));
                 compose<detail::get_vector_size<T1>::value>(detail::decay(v2));
@@ -120,7 +120,7 @@ namespace swizzle
             //! A composite constructor variant with 4 arguments
             template <class T1, class T2, class T3, class T4>
             vector_adapter( const T1& v1, const T2& v2, const T3& v3, const T4& v4,
-                typename std::enable_if< detail::are_sizes_valid<num_of_components, detail::get_vector_size<T1>::value, detail::get_vector_size<T2>::value, detail::get_vector_size<T3>::value, detail::get_vector_size<T4>::value>::value, void>::type* = 0 )
+                typename std::enable_if< detail::are_sizes_valid<Size, detail::get_vector_size<T1>::value, detail::get_vector_size<T2>::value, detail::get_vector_size<T3>::value, detail::get_vector_size<T4>::value>::value, void>::type* = 0 )
             {
                 compose<0>(detail::decay(v1));
                 compose<detail::get_vector_size<T1>::value>(detail::decay(v2));
@@ -166,24 +166,24 @@ namespace swizzle
                 return *this;
             }
 
-            // Assignment-operation with scalar argument (only for Size > 1)
+            // Assignment-operation with scalar argument
 
-            vector_adapter& operator+=(amiguity_protected_scalar_type o)
+            vector_adapter& operator+=(scalar_type o)
             {
                 iterate( [&](size_t i) -> void { at(i) += o; } );
                 return *this;
             }
-            vector_adapter& operator-=(amiguity_protected_scalar_type o)
+            vector_adapter& operator-=(scalar_type o)
             {
                 iterate( [&](size_t i) -> void { at(i) -= o; } );
                 return *this;
             }
-            vector_adapter& operator*=(amiguity_protected_scalar_type o)
+            vector_adapter& operator*=(scalar_type o)
             {
                 iterate( [&](size_t i) -> void { at(i) *= o; } );
                 return *this;
             }
-            vector_adapter& operator/=(amiguity_protected_scalar_type o)
+            vector_adapter& operator/=(scalar_type o)
             {
                 iterate( [&](size_t i) -> void { at(i) /= o; } );
                 return *this;
@@ -204,7 +204,13 @@ namespace swizzle
                 return result;
             }
 
+            // Conversion operator
 
+            //! Auto-decay to scalar type only if this is a 1-sized vector
+            operator typename std::conditional<Size == 1, scalar_type, detail::operation_not_available>::type() const
+            {
+                return at(0);
+            }
         
 
         public:
@@ -262,20 +268,20 @@ namespace swizzle
             template <class Func>
             static void iterate(Func func)
             {
-                iterate<0, num_of_components>(func);
+                iterate<0, Size>(func);
             }
 
             //! Iterates over the vector, firing Func for each index
             template <size_t NStart, size_t NEnd, class Func>
             static void iterate(Func func, std::integral_constant<size_t, NStart> = std::integral_constant<size_t, NStart>(), std::integral_constant<size_t, NEnd> = std::integral_constant<size_t, NEnd>())
             {
-                static_assert( NStart >= 0 && NEnd <= num_of_components && NStart < NEnd, "Out of bounds" );
+                static_assert( NStart >= 0 && NEnd <= Size && NStart < NEnd, "Out of bounds" );
                 detail::compile_time_for<NStart, NEnd>(func);
             }
 
         public:
             //! Decays the vector. For Size==1 this is going to return a scalar, for all other sizes - same vector
-            const decay_type& decay() const
+            decay_type decay() const
             {
                 struct selector
                 {

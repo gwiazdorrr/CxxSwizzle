@@ -45,8 +45,7 @@ namespace swizzle
             template <size_t x>
             struct proxy_factory<x, -1, -1, -1>
             {
-                typedef indexed_proxy< vec1, std::array<TScalar, Size>, x > type;
-                static_assert(sizeof(type) == Size * sizeof(TScalar), "Size of the proxy is not equal to the size of the data");
+                typedef TScalar type;
             };
 
             typedef detail::vector_base< Size, proxy_factory, std::array<TScalar, Size> > base_type;
