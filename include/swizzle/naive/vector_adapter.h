@@ -23,6 +23,10 @@ namespace swizzle
 {
     namespace naive
     {
+        //! A version with Size == 1 is a special case that should not be created explicitly; it only lives in function proxies and
+        //! to create a "common" type for different set of parameters. It is implicitly constructible from a scalar and has to-scalar
+        //! conversion operator - this combination is a short path to ambiguity errors when combined with operator overloading.
+        //! Why std::conditional shenanegance and not template specialisation? Well, the former needs less code in this case.
         template < class ScalarType, size_t Size >
         class vector_adapter : 
             // let the helper decide which base class to choose
