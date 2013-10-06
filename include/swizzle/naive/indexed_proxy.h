@@ -1,5 +1,5 @@
-//  CxxSwizzle
-//  Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.os@gmail.com>
+// CxxSwizzle
+// Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.github@gmail.com>
 #pragma once
 
 #include <type_traits>
@@ -10,7 +10,12 @@ namespace swizzle
 {
     namespace naive
     {
-        template <class VectorType, class DataType, size_t x, size_t y = -1, size_t z = -1, size_t w = -1>
+        //! A VectorType's proxy, using subscript operators to access components of both the vector and the
+        //! DataType. x, y, z & w template args define which components of the vector this proxy uses in place
+        //! of its, with -1 meaning "don't use".
+        //! The type is convertible to the vector. It also forwards all unary arithmetic operators. Binary
+        //! operations hopefully fallback to the vector ones.
+        template <class VectorType, class DataType, size_t x, size_t y, size_t z = -1, size_t w = -1>
         class indexed_proxy
         {
             //! The data.
@@ -38,9 +43,10 @@ namespace swizzle
             vector_type decay() const
             {
                 vector_type result;
-                detail::compile_time_for<0, num_of_components>([&](size_t i) -> void { result[i] = m_data[get_index(i)]; } );
+                detail::static_for<0, num_of_components>([&](size_t i) -> void { result[i] = m_data[get_index(i)]; } );
                 return result;
             }
+
             //! Auto-decaying where possible.
             operator vector_type() const
             {
@@ -48,9 +54,9 @@ namespace swizzle
             }
 
             //! Assignment only enabled if proxy is writable -> has unique indexes
-            indexed_proxy& operator=(const typename std::conditional<is_writable, vector_type, swizzle::detail::operation_not_available >::type& vec)
+            indexed_proxy& operator=(const typename std::conditional<is_writable, vector_type, detail::operation_not_available >::type& vec)
             {
-                detail::compile_time_for<0, num_of_components>([&](size_t i) -> void { m_data[get_index(i)] = vec[i]; } );
+                detail::static_for<0, num_of_components>([&](size_t i) -> void { m_data[get_index(i)] = vec[i]; } );
                 return *this;
             }
 
@@ -60,18 +66,21 @@ namespace swizzle
             {
                 return operator=( decay() + std::forward<T>(o) );
             }
+
             //! Forwarding operator. Global non-assignment operators depend on it.
             template <class T>
             indexed_proxy& operator-=(T && o)
             {
                 return operator=( decay() - std::forward<T>(o) );
             }
+
             //! Forwarding operator. Global non-assignment operators depend on it.
             template <class T>
             indexed_proxy& operator*=(T && o)
             {
                 return operator=( decay() * std::forward<T>(o) );
             }
+
             //! Forwarding operator. Global non-assignment operators depend on it.
             template <class T>
             indexed_proxy& operator/=(T && o)

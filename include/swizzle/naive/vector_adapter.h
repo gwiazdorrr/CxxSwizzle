@@ -17,8 +17,6 @@
 #include <swizzle/naive/vector_traits_impl.h>
 #include <swizzle/naive/vector_adapter_helper.h>
 
-#include <boost/operators.hpp>
-
 namespace swizzle
 {
     namespace naive
@@ -72,25 +70,25 @@ namespace swizzle
             //! Default constructor.
             vector_adapter()
             {
-                iterate( [&](size_t i) -> void { at(i) = 0; } );
+                iterate( [&](size_t i) -> void { m_data[i] = 0; } );
             }
 
             //! Copy constructor
             vector_adapter( const vector_adapter& o )
             {
-                iterate( [&](size_t i) -> void { at(i) = o[i]; } );
+                iterate( [&](size_t i) -> void { m_data[i] = o[i]; } );
             }
 
             //! Implicit constructor from scalar-convertible only for one-component vector
             vector_adapter( typename std::conditional<Size==1, scalar_type, detail::operation_not_available>::type s )
             {
-                iterate( [&](size_t i) -> void { at(i) = s; } );
+                iterate( [&](size_t i) -> void { m_data[i] = s; } );
             }
 
             //! For vectors bigger than 1 conversion from scalar should be explicit.
             explicit vector_adapter( typename std::conditional<Size!=1, scalar_type, detail::operation_not_available>::type s )
             {
-                iterate( [&](size_t i) -> void { at(i) = s; } );
+                iterate( [&](size_t i) -> void { m_data[i] = s; } );
             }
 
             //! A composite constructor variant with 1 argument
@@ -140,33 +138,33 @@ namespace swizzle
 
             scalar_type& operator[](size_t i)
             {
-                return at(i);
+                return m_data[i];
             }
             const scalar_type& operator[](size_t i) const
             {
-                return at(i);
+                return m_data[i];
             }
 
             // Assignment-operation with vector argument
 
             vector_adapter& operator+=(const vector_adapter& o)
             {
-                iterate( [&](size_t i) -> void { at(i) += o[i]; } );
+                iterate( [&](size_t i) -> void { m_data[i] += o[i]; } );
                 return *this;
             }
             vector_adapter& operator-=(const vector_adapter& o)
             {
-                iterate( [&](size_t i) -> void { at(i) -= o[i]; } );
+                iterate( [&](size_t i) -> void { m_data[i] -= o[i]; } );
                 return *this;
             }
             vector_adapter& operator*=(const vector_adapter& o)
             {
-                iterate( [&](size_t i) -> void { at(i) *= o[i]; } );
+                iterate( [&](size_t i) -> void { m_data[i] *= o[i]; } );
                 return *this;
             }
             vector_adapter& operator/=(const vector_adapter& o)
             {
-                iterate( [&](size_t i) -> void { at(i) /= o[i]; } );
+                iterate( [&](size_t i) -> void { m_data[i] /= o[i]; } );
                 return *this;
             }
 
@@ -174,22 +172,22 @@ namespace swizzle
 
             vector_adapter& operator+=(scalar_type o)
             {
-                iterate( [&](size_t i) -> void { at(i) += o; } );
+                iterate( [&](size_t i) -> void { m_data[i] += o; } );
                 return *this;
             }
             vector_adapter& operator-=(scalar_type o)
             {
-                iterate( [&](size_t i) -> void { at(i) -= o; } );
+                iterate( [&](size_t i) -> void { m_data[i] -= o; } );
                 return *this;
             }
             vector_adapter& operator*=(scalar_type o)
             {
-                iterate( [&](size_t i) -> void { at(i) *= o; } );
+                iterate( [&](size_t i) -> void { m_data[i] *= o; } );
                 return *this;
             }
             vector_adapter& operator/=(scalar_type o)
             {
-                iterate( [&](size_t i) -> void { at(i) /= o; } );
+                iterate( [&](size_t i) -> void { m_data[i] /= o; } );
                 return *this;
             }
 
@@ -197,14 +195,14 @@ namespace swizzle
 
             vector_adapter& operator=(const vector_adapter& o)
             {
-                iterate( [&](size_t i) -> void { at(i) = o[i]; } );
+                iterate( [&](size_t i) -> void { m_data[i] = o[i]; } );
                 return *this;
             }
 
             vector_adapter operator-() const
             {
                 vector_adapter result;
-                iterate([&](size_t i) -> void { result[i] = -at(i); });
+                iterate([&](size_t i) -> void { result[i] = -m_data[i]; });
                 return result;
             }
 
@@ -213,51 +211,15 @@ namespace swizzle
             //! Auto-decay to scalar type only if this is a 1-sized vector
             operator typename std::conditional<Size == 1, scalar_type, detail::operation_not_available>::type() const
             {
-                return at(0);
-            }
-        
-
-        public:
-            auto begin() -> decltype( std::begin(m_data) )
-            {
-                return std::begin(m_data);
-            }
-            auto begin() const -> decltype(std::begin( detail::declval<const data_type>() ))
-            {
-                return std::begin(m_data);
-            }
-            auto end() -> decltype ( std::end(m_data) )
-            {
-                return std::end(m_data);
-            }
-            auto end() const -> decltype (std::end( detail::declval<const data_type>() ))
-            {
-                return std::end(m_data);
-            }
-
-            size_t size() const
-            {
-                return num_of_components;
+                return operator[](0);
             }
 
         private:
-
-            //! Helper accessor
-            const scalar_type& at(size_t i) const
-            {
-                return m_data[i];
-            }
-            //! Helper accessor
-            scalar_type& at(size_t i)
-            {
-                return m_data[i];
-            }
-
             //! Puts scalar at given position. Used only during construction.
             template <size_t N>
             void compose(scalar_type v)
             {
-                at(N) = v;
+                operator[](N) = v;
             }
 
             //! Puts a vector (or it's part) at given position. Used only during construction.
@@ -265,7 +227,7 @@ namespace swizzle
             void compose( const vector_adapter<TOtherScalar, OtherSize>& v )
             {
                 const size_t limit = (N + OtherSize > Size) ? Size : (N + OtherSize);
-                iterate<N, limit>([&](size_t i) -> void { at(i) = v[i - N]; });
+                iterate<N, limit>([&](size_t i) -> void { m_data[i] = v[i - N]; });
             }
 
             //! Iterates over the vector, firing Func for each index
@@ -280,7 +242,7 @@ namespace swizzle
             static void iterate(Func func, std::integral_constant<size_t, NStart> = std::integral_constant<size_t, NStart>(), std::integral_constant<size_t, NEnd> = std::integral_constant<size_t, NEnd>())
             {
                 static_assert( NStart >= 0 && NEnd <= Size && NStart < NEnd, "Out of bounds" );
-                detail::compile_time_for<NStart, NEnd>(func);
+                detail::static_for<NStart, NEnd>(func);
             }
 
         public:
@@ -295,7 +257,7 @@ namespace swizzle
                     }
                     const scalar_type& operator()(const vector_adapter& x, scalar_type*)
                     {
-                        return x.at(0);
+                        return x[0];
                     }
                 };
                 return selector()( *this, static_cast<decay_type*>(nullptr) );
@@ -304,7 +266,7 @@ namespace swizzle
             //! As an inline friend function, because thanks to that all convertibles will use same function.
             friend std::ostream& operator<<(std::ostream& os, const vector_adapter& vec)
             {
-                vec.iterate( [&](size_t i) -> void { os << vec[i] << (i == vec.size() - 1 ? "" : ","); } );
+                vec.iterate( [&](size_t i) -> void { os << vec[i] << (i == Size - 1 ? "" : ","); } );
                 return os;
             }
 
@@ -314,7 +276,7 @@ namespace swizzle
                 vec.iterate( [&](size_t i) -> void 
                 { 
                     is >> vec[i];
-                    if ( i < vec.size() - 1 && is.peek() == ',')
+                    if ( i < Size - 1 && is.peek() == ',')
                     {
                         is.ignore(1);
                     }
@@ -323,5 +285,105 @@ namespace swizzle
             }
 
         };
+
+        /*
+        template < class ScalarType >
+        class vector_adapter<ScalarType, 1> : 
+            // let the helper decide which base class to choose
+            public vector_adapter_helper<ScalarType, 1>::base_type,
+            // add static glsl functions
+            public swizzle::glsl::naive_functions_adapter<detail::nothing, vector_adapter, ScalarType, 1>
+        {
+            //! A convenient mnemonic for base type
+            typedef typename vector_adapter_helper<ScalarType, 1>::base_type base_type;
+            //! "Hide" m_data from outside and make it locally visible
+            using base_type::m_data;
+
+        public:
+            //! Number of components of this vector.
+            static const size_t num_of_components = 1;
+            //! This type.
+            typedef vector_adapter vector_type;
+            //! Scalar type.
+            typedef std::array<ScalarType, 1> data_type;
+            //! Scalar type.
+            typedef ScalarType scalar_type;
+            //! Sanity checks
+            static_assert( sizeof(base_type) == sizeof(scalar_type), "Size of the base class is not equal to size of its components, most likely empty base class optimisation failed");
+
+            // CONSTRUCTION
+        public:
+
+            //! Default constructor.
+            vector_adapter()
+            {
+                operator[](0) = 0;
+            }
+
+            //! Implicit constructor from scalar-convertible only for one-component vector
+            vector_adapter( scalar_type s )
+            {
+                operator[](0) = s;
+            }
+
+
+            // OPERATORS
+        public:
+
+            // Indexing
+
+            scalar_type& operator[](size_t i)
+            {
+                return m_data[i];
+            }
+            const scalar_type& operator[](size_t i) const
+            {
+                return m_data[i];
+            }
+
+            // Assignment-operation with vector argument
+
+            vector_adapter& operator+=(const vector_adapter& o)
+            {
+                return *this = decay() + o.decay();
+            }
+            vector_adapter& operator-=(const vector_adapter& o)
+            {
+                return *this = decay() - o.decay();
+            }
+            vector_adapter& operator*=(const vector_adapter& o)
+            {
+                return *this = decay() * o.decay();
+            }
+            vector_adapter& operator/=(const vector_adapter& o)
+            {
+                return *this = decay() / o.decay();
+            }
+
+            // Others
+
+            vector_adapter& operator=(const vector_adapter& o)
+            {
+                return *this = o.decay();
+            }
+
+            vector_adapter operator-() const
+            {
+                return -decay();
+            }
+
+            //! Auto-decay to scalar type only if this is a 1-sized vector
+            operator scalar_type() const
+            {
+                return decay();
+            }
+
+        public:
+            //! Decays the vector. For Size==1 this is going to return a scalar, for all other sizes - same vector
+            scalar_type decay() const
+            {
+                return operator[](0);
+            }
+        };*/
     }
 }

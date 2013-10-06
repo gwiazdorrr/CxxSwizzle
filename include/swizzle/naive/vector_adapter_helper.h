@@ -17,7 +17,6 @@ namespace swizzle
         struct vector_adapter_helper
         {
             //! It's all right, these can be incomplete types at this point.
-            typedef vector_adapter<TScalar, 1> vec1;
             typedef vector_adapter<TScalar, 2> vec2;
             typedef vector_adapter<TScalar, 3> vec3;
             typedef vector_adapter<TScalar, 4> vec4;

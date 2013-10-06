@@ -63,24 +63,24 @@ namespace swizzle
 
         //! Loop terminator.
         template <size_t Begin, class Func>
-        inline void compile_time_for_impl(Func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, Begin>)
+        inline void static_for_impl(Func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, Begin>)
         {
             // do nothing
         }
 
         //! A chain of func calls with each value from [Begin, End) range.
         template <size_t Begin, size_t End, class Func>
-        inline typename std::enable_if<Begin != End, void>::type compile_time_for_impl(Func func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, End>)
+        inline typename std::enable_if<Begin != End, void>::type static_for_impl(Func func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, End>)
         {
             func(Begin);
-            compile_time_for_impl( func, std::integral_constant<size_t, Begin+1>(), std::integral_constant<size_t, End>() );
+            static_for_impl( func, std::integral_constant<size_t, Begin+1>(), std::integral_constant<size_t, End>() );
         }
 
         //! Trigger Func for each value from [Begin, End) range.
         template <size_t Begin, size_t End, class Func>
-        inline void compile_time_for(Func func)
+        inline void static_for(Func func)
         {
-            compile_time_for_impl( func, std::integral_constant<size_t, Begin>(), std::integral_constant<size_t, End>() );
+            static_for_impl( func, std::integral_constant<size_t, Begin>(), std::integral_constant<size_t, End>() );
         }
     }
 }

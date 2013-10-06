@@ -91,9 +91,15 @@ namespace swizzle
         }
 
         template <class T>
-        inline typename std::enable_if< std::is_scalar< typename std::remove_reference<T>::type >::value, T&&>::type decay(T&& t)
+        inline typename std::enable_if< std::is_scalar< typename std::remove_reference<T>::type >::value, T>::type decay(T&& t)
         {
             return std::forward<T>(t);
         }
+
+        template <class T>
+        inline auto decay_type(T&& t) -> decltype( t.decay() );
+
+        template <class T>
+        inline typename std::enable_if< std::is_scalar< typename std::remove_reference<T>::type >::value, T>::type decay_type(T&& t);
     }
 }

@@ -1,3 +1,5 @@
+// CxxSwizzle
+// Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.github@gmail.com>
 #pragma once
 
 #include <cmath>
@@ -6,6 +8,9 @@ namespace swizzle
 {
     namespace glsl
     {
+        //! A class providing static functions matching GLSL's vector functions. Uses naive approach, i.e.
+        //! everything is done components-wise, using stdlib's math functions.
+        //! VectorType must have arithmetic operators, binary and unary.
         template <class Base, template <class, size_t> class VectorType, class ScalarType, size_t Size>
         class naive_functions_adapter : public Base
         {
@@ -22,7 +27,7 @@ namespace swizzle
             template <class Func>
             static vector_type& transform(vector_type& x, Func func)
             {
-                detail::compile_time_for<0, Size>([&](size_t i) -> void { x[i] = func(x[i]); } );
+                detail::static_for<0, Size>([&](size_t i) -> void { x[i] = func(x[i]); } );
                 return x;
             }
 
@@ -30,7 +35,7 @@ namespace swizzle
             template <class Func>
             static vector_type& transform(vector_type& x, const vector_type& y, Func func)
             {
-                detail::compile_time_for<0, Size>([&](size_t i) -> void { x[i] = func(x[i], y[i]); } );
+                detail::static_for<0, Size>([&](size_t i) -> void { x[i] = func(x[i], y[i]); } );
                 return x;
             }
 
@@ -57,7 +62,7 @@ namespace swizzle
             template <class Func>
             static void iterate(Func func)
             {
-                detail::compile_time_for<0, Size>([&](size_t i) -> void { func(i); } );
+                detail::static_for<0, Size>([&](size_t i) -> void { func(i); } );
             }
 
 
@@ -261,7 +266,7 @@ namespace swizzle
                 return std::sqrt(result);
             }
 
-            static scalar_type distance (vector_type p0 , const vector_type& p1 )
+            static scalar_type distance(vector_type p0 , const vector_type& p1 )
             {
                 return length(p0 -= p1);
             }

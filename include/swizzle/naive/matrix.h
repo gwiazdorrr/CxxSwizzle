@@ -72,9 +72,9 @@ namespace swizzle
             matrix(const matrix<TVector, TScalar, OtherN, OtherM>& other, 
                 typename std::enable_if< !detail::is_greater<OtherM, M>::value && !detail::is_greater<OtherN, N>::value, void>::type* = 0)
             {
-                detail::compile_time_for<0, OtherN>([&](size_t row) -> void 
+                detail::static_for<0, OtherN>([&](size_t row) -> void 
                 {
-                    detail::compile_time_for<0, OtherM>([&](size_t col) -> void
+                    detail::static_for<0, OtherM>([&](size_t col) -> void
                     {
                         m_data[row][col] = other[row][col];
                     });
@@ -82,14 +82,14 @@ namespace swizzle
                 // fill rest with 1s
                 const size_t min_inner = OtherN > OtherM ? OtherM : OtherN;
                 const size_t min_outer = N > M ? M : N;
-                detail::compile_time_for<min_inner, min_outer>([&](size_t i) -> void { m_data[i][i] = 1; });
+                detail::static_for<min_inner, min_outer>([&](size_t i) -> void { m_data[i][i] = 1; });
             }
 
             //! Init with s diagonally
             matrix(scalar_type s)
             {
                 const size_t min_dim = N > M ? M : N;
-                detail::compile_time_for<0, min_dim>([&](size_t i) -> void { m_data[i][i] = s; });
+                detail::static_for<0, min_dim>([&](size_t i) -> void { m_data[i][i] = s; });
             }
 
             //! Construct matrix from rows.
@@ -169,7 +169,7 @@ namespace swizzle
             //! Multiplies entire matrix by a scalar.
             matrix_type& operator*=(scalar_type v)
             {
-                detail::compile_time_for<0, N>([&](size_t row) -> void { m_data[row] *= v; } );
+                detail::static_for<0, N>([&](size_t row) -> void { m_data[row] *= v; } );
                 return *this;
             }
 
@@ -180,10 +180,10 @@ namespace swizzle
             static row_type mul(const matrix_type& m, const typename std::conditional<M==N, row_type, detail::operation_not_available>::type& v)
             {
                 row_type result;
-                detail::compile_time_for<0, M>([&](size_t col) -> void
+                detail::static_for<0, M>([&](size_t col) -> void
                 {
                     scalar_type s = 0;
-                    detail::compile_time_for<0, N>([&](size_t row) -> void 
+                    detail::static_for<0, N>([&](size_t row) -> void 
                     {
                         s += m[row][col] * v[row];
                     });
@@ -201,11 +201,11 @@ namespace swizzle
                 result_type result;
 
                 // iterate over rows and columns and store a dot product for each m1.row-m2.column pair
-                detail::compile_time_for<0, N>([&](size_t row) -> void
+                detail::static_for<0, N>([&](size_t row) -> void
                 {
                     row_type row_data = m1[row];
                     typename result_type::row_type result_row;
-                    detail::compile_time_for<0, OtherM>([&](size_t col) -> void
+                    detail::static_for<0, OtherM>([&](size_t col) -> void
                     {
                         result_row[col] = row_data.dot(row_data, m2.column(col));
                     });
@@ -240,7 +240,7 @@ namespace swizzle
             column_type column(size_t i) const
             {
                 column_type result;
-                detail::compile_time_for<0, N>([&](size_t row) -> void
+                detail::static_for<0, N>([&](size_t row) -> void
                 {
                     result[row] = m_data[row][i];
                 });
