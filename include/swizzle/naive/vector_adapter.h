@@ -14,6 +14,7 @@
 #include <swizzle/detail/utils.h>
 #include <swizzle/detail/vector_binary_operators.h>
 #include <swizzle/detail/vector_base.h>
+#include <swizzle/detail/indexed_vector_iterator.h.h>
 #include <swizzle/naive/vector_traits_impl.h>
 #include <swizzle/naive/vector_adapter_helper.h>
 
@@ -50,6 +51,7 @@ namespace swizzle
             //! "Hide" m_data from outside and make it locally visible
             using base_type::m_data;
 
+        // TYPEDEFS
         public:
             //! Number of components of this vector.
             static const size_t num_of_components = Size;
@@ -212,8 +214,27 @@ namespace swizzle
             operator typename std::conditional<Size == 1, scalar_type, detail::operation_not_available>::type() const
             {
                 return operator[](0);
-            }
+            } 
 
+        // AUXILIARY
+        public:
+            //! Decays the vector. For Size==1 this is going to return a scalar, for all other sizes - same vector
+            decay_type decay() const
+            {
+                struct selector
+                {
+                    const vector_adapter& operator()(const vector_adapter& x, vector_adapter*)
+                    {
+                        return x;
+                    }
+                    const scalar_type& operator()(const vector_adapter& x, scalar_type*)
+                    {
+                        return x[0];
+                    }
+                };
+                return selector()( *this, static_cast<decay_type*>(nullptr) );
+            }
+            
         private:
             //! Puts scalar at given position. Used only during construction.
             template <size_t N>
@@ -244,23 +265,33 @@ namespace swizzle
                 static_assert( NStart >= 0 && NEnd <= Size && NStart < NEnd, "Out of bounds" );
                 detail::static_for<NStart, NEnd>(func);
             }
-
+        
+        // STL COMPABILITY (not needed, but useful for testing)
         public:
-            //! Decays the vector. For Size==1 this is going to return a scalar, for all other sizes - same vector
-            decay_type decay() const
+            //!
+            typedef detail::indexed_vector_iterator<const vector_adapter> const_iterator;
+            //!
+            typedef detail::indexed_vector_iterator<vector_adapter> iterator;
+
+            //! \return Immutable iterator.
+            const_iterator begin() const
             {
-                struct selector
-                {
-                    const vector_adapter& operator()(const vector_adapter& x, vector_adapter*)
-                    {
-                        return x;
-                    }
-                    const scalar_type& operator()(const vector_adapter& x, scalar_type*)
-                    {
-                        return x[0];
-                    }
-                };
-                return selector()( *this, static_cast<decay_type*>(nullptr) );
+                return make_vector_iterator(*this);
+            }
+            //! \return Immutable iterator.
+            const_iterator end() const
+            {
+                return make_vector_iterator(*this, num_of_components);
+            }
+            //! \return Mutable iterator.
+            iterator begin()
+            {
+                return make_vector_iterator(*this);
+            }
+            //! \return Mutable iterator.
+            iterator end()
+            {
+                return make_vector_iterator(*this, num_of_components);
             }
 
             //! As an inline friend function, because thanks to that all convertibles will use same function.
@@ -283,107 +314,6 @@ namespace swizzle
                 });
                 return is;
             }
-
         };
-
-        /*
-        template < class ScalarType >
-        class vector_adapter<ScalarType, 1> : 
-            // let the helper decide which base class to choose
-            public vector_adapter_helper<ScalarType, 1>::base_type,
-            // add static glsl functions
-            public swizzle::glsl::naive_functions_adapter<detail::nothing, vector_adapter, ScalarType, 1>
-        {
-            //! A convenient mnemonic for base type
-            typedef typename vector_adapter_helper<ScalarType, 1>::base_type base_type;
-            //! "Hide" m_data from outside and make it locally visible
-            using base_type::m_data;
-
-        public:
-            //! Number of components of this vector.
-            static const size_t num_of_components = 1;
-            //! This type.
-            typedef vector_adapter vector_type;
-            //! Scalar type.
-            typedef std::array<ScalarType, 1> data_type;
-            //! Scalar type.
-            typedef ScalarType scalar_type;
-            //! Sanity checks
-            static_assert( sizeof(base_type) == sizeof(scalar_type), "Size of the base class is not equal to size of its components, most likely empty base class optimisation failed");
-
-            // CONSTRUCTION
-        public:
-
-            //! Default constructor.
-            vector_adapter()
-            {
-                operator[](0) = 0;
-            }
-
-            //! Implicit constructor from scalar-convertible only for one-component vector
-            vector_adapter( scalar_type s )
-            {
-                operator[](0) = s;
-            }
-
-
-            // OPERATORS
-        public:
-
-            // Indexing
-
-            scalar_type& operator[](size_t i)
-            {
-                return m_data[i];
-            }
-            const scalar_type& operator[](size_t i) const
-            {
-                return m_data[i];
-            }
-
-            // Assignment-operation with vector argument
-
-            vector_adapter& operator+=(const vector_adapter& o)
-            {
-                return *this = decay() + o.decay();
-            }
-            vector_adapter& operator-=(const vector_adapter& o)
-            {
-                return *this = decay() - o.decay();
-            }
-            vector_adapter& operator*=(const vector_adapter& o)
-            {
-                return *this = decay() * o.decay();
-            }
-            vector_adapter& operator/=(const vector_adapter& o)
-            {
-                return *this = decay() / o.decay();
-            }
-
-            // Others
-
-            vector_adapter& operator=(const vector_adapter& o)
-            {
-                return *this = o.decay();
-            }
-
-            vector_adapter operator-() const
-            {
-                return -decay();
-            }
-
-            //! Auto-decay to scalar type only if this is a 1-sized vector
-            operator scalar_type() const
-            {
-                return decay();
-            }
-
-        public:
-            //! Decays the vector. For Size==1 this is going to return a scalar, for all other sizes - same vector
-            scalar_type decay() const
-            {
-                return operator[](0);
-            }
-        };*/
     }
 }

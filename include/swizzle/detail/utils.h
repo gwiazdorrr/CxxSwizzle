@@ -82,5 +82,21 @@ namespace swizzle
         {
             static_for_impl( func, std::integral_constant<size_t, Begin>(), std::integral_constant<size_t, End>() );
         }
+
+
+
+        //! Sets i-th element of dst with the value of j-th element of src. Used only if i & j are valid, i.e. != -1
+        template <size_t i, size_t j, class DestinationType, class SourceType>
+        inline typename std::enable_if< i != -1 && j != -1 >::type set_if_indices_are_valid(DestinationType& dst, const SourceType& src)
+        {
+            dst[i] = src[j];
+        }
+
+        //! Does nothing. Used only if i or j == -1
+        template <size_t i, size_t j, class DestinationType, class SourceType>
+        inline typename std::enable_if< i == -1 || j == -1 >::type set_if_indices_are_valid(DestinationType& /*dst*/, const SourceType& /*src*/)
+        {
+            // do nothing
+        }
     }
 }

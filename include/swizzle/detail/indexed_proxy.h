@@ -3,12 +3,11 @@
 #pragma once
 
 #include <type_traits>
-#include <iostream>
 #include <swizzle/detail/utils.h>
 
 namespace swizzle
 {
-    namespace naive
+    namespace detail
     {
         //! A VectorType's proxy, using subscript operators to access components of both the vector and the
         //! DataType. x, y, z & w template args define which components of the vector this proxy uses in place
@@ -18,7 +17,7 @@ namespace swizzle
         template <class VectorType, class DataType, size_t x, size_t y, size_t z = -1, size_t w = -1>
         class indexed_proxy
         {
-            //! The data.
+            //! The data. Must support subscript operator.
             DataType m_data;
 
         public:
@@ -43,7 +42,11 @@ namespace swizzle
             vector_type decay() const
             {
                 vector_type result;
-                detail::static_for<0, num_of_components>([&](size_t i) -> void { result[i] = m_data[get_index(i)]; } );
+                // inlined, calls with x, y, z or w being -1 will get compiled out
+                set_if_indices_are_valid<0, x>(result, m_data);
+                set_if_indices_are_valid<1, y>(result, m_data);
+                set_if_indices_are_valid<2, z>(result, m_data);
+                set_if_indices_are_valid<3, w>(result, m_data);
                 return result;
             }
 
@@ -54,9 +57,13 @@ namespace swizzle
             }
 
             //! Assignment only enabled if proxy is writable -> has unique indexes
-            indexed_proxy& operator=(const typename std::conditional<is_writable, vector_type, detail::operation_not_available >::type& vec)
+            indexed_proxy& operator=(const typename std::conditional<is_writable, vector_type, operation_not_available>::type& vec)
             {
-                detail::static_for<0, num_of_components>([&](size_t i) -> void { m_data[get_index(i)] = vec[i]; } );
+                // inlined, calls with x, y, z or w being -1 will get compiled out
+                set_if_indices_are_valid<x, 0>(m_data, vec);
+                set_if_indices_are_valid<y, 1>(m_data, vec);
+                set_if_indices_are_valid<z, 2>(m_data, vec);
+                set_if_indices_are_valid<w, 3>(m_data, vec);
                 return *this;
             }
 
@@ -87,26 +94,13 @@ namespace swizzle
             {
                 return operator=( decay() / std::forward<T>(o) );
             }
+        };
 
-        private:
-            //! Translates 0..3 into x..w. Had doubts how to do it, but MSVC seems to inline and compile-time optimise this call,
-            //! regardless of whether it's a switch or a static array.
-            static const size_t get_index(size_t i)
-            {
-                /*static const size_t s_indices[] = { x, y, z, w };
-                return s_indices[i];*/
-                switch (i)
-                {
-                case 0:
-                    return x;
-                case 1:
-                    return y;
-                case 2:
-                    return z;
-                default:
-                    return w;
-                }
-            }
+        //! A specialisation for the indexed_proxy, defines TVector as vector type.
+        template <class TVector, class TData, size_t x, size_t y, size_t z, size_t w>
+        struct get_vector_type_impl< indexed_proxy<TVector, TData, x, y, z, w> >
+        {
+            typedef TVector type;
         };
     }
 }

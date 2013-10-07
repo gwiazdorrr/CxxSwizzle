@@ -3,7 +3,7 @@
 #pragma once
 
 #include <array>
-#include <swizzle/naive/indexed_proxy.h>
+#include <swizzle/detail/indexed_proxy.h>
 
 namespace swizzle
 {
@@ -26,19 +26,19 @@ namespace swizzle
             template <size_t x, size_t y, size_t z, size_t w>
             struct proxy_factory
             {
-                typedef indexed_proxy< vec4, std::array<TScalar, Size>, x, y, z, w> type;
+                typedef detail::indexed_proxy< vec4, std::array<TScalar, Size>, x, y, z, w> type;
                 static_assert(sizeof(type) == Size * sizeof(TScalar), "Size of the proxy is not equal to the size of the data");
             };
             template <size_t x, size_t y, size_t z>
             struct proxy_factory<x, y, z, -1>
             {
-                typedef indexed_proxy< vec3, std::array<TScalar, Size>, x, y, z > type;
+                typedef detail::indexed_proxy< vec3, std::array<TScalar, Size>, x, y, z > type;
                 static_assert(sizeof(type) == Size * sizeof(TScalar), "Size of the proxy is not equal to the size of the data");
             };
             template <size_t x, size_t y>
             struct proxy_factory<x, y, -1, -1>
             {
-                typedef indexed_proxy< vec2, std::array<TScalar, Size>, x, y > type;
+                typedef detail::indexed_proxy< vec2, std::array<TScalar, Size>, x, y > type;
                 static_assert(sizeof(type) == Size * sizeof(TScalar), "Size of the proxy is not equal to the size of the data");
             };
             template <size_t x>

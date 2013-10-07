@@ -11,9 +11,6 @@ namespace swizzle
     {
         template <class TScalar, size_t Size>
         class vector_adapter;
-
-        template <class TVector, class TData, size_t x, size_t y, size_t z, size_t w>
-        class indexed_proxy;
     }
 
     namespace detail
@@ -48,12 +45,6 @@ namespace swizzle
         struct get_vector_type_impl< naive::vector_adapter<TScalar, Size> >
         {
             typedef naive::vector_adapter<TScalar, Size> type;
-        };
-
-        template <class TVector, class TData, size_t x, size_t y, size_t z, size_t w>
-        struct get_vector_type_impl< naive::indexed_proxy<TVector, TData, x, y, z, w> >
-        {
-            typedef TVector type;
         };
     }
 }
