@@ -14,7 +14,7 @@
 #include <swizzle/detail/utils.h>
 #include <swizzle/detail/vector_binary_operators.h>
 #include <swizzle/detail/vector_base.h>
-#include <swizzle/detail/indexed_vector_iterator.h.h>
+#include <swizzle/detail/indexed_vector_iterator.h>
 #include <swizzle/naive/vector_traits_impl.h>
 #include <swizzle/naive/vector_adapter_helper.h>
 

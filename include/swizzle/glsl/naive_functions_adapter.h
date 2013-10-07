@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cmath>
+#include <swizzle/detail/utils.h>
 
 namespace swizzle
 {
