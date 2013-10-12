@@ -1,5 +1,5 @@
 // CxxSwizzle
-// Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.github@gmail.com>
+// Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
 #include <swizzle/glsl/naive/vector.h>
 #include <swizzle/glsl/naive/matrix.h>
