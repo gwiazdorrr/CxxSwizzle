@@ -57,7 +57,6 @@ namespace glsl_sandbox
 
     #include <swizzle/glsl/vector_functions.h>
 
-//    float wtf = clamp(0.0f, 1.0f);
     // constants shaders are using
     float time;
     vec2 mouse;
