@@ -1,3 +1,6 @@
+# CxxSwizzle
+# Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.github@gmail.com>
+
 find_package(SDL)
 find_package(SDL_image)
 find_package(OpenMP)

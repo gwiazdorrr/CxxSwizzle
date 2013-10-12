@@ -1,3 +1,6 @@
+// CxxSwizzle
+// Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.github@gmail.com>
+
 #include <swizzle/glsl/naive/vector.h>
 #include <swizzle/glsl/naive/matrix.h>
 #include <swizzle/glsl/texture_functions.h>
@@ -5,8 +8,6 @@
 typedef swizzle::glsl::naive::vector< float, 2 > vec2;
 typedef swizzle::glsl::naive::vector< float, 3 > vec3;
 typedef swizzle::glsl::naive::vector< float, 4 > vec4;
-
-//typedef swizzle::glsl::naive_functions_adapter< swizzle::detail::nothing, swizzle::naive::vector, float, 2 > test;
 
 static_assert(sizeof(vec2) == sizeof(float[2]), "Too big");
 static_assert(sizeof(vec3) == sizeof(float[3]), "Too big");
@@ -70,7 +71,6 @@ namespace glsl_sandbox
     sampler2D diffuse("diffuse.png", sampler2D::Repeat);
     sampler2D specular("specular.png", sampler2D::Repeat);
 
-   
     struct fragment_shader
     {
         vec2 gl_FragCoord;
@@ -183,7 +183,7 @@ extern C_LINKAGE int main(int argc, char* argv[])
 
             glsl_sandbox::time = time;
 
-#if !OMP_ENABLED
+#if OMP_ENABLED
             #pragma omp parallel 
             {
                 int thredsCount = omp_get_num_threads();

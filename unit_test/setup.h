@@ -1,3 +1,7 @@
+// CxxSwizzle
+// Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.github@gmail.com>
+#pragma once
+
 #include <swizzle/glsl/naive/vector.h>
 #include <swizzle/glsl/vector_functions.h>
 

@@ -1,5 +1,5 @@
-//  CxxSwizzle
-//  Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.os@gmail.com>
+// CxxSwizzle
+// Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.github@gmail.com>
 #pragma once
 
 #include <type_traits>

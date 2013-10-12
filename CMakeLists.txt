@@ -1,3 +1,6 @@
+# CxxSwizzle
+# Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.github@gmail.com>
+
 cmake_minimum_required (VERSION 2.6)
 project (CxxSwizzle)
 
