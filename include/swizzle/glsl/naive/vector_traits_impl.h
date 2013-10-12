@@ -2,15 +2,17 @@
 //  Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.os@gmail.com>
 #pragma once
 
-#include <type_traits>
 #include <swizzle/detail/vector_traits.h>
 
 namespace swizzle
 {
-    namespace naive
+    namespace glsl
     {
-        template <class TScalar, size_t Size>
-        class vector_adapter;
+        namespace naive
+        {
+            template <class ScalarType, size_t Size>
+            class vector;
+        }
     }
 
     namespace detail
@@ -18,7 +20,7 @@ namespace swizzle
         template <class T>
         struct get_vector_type_impl_for_scalar
         {
-            typedef naive::vector_adapter< T, 1 > type;
+            typedef glsl::naive::vector<T, 1> type;
         };
 
         template <>
@@ -34,17 +36,25 @@ namespace swizzle
         {};
 
         template <>
-        struct get_vector_type_impl<int> : get_vector_type_impl_for_scalar<int>
+        struct get_vector_type_impl<signed int> : get_vector_type_impl_for_scalar<signed int>
+        {};
+
+        template <>
+        struct get_vector_type_impl<unsigned int> : get_vector_type_impl_for_scalar<unsigned int>
+        {};
+
+        template <>
+        struct get_vector_type_impl<signed short> : get_vector_type_impl_for_scalar<signed short>
         {};
 
         template <>
         struct get_vector_type_impl<unsigned short> : get_vector_type_impl_for_scalar<unsigned short>
         {};
 
-        template <class TScalar, size_t Size>
-        struct get_vector_type_impl< naive::vector_adapter<TScalar, Size> >
+        template <class ScalarType, size_t Size>
+        struct get_vector_type_impl< glsl::naive::vector<ScalarType, Size> >
         {
-            typedef naive::vector_adapter<TScalar, Size> type;
+            typedef glsl::naive::vector<ScalarType, Size> type;
         };
     }
 }

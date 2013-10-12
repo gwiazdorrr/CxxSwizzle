@@ -20,20 +20,27 @@
 // Only defining functions of same name in a namespace overrides this behavior
 // (importing with using statement doesn't), giving you full control of how scalars
 // are handled.
+//
+// Another "funny" thing: the bit in the decltype is different to the one in return statement;
+// Both are meant to call static functions. In C++ it is legal to call a static function
+// like a member function, i.e. using an instance. This form is used in the decltype as
+// it yields better error messages in MSVC if something goes wrong (can't specialize vs.
+// internal complier linkage).
+
 
 #define SWIZZLE_FORWARD_FUNC_1(name) \
 template <class T> inline auto name(T&& t) -> \
-decltype(::swizzle::detail::decay_type(::swizzle::detail::get_vector_type<T>::type::name(t)) ) \
+decltype(::swizzle::detail::decay( ::swizzle::detail::declval<swizzle::detail::get_vector_type<T>::type>().name(t)) ) \
 { return ::swizzle::detail::get_vector_type<T>::type::name(std::forward<T>(t)); }      
 
 #define SWIZZLE_FORWARD_FUNC_2(name) \
 template <class T, class U> inline auto name(T&& t, U&& u) -> \
-decltype(::swizzle::detail::decay_type(::swizzle::detail::get_vector_type<T, U>::type::name(t, u)) ) \
+decltype(::swizzle::detail::decay( ::swizzle::detail::declval<::swizzle::detail::get_vector_type<T, U>::type>().name(t, u)) ) \
 { return ::swizzle::detail::get_vector_type<T, U>::type::name(std::forward<T>(t), std::forward<U>(u)); }                      
 
 #define SWIZZLE_FORWARD_FUNC_3(name) \
 template <class T, class U, class V> inline  auto name(T&& t, U&& u, V&& v) -> \
-decltype(::swizzle::detail::decay_type(::swizzle::detail::get_vector_type<T, U, V>::type::name(t, u, v)) )\
+decltype(::swizzle::detail::decay( ::swizzle::detail::declval<::swizzle::detail::get_vector_type<T, U, V>::type>().name(t, u, v)) )\
 { return ::swizzle::detail::get_vector_type<T, U, V>::type::name(std::forward<T>(t), std::forward<U>(u), std::forward<V>(v)); }
 
 SWIZZLE_FORWARD_FUNC_1(radians)

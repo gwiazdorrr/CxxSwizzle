@@ -36,6 +36,7 @@ namespace swizzle
 
             // Use the traits to define vector and scalar
             typedef VectorType vector_type;
+            typedef VectorType decay_type;
           
         public:
             //! Convert proxy into a vector.

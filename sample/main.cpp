@@ -1,23 +1,20 @@
-#include <swizzle/detail/vector_binary_operators.h>
-#include <swizzle/naive/vector_adapter.h>
-#include <swizzle/naive/matrix.h>
+#include <swizzle/glsl/naive/vector.h>
+#include <swizzle/glsl/naive/matrix.h>
 #include <swizzle/glsl/texture_functions.h>
-#include <swizzle/glsl/naive_functions_adapter.h>
 
-typedef swizzle::naive::vector_adapter< float, 2 > vec2;
-typedef swizzle::naive::vector_adapter< float, 3 > vec3;
-typedef swizzle::naive::vector_adapter< float, 4 > vec4;
+typedef swizzle::glsl::naive::vector< float, 2 > vec2;
+typedef swizzle::glsl::naive::vector< float, 3 > vec3;
+typedef swizzle::glsl::naive::vector< float, 4 > vec4;
 
-//typedef swizzle::glsl::naive_functions_adapter< swizzle::detail::nothing, swizzle::naive::vector_adapter, float, 2 > test;
+//typedef swizzle::glsl::naive_functions_adapter< swizzle::detail::nothing, swizzle::naive::vector, float, 2 > test;
 
 static_assert(sizeof(vec2) == sizeof(float[2]), "Too big");
 static_assert(sizeof(vec3) == sizeof(float[3]), "Too big");
 static_assert(sizeof(vec4) == sizeof(float[4]), "Too big");
 
-typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 2, 2> mat2;
-typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 3, 3> mat3;
-typedef swizzle::naive::matrix< swizzle::naive::vector_adapter, float, 4, 4> mat4;
-
+typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, float, 2, 2> mat2;
+typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, float, 3, 3> mat3;
+typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, float, 4, 4> mat4;
 
 //! A really, really simplistic sampler using SDLImage
 struct SDL_Surface;
@@ -63,7 +60,7 @@ namespace glsl_sandbox
     // constants shaders are using
     float time;
     vec2 mouse;
-    vec2 resolution(100.0f, 100.0f);
+    vec2 resolution(50.0f, 50.0f);
 
     // constants some shaders from shader toy are using
     vec2& iResolution = resolution;
@@ -73,6 +70,7 @@ namespace glsl_sandbox
     sampler2D diffuse("diffuse.png", sampler2D::Repeat);
     sampler2D specular("specular.png", sampler2D::Repeat);
 
+   
     struct fragment_shader
     {
         vec2 gl_FragCoord;
@@ -185,7 +183,7 @@ extern C_LINKAGE int main(int argc, char* argv[])
 
             glsl_sandbox::time = time;
 
-#if OMP_ENABLED
+#if !OMP_ENABLED
             #pragma omp parallel 
             {
                 int thredsCount = omp_get_num_threads();
