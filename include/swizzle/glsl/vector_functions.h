@@ -30,17 +30,17 @@
 
 #define SWIZZLE_FORWARD_FUNC_1(name) \
 template <class T> inline auto name(T&& t) -> \
-decltype(::swizzle::detail::decay( ::swizzle::detail::declval<swizzle::detail::get_vector_type<T>::type>().name(t)) ) \
+decltype(::swizzle::detail::decay( ::swizzle::detail::declval<typename ::swizzle::detail::get_vector_type<T>::type>().name(t)) ) \
 { return ::swizzle::detail::get_vector_type<T>::type::name(std::forward<T>(t)); }      
 
 #define SWIZZLE_FORWARD_FUNC_2(name) \
 template <class T, class U> inline auto name(T&& t, U&& u) -> \
-decltype(::swizzle::detail::decay( ::swizzle::detail::declval<::swizzle::detail::get_vector_type<T, U>::type>().name(t, u)) ) \
+decltype(::swizzle::detail::decay( ::swizzle::detail::declval<typename ::swizzle::detail::get_vector_type<T, U>::type>().name(t, u)) ) \
 { return ::swizzle::detail::get_vector_type<T, U>::type::name(std::forward<T>(t), std::forward<U>(u)); }                      
 
 #define SWIZZLE_FORWARD_FUNC_3(name) \
 template <class T, class U, class V> inline  auto name(T&& t, U&& u, V&& v) -> \
-decltype(::swizzle::detail::decay( ::swizzle::detail::declval<::swizzle::detail::get_vector_type<T, U, V>::type>().name(t, u, v)) )\
+decltype(::swizzle::detail::decay( ::swizzle::detail::declval<typename ::swizzle::detail::get_vector_type<T, U, V>::type>().name(t, u, v)) )\
 { return ::swizzle::detail::get_vector_type<T, U, V>::type::name(std::forward<T>(t), std::forward<U>(u), std::forward<V>(v)); }
 
 SWIZZLE_FORWARD_FUNC_1(radians)
