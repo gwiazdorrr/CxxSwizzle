@@ -1,16 +1,17 @@
-//  CxxSwizzle
-//  Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.os@gmail.com>
+// CxxSwizzle
+// Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 #pragma once
-
-#include <utility>
-#include <swizzle/detail/vector_traits.h>
 
 namespace swizzle
 {
     namespace detail
     {
+        //! Inspired by boost/operators, this class defines arithmetic operators for a vector
+        //! and a scalar as friend inline functions (only accessible with ADL). The reason for that,
+        //! contrary to having global template operators is there's less typing and types decaying
+        //! to a vector/scalar (proxies!) can use these operators too.
         template <class VectorType, class ScalarType>
-        struct binary_operators
+        struct vector_binary_operators
         {
             friend VectorType operator+(VectorType v, ScalarType s)
             {

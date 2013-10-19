@@ -1,5 +1,5 @@
 // CxxSwizzle
-// Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.github@gmail.com>
+// Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 #pragma once
 
 #include <type_traits>
@@ -36,6 +36,7 @@ namespace swizzle
 
             // Use the traits to define vector and scalar
             typedef VectorType vector_type;
+            typedef VectorType decay_type;
           
         public:
             //! Convert proxy into a vector.

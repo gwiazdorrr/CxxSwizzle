@@ -1,5 +1,5 @@
-//  CxxSwizzle
-//  Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.os@gmail.com>
+// CxxSwizzle
+// Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 #pragma once
 
 #include <type_traits>
@@ -12,7 +12,7 @@ namespace swizzle
         //! Checks whether sum of sizes is greater/equal to VectorSize and whether it's the minimal
         //! i.e. redundant components are only allowed in last required size
         template <size_t VectorSize, size_t Size1, size_t Size2=0, size_t Size3=0, size_t Size4=0>
-        struct are_sizes_valid
+        struct are_sizes_greater_or_equal
         {
             static const bool value = 
                 (VectorSize > Size1 || !Size2 && !Size3 && !Size4) &&
@@ -43,16 +43,12 @@ namespace swizzle
         struct has_type : std::integral_constant< bool, has_type_helper<T>::value >
         {};
 
-        template <size_t a, size_t b>
-        struct is_greater_helper
-        {
-            static const bool value = a > b;
-        };
 
         // is a > b?
         template <size_t a, size_t b>
-        struct is_greater : std::integral_constant<bool, is_greater_helper<a, b>::value>
+        struct is_greater : std::integral_constant<bool, (a > b)>
         {};
+
 
         //! A type to indicate that operation is not available for some combination of input types.
         struct operation_not_available;
@@ -97,6 +93,21 @@ namespace swizzle
         inline typename std::enable_if< i == -1 || j == -1 >::type set_if_indices_are_valid(DestinationType& /*dst*/, const SourceType& /*src*/)
         {
             // do nothing
+        }
+
+
+        //! Calls and returns a result of the decay memeber function (provided there's one).
+        template <class T>
+        inline auto decay(T&& t) -> decltype( t.decay() )
+        {
+            return t.decay();
+        }
+
+        //! If there's no decay function defined just return same object -- if it is a scalar.
+        template <class T>
+        inline typename std::enable_if< std::is_scalar< typename std::remove_reference<T>::type >::value, T>::type decay(T&& t)
+        {
+            return std::forward<T>(t);
         }
     }
 }

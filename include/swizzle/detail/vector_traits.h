@@ -1,5 +1,5 @@
-//  CxxSwizzle
-//  Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr.os@gmail.com>
+// CxxSwizzle
+// Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 #pragma once
 
 #include <type_traits>
@@ -10,67 +10,80 @@ namespace swizzle
     namespace detail
     {
         //! Type to specialise; it should define a nested type 'type' being a vector
-        //! Non-specialised version does not define it, failing any function relying on it
+        //! Non-specialised version does not define it, failing any function relying on it.
         template <class T>
         struct get_vector_type_impl
         {};
 
-        
+        //! Used for graceful SFINAE - becomes true_type if get_vector_type_impl defines nested type.
         template <class T>
-        struct is_vector : std::integral_constant<bool, has_type< get_vector_type_impl< typename remove_reference_cv<T>::type > >::value >
+        struct has_vector_type_impl : std::integral_constant<bool, has_type< get_vector_type_impl< typename remove_reference_cv<T>::type > >::value >
         {};
 
-        //! Defines common vector for given combination of input types; should be done using variadic templates,
-        //! but MSVC does not support them
+
+
+        //! A generic common vector type implementation. Defines a type if:
+        //! 1) scalars have a common type and it must be either one of them
+        //! 2) Sizes are equal
+        //! This type is specialised to handle cases of 1-sized vectors.
+        template <class VectorType1, class ScalarType1, size_t Size1, class VectorType2, class ScalarType2, size_t Size2>
+        struct common_vector_type_generic_fallback
+        {
+        private:
+            typedef typename std::common_type<ScalarType1, ScalarType2>::type common_scalar_type;
+            static_assert( std::is_same<common_scalar_type, ScalarType1>::value || std::is_same<common_scalar_type, ScalarType2>::value, 
+                "Common type must be same as at least one of scalar types");
+            static_assert( Size1 == Size2 || Size1 == 1 || Size2 == 1,
+                "Either both vectors must have same size or either one of them has to have a size equal to 1 (auto promotion to the bigger vector)");
+
+        public:
+            typedef typename std::conditional< Size1 == Size2,
+                typename std::conditional< std::is_same<common_scalar_type, ScalarType1>::value,
+                    VectorType1,
+                    VectorType2
+                >::type,
+                typename std::conditional< Size2 == 1,
+                    VectorType1,
+                    VectorType2
+                >::type
+            >::type type;
+        };
+
+        //! Defines a common type for two vectors. By default falls back to common_vector_type_generic_fallback,
+        //! but can be easily specialised to handle vectors differently.
+        template <class VectorType1, class VectorType2>
+        struct common_vector_type : common_vector_type_generic_fallback<
+            VectorType1, typename VectorType1::scalar_type, VectorType1::num_of_components, 
+            VectorType2, typename VectorType2::scalar_type, VectorType2::num_of_components>
+        {};
+
+
+
+        //! Defines common vector type for given combination of input types; should be done using variadic templates,
+        //! but MSVC does not support them. Scalars are treated as one-component vector.
+        //! Anyway, this type is specialised later on.
         template <class T, class U = void, class V = void, class = std::true_type >
         struct get_vector_type
         {};
 
-
-        //! Type needs specializing for custom vectors
-        template <class T, class U>
-        struct common_vector_type
-        {
-            typedef typename get_vector_type<T>::type type_1;
-            typedef typename get_vector_type<U>::type type_2;
-
-            typedef typename type_1::scalar_type scalar_type_1;
-            typedef typename type_2::scalar_type scalar_type_2;
-            typedef typename std::common_type<scalar_type_1, scalar_type_2>::type common_scalar_type;
-
-            //! had to do comparisons outside std::conditional as using less than/greater than in templates confuses compiler
-            static const bool are_sizes_equal = type_1::num_of_components == type_2::num_of_components;
-            static const bool is_first_bigger = type_1::num_of_components > type_2::num_of_components;
-
-            // this may be confusing at first, but principle is simple
-            // sizes match -> type that scalars get promoted to gets chosen
-            // sizes don't match -> type that has bigger number of components wins
-            typedef typename std::conditional<
-                are_sizes_equal && std::is_same<scalar_type_1, common_scalar_type>::value || is_first_bigger,
-                type_1,
-                type_2
-            >::type type;
-        };
-
-
-
         //! A specialisation for one type; redirects to get_vector_type_impl<T>
         template <class T>
-        struct get_vector_type<T, void, void, std::integral_constant<bool, is_vector<T>::value> > 
+        struct get_vector_type<T, void, void, std::integral_constant<bool, has_vector_type_impl<T>::value> > 
             : get_vector_type_impl< typename remove_reference_cv<T>::type >
         {};
 
         //! A specialisation for two types; redirectrs to common_vector_type
         template <class T, class U>
-        struct get_vector_type<T, U, void, std::integral_constant<bool, is_vector<T>::value && is_vector<U>::value> > 
+        struct get_vector_type<T, U, void, std::integral_constant<bool, has_vector_type_impl<T>::value && has_vector_type_impl<U>::value> > 
             : common_vector_type< typename get_vector_type<T>::type, typename get_vector_type<U>::type >
         {};
 
         //! Uses two-types specialization to get the result
         template <class T, class U, class V>
-        struct get_vector_type<T, U, V, std::integral_constant<bool, is_vector<T>::value && is_vector<U>::value && is_vector<V>::value> > 
+        struct get_vector_type<T, U, V, std::integral_constant<bool, has_vector_type_impl<T>::value && has_vector_type_impl<U>::value && has_vector_type_impl<V>::value> > 
             : get_vector_type< typename get_vector_type<T, U>::type, V >
         {};
+
 
 
         //! A shortcut for getting the number of vector's components.
@@ -83,23 +96,5 @@ namespace swizzle
             :  std::integral_constant< size_t, get_vector_type<T>::type::num_of_components >
         {
         };
-
-        template <class T>
-        inline auto decay(T&& t) -> decltype( t.decay() )
-        {
-            return t.decay();
-        }
-
-        template <class T>
-        inline typename std::enable_if< std::is_scalar< typename std::remove_reference<T>::type >::value, T>::type decay(T&& t)
-        {
-            return std::forward<T>(t);
-        }
-
-        template <class T>
-        inline auto decay_type(T&& t) -> decltype( t.decay() );
-
-        template <class T>
-        inline typename std::enable_if< std::is_scalar< typename std::remove_reference<T>::type >::value, T>::type decay_type(T&& t);
     }
 }
