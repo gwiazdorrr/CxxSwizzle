@@ -1,3 +1,4 @@
+// http://glsl.heroku.com/e#10661.0
 #ifdef GL_ES
 precision mediump float;
 #endif

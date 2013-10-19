@@ -1,3 +1,6 @@
+// CxxSwizzle
+// Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
+
 #include <boost/test/unit_test.hpp>
 #include <array>
 #include <limits>
