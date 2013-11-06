@@ -103,11 +103,17 @@ namespace swizzle
             return t.decay();
         }
 
+        //! Special case for nothing
+        inline nothing decay(nothing)
+        {
+            return nothing();
+        }
+
         //! If there's no decay function defined just return same object -- if it is a scalar.
         template <class T>
         inline typename std::enable_if< std::is_scalar< typename std::remove_reference<T>::type >::value, T>::type decay(T&& t)
         {
-            return std::forward<T>(t);
+            return t;
         }
     }
 }

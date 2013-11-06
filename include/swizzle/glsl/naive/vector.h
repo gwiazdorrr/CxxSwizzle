@@ -6,12 +6,13 @@
 #include <iostream>
 
 #include <swizzle/detail/utils.h>
-#include <swizzle/detail/vector_binary_operators.h>
+#include <swizzle/detail/common_binary_operators.h>
 #include <swizzle/detail/vector_base.h>
 #include <swizzle/detail/indexed_vector_iterator.h>
 #include <swizzle/glsl/naive/vector_functions_adapter.h>
 #include <swizzle/glsl/naive/vector_traits_impl.h>
 #include <swizzle/glsl/naive/vector_helper.h>
+#include <swizzle/glsl/naive/matrix.h>
 
 namespace swizzle
 {
@@ -34,7 +35,7 @@ namespace swizzle
                     typename std::conditional< 
                         Size == 1,
                         detail::nothing,
-                        detail::vector_binary_operators<vector<ScalarType, Size>, ScalarType>
+                        detail::common_binary_operators<vector<ScalarType, Size>, ScalarType>
                     >::type,
                     vector,
                     ScalarType,
@@ -88,45 +89,12 @@ namespace swizzle
                     iterate( [&](size_t i) -> void { m_data[i] = s; } );
                 }
 
-                //! A composite constructor variant with 1 argument
-                //! Note that for types convertibles to scalar type the instantiation will fail effectively falling back to one of previous two constructors
-                template <class T1>
-                explicit vector( const T1& v1,
-                    typename std::enable_if< !std::is_convertible<T1, scalar_type>::value && detail::are_sizes_greater_or_equal<Size, detail::get_vector_size<T1>::value>::value, void>::type* = 0 )
-                {
-                    compose<0>(detail::decay(v1));
-                }
-
-                //! A composite constructor variant with 2 arguments
-                template <class T1, class T2>
-                vector( const T1& v1, const T2& v2,
-                    typename std::enable_if< detail::are_sizes_greater_or_equal<Size, detail::get_vector_size<T1>::value, detail::get_vector_size<T2>::value>::value, void>::type* = 0 )
-                {
-                    compose<0>(detail::decay(v1));
-                    compose<detail::get_vector_size<T1>::value>(detail::decay(v2));
-                }
-
-                //! A composite constructor variant with 3 arguments
-                template <class T1, class T2, class T3>
-                vector( const T1& v1, const T2& v2, const T3& v3,
-                    typename std::enable_if< detail::are_sizes_greater_or_equal<Size, detail::get_vector_size<T1>::value, detail::get_vector_size<T2>::value, detail::get_vector_size<T3>::value>::value, void>::type* = 0 )
-                {
-                    compose<0>(detail::decay(v1));
-                    compose<detail::get_vector_size<T1>::value>(detail::decay(v2));
-                    compose<detail::get_vector_size<T1>::value + detail::get_vector_size<T2>::value>(detail::decay(v3));
-                }
-
-                //! A composite constructor variant with 4 arguments
-                template <class T1, class T2, class T3, class T4>
-                vector( const T1& v1, const T2& v2, const T3& v3, const T4& v4,
-                    typename std::enable_if< detail::are_sizes_greater_or_equal<Size, detail::get_vector_size<T1>::value, detail::get_vector_size<T2>::value, detail::get_vector_size<T3>::value, detail::get_vector_size<T4>::value>::value, void>::type* = 0 )
-                {
-                    compose<0>(detail::decay(v1));
-                    compose<detail::get_vector_size<T1>::value>(detail::decay(v2));
-                    compose<detail::get_vector_size<T1>::value + detail::get_vector_size<T2>::value>(detail::decay(v3));
-                    compose<detail::get_vector_size<T1>::value + detail::get_vector_size<T2>::value + detail::get_vector_size<T3>::value>(detail::decay(v4));
-                }
-
+                // Block of generic proxy-constructos calling construct member function. Compiler
+                // will likely optimise this.
+                CXXSWIZZLE_CONSTRUCTOR_GREATER_OR_EQUAL_COMPONENTS(vector, Size, 1, 3)
+                CXXSWIZZLE_CONSTRUCTOR_GREATER_OR_EQUAL_COMPONENTS(vector, Size, 2, 2)
+                CXXSWIZZLE_CONSTRUCTOR_GREATER_OR_EQUAL_COMPONENTS(vector, Size, 3, 1)
+                CXXSWIZZLE_CONSTRUCTOR_GREATER_OR_EQUAL_COMPONENTS(vector, Size, 4, 0)
         
             // OPERATORS
             public:
@@ -188,12 +156,30 @@ namespace swizzle
                     return *this;
                 }
 
+                // Matrix multiply operation
+                vector& operator*=(const matrix<::swizzle::glsl::naive::vector, ScalarType, Size, Size>& m)
+                {
+                    return *this = *this * m;
+                }
+
                 // Others
 
                 vector& operator=(const vector& o)
                 {
                     iterate( [&](size_t i) -> void { m_data[i] = o[i]; } );
                     return *this;
+                }
+
+                bool operator==(const vector& o) const
+                {
+                    bool are_equal = true;
+                    iterate( [&](size_t i) -> void { are_equal &= ( m_data[i] == o[i] ); });
+                    return are_equal;
+                }
+
+                bool operator!=(const vector& o) const
+                {
+                    return !(*this == o);
                 }
 
                 vector operator-() const
@@ -231,34 +217,49 @@ namespace swizzle
                 }
             
             private:
+
+                template <class T1, class T2, class T3, class T4>
+                void construct(T1&& t1, T2&& t2, T3&& t3, T4&& t4)
+                {
+                    // the pyramid of MSVC shame
+                    compose<T1, 0>(t1);
+                    compose<T2, detail::get_total_size<T1>::value>(t2);
+                    compose<T3, detail::get_total_size<T1, T2>::value>(t3);
+                    compose<T4, detail::get_total_size<T1, T2, T3>::value>(t4);
+                }
+
+                template <class T, size_t CellIdx>
+                void compose(typename std::remove_reference<T>::type& t)
+                {
+                    compose_impl<CellIdx>( detail::decay( std::forward<T>(t) ) );
+                }
+
+                template <size_t N>
+                void compose_impl(detail::nothing)
+                {
+                    // noop
+                }
+
                 //! Puts scalar at given position. Used only during construction.
                 template <size_t N>
-                void compose(scalar_type v)
+                void compose_impl(scalar_type v)
                 {
                     operator[](N) = v;
                 }
 
                 //! Puts a vector (or it's part) at given position. Used only during construction.
                 template <size_t N, class TOtherScalar, size_t OtherSize>
-                void compose( const vector<TOtherScalar, OtherSize>& v )
+                void compose_impl( const vector<TOtherScalar, OtherSize>& v )
                 {
                     const size_t limit = (N + OtherSize > Size) ? Size : (N + OtherSize);
-                    iterate<N, limit>([&](size_t i) -> void { m_data[i] = v[i - N]; });
+                    detail::static_for<N, limit>([&](size_t i) -> void { m_data[i] = v[i - N]; });
                 }
 
                 //! Iterates over the vector, firing Func for each index
                 template <class Func>
                 static void iterate(Func func)
                 {
-                    iterate<0, Size>(func);
-                }
-
-                //! Iterates over the vector, firing Func for each index
-                template <size_t NStart, size_t NEnd, class Func>
-                static void iterate(Func func, std::integral_constant<size_t, NStart> = std::integral_constant<size_t, NStart>(), std::integral_constant<size_t, NEnd> = std::integral_constant<size_t, NEnd>())
-                {
-                    static_assert( NStart >= 0 && NEnd <= Size && NStart < NEnd, "Out of bounds" );
-                    detail::static_for<NStart, NEnd>(func);
+                    detail::static_for<0, Size>(func);
                 }
         
             // STL COMPABILITY (not needed, but useful for testing)

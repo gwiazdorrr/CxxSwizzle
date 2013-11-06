@@ -91,10 +91,67 @@ namespace swizzle
         struct get_vector_size
         {};
 
+        //! A shortcut for getting the number of vector's components.
+        template <>
+        struct get_vector_size< nothing, std::true_type > : std::integral_constant<size_t, 0>
+        {};
+
         template <class T>
         struct get_vector_size<T, std::integral_constant<bool, is_greater<get_vector_type<T>::type::num_of_components, 0>::value> >
             :  std::integral_constant< size_t, get_vector_type<T>::type::num_of_components >
-        {
-        };
+        {};
+
+        // damn you MSVC and your lack of variadic templates....
+
+        template <class T1, class T2 = nothing, class T3 = nothing, class T4 = nothing, 
+                  class T5 = nothing, class T6 = nothing, class T7 = nothing, class T8 = nothing, 
+                  class T9 = nothing, class T10 = nothing, class T11 = nothing, class T12 = nothing, 
+                  class T13 = nothing, class T14 = nothing, class T15 = nothing, class T16 = nothing,
+                  class = std::true_type>
+        struct get_total_size
+        {};
+
+        template <class T1, class T2, class T3, class T4, 
+                  class T5, class T6, class T7, class T8, 
+                  class T9, class T10, class T11, class T12, 
+                  class T13, class T14, class T15, class T16>
+        struct get_total_size<
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16,
+            std::integral_constant<bool, 0 <
+                get_vector_size<T1>::value + 
+                get_vector_size<T2>::value + 
+                get_vector_size<T3>::value + 
+                get_vector_size<T4>::value + 
+                get_vector_size<T5>::value + 
+                get_vector_size<T6>::value + 
+                get_vector_size<T7>::value + 
+                get_vector_size<T8>::value + 
+                get_vector_size<T9>::value + 
+                get_vector_size<T10>::value + 
+                get_vector_size<T11>::value + 
+                get_vector_size<T12>::value + 
+                get_vector_size<T13>::value + 
+                get_vector_size<T14>::value + 
+                get_vector_size<T15>::value + 
+                get_vector_size<T16>::value>
+            > :
+            std::integral_constant<size_t, 
+                get_vector_size<T1>::value + 
+                get_vector_size<T2>::value + 
+                get_vector_size<T3>::value + 
+                get_vector_size<T4>::value + 
+                get_vector_size<T5>::value + 
+                get_vector_size<T6>::value + 
+                get_vector_size<T7>::value + 
+                get_vector_size<T8>::value + 
+                get_vector_size<T9>::value + 
+                get_vector_size<T10>::value + 
+                get_vector_size<T11>::value + 
+                get_vector_size<T12>::value + 
+                get_vector_size<T13>::value + 
+                get_vector_size<T14>::value + 
+                get_vector_size<T15>::value + 
+                get_vector_size<T16>::value>
+        {};
     }
 }

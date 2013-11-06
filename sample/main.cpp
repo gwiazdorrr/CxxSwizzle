@@ -5,6 +5,7 @@
 #include <swizzle/glsl/naive/matrix.h>
 #include <swizzle/glsl/texture_functions.h>
 
+typedef swizzle::glsl::naive::vector< int, 2 > ivec2;
 typedef swizzle::glsl::naive::vector< float, 2 > vec2;
 typedef swizzle::glsl::naive::vector< float, 3 > vec3;
 typedef swizzle::glsl::naive::vector< float, 4 > vec4;
@@ -60,7 +61,7 @@ namespace glsl_sandbox
     // constants shaders are using
     float time;
     vec2 mouse;
-    vec2 resolution(50.0f, 50.0f);
+    vec2 resolution;
 
     // constants some shaders from shader toy are using
     vec2& iResolution = resolution;
@@ -93,7 +94,9 @@ namespace glsl_sandbox
     //#include "shaders/terrain.frag"
     //#include "shaders/complex.frag"
     //#include "shaders/road.frag"
-    #include "shaders/gears.frag"
+    //#include "shaders/gears.frag"
+    //#include "shaders/water_turbulence.frag"
+	#include "shaders/sky.frag"
 
     // be a dear a clean up
     #pragma warning(pop)
@@ -113,9 +116,135 @@ namespace glsl_sandbox
 #include <SDL.h>
 #include <SDL_image.h>
 #include <time.h>
+#include <memory>
+#include <functional>
 #if OMP_ENABLED
 #include <omp.h>
 #endif
+
+//! A handy way of creating (and checking) unique_ptrs of SDL objects
+template <class T>
+std::unique_ptr< T, std::function<void (T*)> > makeUnique(T* value, std::function<void (T*)> deleter)
+{
+    if (!value)
+    {
+        throw std::runtime_error("Null pointer");
+    }
+    return std::unique_ptr<T, decltype(deleter)>(value, deleter);
+}
+
+//! As above, but allows null initialisation
+template <class T>
+std::unique_ptr< T, std::function<void (T*)> > makeUnique(std::function<void (T*)> deleter)
+{
+    return std::unique_ptr<T, decltype(deleter)>(nullptr, deleter);
+}
+
+//! Just a RAII wrapper around SDL_mutex
+struct ScopedLock
+{
+    SDL_mutex* mutex;
+
+    explicit ScopedLock( SDL_mutex* mutex ) : mutex(mutex)
+    {
+        SDL_LockMutex(mutex);
+    }
+
+    template <class T>
+    explicit  ScopedLock( std::unique_ptr<SDL_mutex, T>& mutex ) : mutex(mutex.get())
+    {
+        SDL_LockMutex(this->mutex);
+    }
+
+    ~ScopedLock()
+    {
+        SDL_UnlockMutex(mutex);
+    }
+};
+
+
+//! The surface to draw on.
+auto g_surface = makeUnique<SDL_Surface>( SDL_FreeSurface );
+//! Mutex used when exchaning frame between threads
+auto g_frameHandshakeMutex = makeUnique<SDL_mutex>( SDL_CreateMutex(), SDL_DestroyMutex );
+//! Signaled when a frame has been processed
+auto m_frameReceivedEvent = makeUnique<SDL_cond>( SDL_CreateCond(), SDL_DestroyCond );
+//! Signaled when a frame is ready to be processed
+auto m_frameReadyEvent = makeUnique<SDL_cond>( SDL_CreateCond(), SDL_DestroyCond );
+//! Additional flag set when a frame becomes ready, in case main thread is not waiting
+bool g_frameReady = false;
+//! Stop drawing
+bool g_cancelDraw = false;
+//! Quit!
+bool g_quit = false;
+
+
+//! Thread used for rendering; it invokes the shader
+static int renderThread(void*)
+{
+    while (true)
+    {
+        auto bmp = g_surface.get();
+
+#if !defined(_DEBUG) && OMP_ENABLED
+#pragma omp parallel 
+        {
+            int thredsCount = omp_get_num_threads();
+            int threadNum = omp_get_thread_num();
+
+            int heightPerThread = bmp->h / thredsCount;
+            int heightStart = threadNum * heightPerThread;
+            int heightEnd = (threadNum == thredsCount - 1) ? bmp->h : (heightStart + heightPerThread);
+#else
+        {
+            int heightStart = 0;
+            int heightEnd = bmp->h;
+#endif
+
+            glsl_sandbox::fragment_shader shader;
+            for ( int y = heightStart; !g_cancelDraw && y < heightEnd; ++y )
+            {
+                uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch;
+                for (int x = 0; x < bmp->w; ++x )
+                {
+                    shader.gl_FragCoord = vec2(static_cast<float>(x) , bmp->h - 1.0f - y);
+
+                    // vvvvvvvvvvvvvvvvvvvvvvvvvv
+                    // THE SHADER IS INVOKED HERE
+                    // ^^^^^^^^^^^^^^^^^^^^^^^^^^
+                    shader();
+
+                    auto color = glsl_sandbox::clamp(shader.gl_FragColor, 0.0f, 1.0f);
+
+                    *ptr++ = static_cast<uint8_t>(255 * color.x + 0.5f);
+                    *ptr++ = static_cast<uint8_t>(255 * color.y + 0.5f);
+                    *ptr++ = static_cast<uint8_t>(255 * color.z + 0.5f);
+                }
+            }
+        }
+
+        ScopedLock lock(g_frameHandshakeMutex);
+        if ( g_quit )
+        {
+            return 0;
+        }
+        else
+        {
+            // frame is ready, change bool and raise signal (in case main thread is waiting)
+            g_frameReady = true;
+            SDL_CondSignal(m_frameReadyEvent.get());
+
+            // wait for the main thread to process the frame
+            SDL_CondWait(m_frameReceivedEvent.get(), g_frameHandshakeMutex.get());
+            if ( g_quit )
+            {
+                return 0;
+            }
+        }
+    }
+}
+
+
 
 extern C_LINKAGE int main(int argc, char* argv[])
 {
@@ -124,112 +253,122 @@ extern C_LINKAGE int main(int argc, char* argv[])
     // initialise SDLImage
     int flags = IMG_INIT_JPG | IMG_INIT_PNG;
     int initted = IMG_Init(flags);
-    if ((initted & flags) != flags) {
+    if ((initted & flags) != flags) 
+    {
         cerr << "WARNING: failed to initialise required jpg and png support: " << IMG_GetError() << endl;
     }
 
-    SDL_Surface* screen = nullptr;
-    SDL_Surface* bmp = nullptr;
-
+    // get initial resolution
+    ivec2 initialResolution(100, 100);
     if (argc == 2)
     {
-        vec2 resolution;
-
         std::stringstream s;
         s << argv[1];
-        s >> resolution;
-        glsl_sandbox::resolution = resolution;
+        if ( !(s >> initialResolution) )
+        {
+            cerr << "ERROR: unable to parse resolution argument" << endl;
+            return 1;
+        }
     }
 
-    if ( glsl_sandbox::resolution.x <= 0.0f || glsl_sandbox::resolution.y <= 0.0f )
+    if ( initialResolution.x <= 0 || initialResolution.y < 0 )
     {
-        cerr << "ERROR: invalid resolution: " << glsl_sandbox::resolution  << endl;
+        cerr << "ERROR: invalid resolution: " << initialResolution  << endl;
         return 1;
     }
 
     cout << "\n";
-    cout << "+/-  - increase/decrease time scale\n";
-    cout << "lmb  - update glsl_sandbox::mouse\n";
-    cout << "esc  - quit\n\n";
+    cout << "+/-   - increase/decrease time scale\n";
+    cout << "lmb   - update glsl_sandbox::mouse\n";
+    cout << "space - blit now! (show incomplete render)\n";
+    cout << "esc   - quit\n\n";
 
-    try {
-        
-        SDL_Init( SDL_INIT_VIDEO );
-        SDL_EnableKeyRepeat(100, 10);
+    // it doesn't need cleaning up
+    SDL_Surface* screen = nullptr;
+
+    try 
+    {
+        // a function to resize the screen; throws if unsuccessful
+        auto resizeOrCreateScreen = [&](int w, int h) -> void
+        {
+            screen = SDL_SetVideoMode( w, h, 24, SDL_SWSURFACE | SDL_RESIZABLE);
+            if ( !screen )
+            {
+                throw std::runtime_error("Unable to set video mode");
+            }
+        };
+
+        // a function used to resize the surface
+        auto resizeOrCreateSurface = [&](int w, int h) -> void
+        {
+            g_surface.reset( SDL_CreateRGBSurface(SDL_SWSURFACE, w, h, 24, 0x000000ff, 0x0000ff00, 0x00ff0000, 0 ) );
+            if ( !g_surface )
+            {
+                throw std::runtime_error("Unable to create surface");
+            }
+            // update shader value
+            glsl_sandbox::resolution.x = static_cast<float>(w);
+            glsl_sandbox::resolution.y = static_cast<float>(h);
+        };
+
+        // initial setup
+        if (SDL_Init( SDL_INIT_VIDEO ) < 0 )
+        {
+            throw std::runtime_error("Unable to init SDL");
+        }
+        SDL_EnableKeyRepeat(200, 16);
         SDL_WM_SetCaption("SDL/Swizzle", "SDL/Swizzle");
-        SDL_Rect rect;
-        rect.x = 0;
-        rect.y = 0;
-        rect.w = static_cast<Uint16>(glsl_sandbox::resolution.x + 0.5f);
-        rect.h = static_cast<Uint16>(glsl_sandbox::resolution.y + 0.5f);
-        screen = SDL_SetVideoMode( rect.w, rect.h, 24, SDL_SWSURFACE ); 
-        bmp = SDL_CreateRGBSurface(SDL_SWSURFACE, rect.w, rect.h, 24, 0x000000ff, 0x0000ff00, 0x00ff0000, 0 );
+
+        resizeOrCreateScreen(initialResolution.x, initialResolution.y);
+        resizeOrCreateSurface(initialResolution.x, initialResolution.y);
         
-        float time = 0;
         float timeScale = 1;
         int frame = 0;
+        float time = 0;
+        vec2 mousePosition;        
+        bool pendingResize = false;
+        bool mousePressed = false;
 
-        SDL_Event event;
-        bool quit = false;
+
+        auto renderThreadInstance = SDL_CreateThread(renderThread, nullptr);
 
         clock_t begin = clock();
-        double bufferedTimeScale = 0.0f;
-        
 
-        while (!quit) {
-
-            SDL_LockSurface(bmp);
-
-            glsl_sandbox::time = time;
-
-#if OMP_ENABLED
-            #pragma omp parallel 
-            {
-                int thredsCount = omp_get_num_threads();
-                int threadNum = omp_get_thread_num();
-
-                int heightPerThread = bmp->h / thredsCount;
-                int heightStart = threadNum * heightPerThread;
-                int heightEnd = (threadNum == thredsCount - 1) ? bmp->h : (heightStart + heightPerThread);
-#else
-            {
-                int heightStart = 0;
-                int heightEnd = bmp->h;
-#endif
-
-                glsl_sandbox::fragment_shader shader;
-                for ( int y = heightStart; y < heightEnd; ++y )
-                {
-                    uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch;
-                    for (int x = 0; x < bmp->w; ++x )
-                    {
-                        shader.gl_FragCoord = vec2(static_cast<float>(x) , bmp->h - 1.0f - y);
-                    
-                        shader();
-
-                        auto color = glsl_sandbox::clamp(shader.gl_FragColor, 0.0f, 1.0f);
-
-                        *ptr++ = static_cast<uint8_t>(255 * color.x + 0.5f);
-                        *ptr++ = static_cast<uint8_t>(255 * color.y + 0.5f);
-                        *ptr++ = static_cast<uint8_t>(255 * color.z + 0.5f);
-                    }
-                }
-            }
-
-            SDL_UnlockSurface(bmp);
-            SDL_BlitSurface( bmp, NULL, screen, NULL );
-            SDL_Flip( screen );
+        while (!g_quit) 
+        {
+            bool blitNow = false;
 
             // process events
-            while (SDL_PollEvent(&event)) {
-                switch ( event.type ) {
+            SDL_Event event;
+            while (SDL_PollEvent(&event)) 
+            {
+                switch ( event.type ) 
+                {
+                case SDL_VIDEORESIZE:
+                    if ( event.resize.w != screen->w || event.resize.h != screen->h )
+                    {
+                        resizeOrCreateScreen( event.resize.w, event.resize.h );
+                        ScopedLock lock(g_frameHandshakeMutex);
+                        g_cancelDraw = pendingResize = true;
+                    }
+                    break;
                 case SDL_QUIT:
-                    quit = true;
+                    {
+                        ScopedLock lock(g_frameHandshakeMutex);
+                        g_quit = g_cancelDraw = true;
+                    }
                     break; 
                 case SDL_KEYDOWN:
-                    switch ( event.key.keysym.sym ) {
+                    switch ( event.key.keysym.sym ) 
+                    {
+                    case SDLK_SPACE:
+                        blitNow = true;
+                        break;
                     case SDLK_ESCAPE:
-                        quit = true;
+                        {
+                            ScopedLock lock(g_frameHandshakeMutex);
+                            g_quit = g_cancelDraw = true;
+                        }
                         break;
                     case SDLK_PLUS:
                     case SDLK_EQUALS:
@@ -242,38 +381,91 @@ extern C_LINKAGE int main(int argc, char* argv[])
                         break;
                     }
                     break;
-                case SDL_MOUSEBUTTONDOWN:
-                    glsl_sandbox::mouse.x = static_cast<float>(event.button.x);
-                    glsl_sandbox::mouse.y = static_cast<float>(bmp->h - 1 - event.button.y);
+                case SDL_MOUSEMOTION:
+                    if (mousePressed)
+                    {
+                        mousePosition.x = static_cast<float>(event.button.x);
+                        mousePosition.y = static_cast<float>(g_surface->h - 1 - event.button.y);
+                    }
                     break;
+                case SDL_MOUSEBUTTONDOWN:
+                    mousePressed = true;
+                    mousePosition.x = static_cast<float>(event.button.x);
+                    mousePosition.y = static_cast<float>(g_surface->h - 1 - event.button.y);
+                    break;
+                case SDL_MOUSEBUTTONUP:
+                    mousePressed = false;
                 default:
                     break;
                 }
             }
 
-            cout << "frame: " << frame++ << "\t time: " << time << "\t timescale: " << timeScale << "         \r";
+            bool doFlip = false;
+            {
+                ScopedLock lock(g_frameHandshakeMutex);
+                if ( g_quit )
+                {
+                    if ( g_frameReady )
+                    {
+                        // unlock waiting thread
+                        SDL_CondSignal( m_frameReceivedEvent.get() );
+                    }
+                }
+                // if either the flag is set or variable has been signaled do the blit
+                else if ( blitNow || g_frameReady || SDL_CondWaitTimeout(m_frameReadyEvent.get(), g_frameHandshakeMutex.get(), 33) == 0 )
+                {
+                    doFlip = true;
+                    SDL_BlitSurface( g_surface.get(), NULL, screen, NULL );
+
+                    if ( pendingResize )
+                    {
+                        resizeOrCreateSurface(screen->w, screen->h);
+                        pendingResize = false;
+                    }
+
+                    if (!blitNow || g_frameReady)
+                    {
+                        // transfer variables (resolution is transfered elsewhere)
+                        glsl_sandbox::time = time;
+                        glsl_sandbox::mouse = mousePosition / vec2(screen->w, screen->h);
+                        // reset flags
+                        g_cancelDraw = g_frameReady = false;
+                        SDL_CondSignal( m_frameReceivedEvent.get() );
+                    }
+                }
+            }
+
+            if (doFlip)
+            {
+                ++frame;
+                SDL_Flip( screen );
+            }
+
+            cout << "frame: " << frame << "\t time: " << time << "\t timescale: " << timeScale << "         \r";
             cout.flush();
 
             clock_t delta = clock() - begin;
             time += static_cast<float>(delta / double(CLOCKS_PER_SEC) * timeScale);
             begin = clock();
         }
-    } catch ( exception& error ) {
+
+        // wait for the render thread to stop
+        cout << "\nwaiting for the worker thread to finish...";
+        SDL_WaitThread(renderThreadInstance, nullptr);
+    } 
+    catch ( exception& error ) 
+    {
         cerr << "ERROR: " << error.what() << endl;
-    } catch (...) {
+    } 
+    catch (...) 
+    {
         cerr << "ERROR: Unknown error" << endl;
     }
 
-
-    if ( bmp ) {
-        SDL_FreeSurface(bmp);
-    }
-    if ( screen ) { 
-        SDL_FreeSurface(screen);
-    }
     SDL_Quit();
     return 0; 
 }
+
 
 sampler2D::sampler2D( const char* path, WrapMode wrapMode ) : m_wrapMode(wrapMode)
 {

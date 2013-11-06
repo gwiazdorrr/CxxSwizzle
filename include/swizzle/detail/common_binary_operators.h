@@ -11,7 +11,7 @@ namespace swizzle
         //! contrary to having global template operators is there's less typing and types decaying
         //! to a vector/scalar (proxies!) can use these operators too.
         template <class VectorType, class ScalarType>
-        struct vector_binary_operators
+        struct common_binary_operators
         {
             friend VectorType operator+(VectorType v, ScalarType s)
             {
