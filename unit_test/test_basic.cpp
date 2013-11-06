@@ -6,49 +6,6 @@
 #include <limits>
 #include "setup.h"
 
-bool are_close(float a, float b)
-{
-    static const float eps = std::numeric_limits<float>::epsilon();
-    return (a-b) <= eps;
-}
-
-template <class TVec>
-bool are_equal(const TVec& a, const TVec& b)
-{
-    return std::equal(a.begin(), a.end(), b.begin());
-}
-
-template <class TVec>
-bool are_equal_reverse(const TVec& a, const TVec& b)
-{
-    typedef std::reverse_iterator< decltype(b.begin()) > reverse_iterator;
-    return std::equal(a.begin(), a.end(), reverse_iterator(b.end()));
-}
-
-template <class TVec>
-bool are_all_equal(const TVec& a, typename TVec::scalar_type v)
-{
-    return std::all_of(a.begin(), a.end(), [=](typename TVec::scalar_type x) -> bool { return x == v; } );
-}
-
-template <class TVec>
-bool are_all_equal_list(const TVec& a, typename TVec::array_type &b)
-{
-    return std::equal(a.begin(), a.end(), std::begin(b));
-}
-
-template <class TVec, class Func>
-bool are_all_of(const TVec& a, Func func)
-{
-    return std::all_of(a.begin(), a.end(), func);
-}
-
-template <class TVec, class Func>
-bool are_equal(const TVec& a, const TVec& b, Func func)
-{
-    return std::equal(a.begin(), a.end(), b.begin(), func);
-}
-
 
 template <class TVec, class TScalar>
 void test_operators(TVec a, TScalar b)
