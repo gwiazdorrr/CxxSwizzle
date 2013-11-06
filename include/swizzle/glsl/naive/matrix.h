@@ -238,10 +238,10 @@ namespace swizzle
                         auto& column_data = m2.column(col);
                         result_column_type result_column;
 
-                        detail::static_for<0, N>([&](size_t row) -> void
+                        for (size_t row = 0; row < N; ++row)
                         {
                             result_column[row] = column_data.dot(column_data, m1.row(row));
-                        });
+                        }
 
                         result.column(col) = result_column;
                     });
@@ -263,15 +263,15 @@ namespace swizzle
                 }
 
             private:
-                template <size_t M, size_t N, class OtherMatrix>
+                template <size_t OtherM, size_t OtherN, class OtherMatrix>
                 void copy_part(const OtherMatrix& other)
                 {
-                    detail::static_for<0, N>([&](size_t row) -> void 
+                    detail::static_for<0, OtherN>([&](size_t row) -> void 
                     {
-                        detail::static_for<0, M>([&](size_t col) -> void
+                        for (size_t col = 0; col < OtherM; ++col) 
                         {
                             cell(row, col) = other.cell(row, col);
-                        });
+                        }
                     });
                 }
 
