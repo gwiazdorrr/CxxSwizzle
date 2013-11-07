@@ -217,10 +217,12 @@ namespace swizzle
                 static column_type mul(const matrix_type& m, const row_type& v)
                 {
                     column_type result;
+
                     detail::static_for<0, N>([&](size_t row) -> void
                     {
                         result[row] = v.dot(v, m.row(row));
                     });
+
                     return result;
                 }
 
@@ -228,22 +230,11 @@ namespace swizzle
                 template <size_t OtherM>
                 static matrix<VectorType, ScalarType, N, OtherM> mul(const matrix_type& m1, const matrix<VectorType, ScalarType, M, OtherM>& m2)
                 {
-                    typedef matrix<VectorType, ScalarType, N, OtherM> result_type;
-                    typedef typename result_type::column_type result_column_type; 
-                
-                    result_type result;
+                    matrix<VectorType, ScalarType, N, OtherM> result;
 
                     detail::static_for<0, OtherM>([&](size_t col) -> void
                     {
-                        auto& column_data = m2.column(col);
-                        result_column_type result_column;
-
-                        for (size_t row = 0; row < N; ++row)
-                        {
-                            result_column[row] = column_data.dot(column_data, m1.row(row));
-                        }
-
-                        result.column(col) = result_column;
+                        result.column(col) = m1 * m2.column(col);
                     });
 
                     return result;
