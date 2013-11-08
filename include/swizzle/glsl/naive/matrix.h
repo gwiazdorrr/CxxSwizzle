@@ -51,7 +51,15 @@ namespace swizzle
                     const size_t min_m = OtherM > M ? M : OtherM;
                     const size_t min_n = OtherN > N ? N : OtherN;
 
-                    copy_part<min_m, min_n>(other);
+                    detail::static_for<0, min_n>([&](size_t row) -> void 
+                    {
+                        // static_for kills compilers over here...
+                        // detail::static_for<0, min_m>([&](size_t col) -> void 
+                        for (size_t col = 0; col < min_m; ++col)
+                        {
+                            cell(row, col) = other.cell(row, col);
+                        }
+                    });
 
                     // fill rest with 1s
                     const size_t min_inner = min_n > min_m ? min_m : min_n;
@@ -140,7 +148,7 @@ namespace swizzle
 
                 matrix_type& operator*=(const matrix_type& v)
                 {
-                    // 5.10 - matrix multiplication is "special"
+                    // Matrix multiplication is "special"
                     return *this = mul(*this, v);
                 }
 
@@ -254,17 +262,6 @@ namespace swizzle
                 }
 
             private:
-                template <size_t OtherM, size_t OtherN, class OtherMatrix>
-                void copy_part(const OtherMatrix& other)
-                {
-                    detail::static_for<0, OtherN>([&](size_t row) -> void 
-                    {
-                        for (size_t col = 0; col < OtherM; ++col) 
-                        {
-                            cell(row, col) = other.cell(row, col);
-                        }
-                    });
-                }
 
                 template <class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, 
                           class T9, class T10, class T11, class T12, class T13, class T14, class T15, class T16>
@@ -296,16 +293,16 @@ namespace swizzle
                     compose_impl<CellIdx>( detail::decay( std::forward<T>(t) ) );
                 }
 
-                ////! Optimised setter used when setting whole column
-                //template <size_t CellIdx>
-                //typename std::enable_if<CellIdx % N == 0, void>::type compose_impl( const column_type& v )
-                //{
-                //    column( CellIdx / N ) = v;
-                //}
+                //! Optimised setter used when setting whole column
+                template <size_t CellIdx>
+                typename std::enable_if<CellIdx % N == 0, void>::type compose_impl( const column_type& v )
+                {
+                    column( CellIdx / N ) = v;
+                }
 
                 //! Vector fallback setter, when CellIdx is not align
                 template <size_t CellIdx, class VectorScalarType, size_t VectorSize>
-                /*typename std::enable_if<CellIdx % N != 0 || VectorSize != N, void>::type*/ void compose_impl( const VectorType<VectorScalarType, VectorSize>& v )
+                typename std::enable_if<CellIdx % N != 0 || VectorSize != N, void>::type compose_impl( const VectorType<VectorScalarType, VectorSize>& v )
                 {
                     // do not go over the matrix size!
                     const size_t c_limit = (CellIdx + VectorSize > N * M) ? (N * M) : (CellIdx + VectorSize);
