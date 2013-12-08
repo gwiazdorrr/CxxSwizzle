@@ -62,6 +62,9 @@ namespace swizzle
                 //! Sanity checks
                 static_assert( sizeof(base_type) == sizeof(scalar_type) * Size, "Size of the base class is not equal to size of its components, most likely empty base class optimisation failed");
 
+				//! tudum-tu-tu-tu
+				struct terminator {};
+
             // CONSTRUCTION
             public:
 
@@ -91,10 +94,19 @@ namespace swizzle
 
                 // Block of generic proxy-constructos calling construct member function. Compiler
                 // will likely optimise this.
-                CXXSWIZZLE_CONSTRUCTOR_GREATER_OR_EQUAL_COMPONENTS(vector, Size, 1, 3)
-                CXXSWIZZLE_CONSTRUCTOR_GREATER_OR_EQUAL_COMPONENTS(vector, Size, 2, 2)
-                CXXSWIZZLE_CONSTRUCTOR_GREATER_OR_EQUAL_COMPONENTS(vector, Size, 3, 1)
-                CXXSWIZZLE_CONSTRUCTOR_GREATER_OR_EQUAL_COMPONENTS(vector, Size, 4, 0)
+
+				template <class T0, class... T,
+					class = typename std::enable_if< 
+						!(Size <= detail::get_total_size<T0, T...>::value - detail::get_total_size<typename detail::mpl::last<T0, T...>::type >::value) &&
+						 (Size <= detail::get_total_size<T0, T...>::value),
+						void>::type 
+					>
+				explicit vector(T0&& t0, T&&... ts)
+				{
+					construct<0>(std::forward<T0>(t0), std::forward<T>(ts)..., terminator{});
+				}
+
+
         
             // OPERATORS
             public:
@@ -218,38 +230,28 @@ namespace swizzle
             
             private:
 
-                template <class T1, class T2, class T3, class T4>
-                void construct(T1&& t1, T2&& t2, T3&& t3, T4&& t4)
+                template <size_t offset, class T0, class... Tail>
+                void construct(T0&& t0, Tail&&... tail)
                 {
                     // the pyramid of MSVC shame
-                    compose<T1, 0>(t1);
-                    compose<T2, detail::get_total_size<T1>::value>(t2);
-                    compose<T3, detail::get_total_size<T1, T2>::value>(t3);
-                    compose<T4, detail::get_total_size<T1, T2, T3>::value>(t4);
+					compose<offset>(detail::decay(std::forward<T0>(t0)));
+					construct<offset + detail::get_total_size<T0>::value>(std::forward<Tail>(tail)...);
                 }
 
-                template <class T, size_t CellIdx>
-                void compose(typename std::remove_reference<T>::type& t)
-                {
-                    compose_impl<CellIdx>( detail::decay( std::forward<T>(t) ) );
-                }
-
-                template <size_t N>
-                void compose_impl(detail::nothing)
-                {
-                    // noop
-                }
+				template <size_t>
+				void construct(terminator)
+				{}
 
                 //! Puts scalar at given position. Used only during construction.
                 template <size_t N>
-                void compose_impl(scalar_type v)
+                void compose(scalar_type v)
                 {
                     operator[](N) = v;
                 }
 
                 //! Puts a vector (or it's part) at given position. Used only during construction.
                 template <size_t N, class TOtherScalar, size_t OtherSize>
-                void compose_impl( const vector<TOtherScalar, OtherSize>& v )
+                void compose( const vector<TOtherScalar, OtherSize>& v )
                 {
                     const size_t limit = (N + OtherSize > Size) ? Size : (N + OtherSize);
                     detail::static_for<N, limit>([&](size_t i) -> void { m_data[i] = v[i - N]; });

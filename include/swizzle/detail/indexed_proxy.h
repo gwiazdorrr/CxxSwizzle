@@ -14,40 +14,31 @@ namespace swizzle
         //! of its, with -1 meaning "don't use".
         //! The type is convertible to the vector. It also forwards all unary arithmetic operators. Binary
         //! operations hopefully fallback to the vector ones.
-        template <class VectorType, class DataType, size_t x, size_t y, size_t z = -1, size_t w = -1>
+        template <class VectorType, class DataType, size_t... indices>
         class indexed_proxy
         {
             //! The data. Must support subscript operator.
             DataType m_data;
 
         public:
-            // Make sure -1 are always trailing, not in the middle
-            static_assert ( (x!=-1) && (y!=-1) && (z!=-1 || w==-1), "Must be continuous" );
-
             // Can easily count now since -1 must be continuous
-            static const size_t num_of_components = (x!=-1) + (y!=-1) + (z!=-1) + (w!=-1);
+			static const size_t num_of_components = sizeof...(indices);
             static_assert(num_of_components >= 2, "Must be at least 2 components");
 
             // Is this proxy writable? All indices must be different, except for -1s
-            static const bool is_writable = 
-                (x != y  && x != z && x != w) && 
-                (y == -1 || y != z && y != w) && 
-                (z == -1 || z != w );
+			static const bool is_writable = mpl::are_unique<indices...>::value;
 
             // Use the traits to define vector and scalar
             typedef VectorType vector_type;
             typedef VectorType decay_type;
           
         public:
+
             //! Convert proxy into a vector.
             vector_type decay() const
             {
                 vector_type result;
-                // inlined, calls with x, y, z or w being -1 will get compiled out
-                set_if_indices_are_valid<0, x>(result, m_data);
-                set_if_indices_are_valid<1, y>(result, m_data);
-                set_if_indices_are_valid<2, z>(result, m_data);
-                set_if_indices_are_valid<3, w>(result, m_data);
+				decay_helper<0, indices...> {result, m_data};
                 return result;
             }
 
@@ -60,11 +51,7 @@ namespace swizzle
             //! Assignment only enabled if proxy is writable -> has unique indexes
             indexed_proxy& operator=(const typename std::conditional<is_writable, vector_type, operation_not_available>::type& vec)
             {
-                // inlined, calls with x, y, z or w being -1 will get compiled out
-                set_if_indices_are_valid<x, 0>(m_data, vec);
-                set_if_indices_are_valid<y, 1>(m_data, vec);
-                set_if_indices_are_valid<z, 2>(m_data, vec);
-                set_if_indices_are_valid<w, 3>(m_data, vec);
+				decay_helper<0, indices...> {vec, m_data};
                 return *this;
             }
 
@@ -95,11 +82,46 @@ namespace swizzle
             {
                 return operator=( decay() / std::forward<T>(o) );
             }
+
+		private:
+			//! Helper type, converts vector to or from data
+			template <size_t VectorIndex, size_t DataIndex, size_t... DataIndexTail>
+			struct decay_helper
+			{
+				//! Convert data into vector.
+				decay_helper(VectorType& vec, const DataType& data)
+				{
+					vec[VectorIndex] = data[DataIndex];
+					decay_helper<VectorIndex + 1, DataIndexTail...>(vec, data);
+				}
+				//! Convert vector into data.
+				decay_helper(const VectorType& vec, DataType& data)
+				{
+					data[DataIndex] = vec[VectorIndex];
+					decay_helper<VectorIndex + 1, DataIndexTail...>(vec, data);
+				}
+			};
+
+			//! Terminator.
+			template <size_t VectorIndex, size_t DataIndex>
+			struct decay_helper<VectorIndex, DataIndex>
+			{
+				decay_helper(VectorType& vec, const DataType& data)
+				{
+					vec[VectorIndex] = data[DataIndex];
+				}
+
+				decay_helper(const VectorType& vec, DataType& data)
+				{
+					data[DataIndex] = vec[VectorIndex];
+				}
+			};
         };
 
+
         //! A specialisation for the indexed_proxy, defines TVector as vector type.
-        template <class TVector, class TData, size_t x, size_t y, size_t z, size_t w>
-        struct get_vector_type_impl< indexed_proxy<TVector, TData, x, y, z, w> >
+        template <class TVector, class TData, size_t... indices>
+        struct get_vector_type_impl< indexed_proxy<TVector, TData, indices...> >
         {
             typedef TVector type;
         };
