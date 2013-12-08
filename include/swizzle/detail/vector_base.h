@@ -6,10 +6,10 @@ namespace swizzle
 {
     namespace detail
     {
-        template <size_t Size, template <size_t, size_t, size_t, size_t> class TProxyGenerator, class TData>
+        template <size_t Size, template <size_t...> class TProxyGenerator, class TData>
         struct vector_base;
 
-        template <template <size_t, size_t=-1, size_t=-1, size_t=-1> class TProxyGenerator, class TData>
+        template <template <size_t...> class TProxyGenerator, class TData>
         struct vector_base<1, TProxyGenerator, TData>
         {
             union
@@ -23,7 +23,7 @@ namespace swizzle
             };
         };
 
-        template <template <size_t, size_t=-1, size_t=-1, size_t=-1> class TProxyGenerator, class TData>
+        template <template <size_t...> class TProxyGenerator, class TData>
         struct vector_base<2, TProxyGenerator, TData>
         {
             union
@@ -79,7 +79,7 @@ namespace swizzle
             };
         };
 
-        template <template <size_t, size_t=-1, size_t=-1, size_t=-1> class TProxyGenerator, class TData>
+        template <template <size_t...> class TProxyGenerator, class TData>
         struct vector_base<3, TProxyGenerator, TData>
         {
             union
@@ -227,7 +227,7 @@ namespace swizzle
             };
         };
 
-        template <template <size_t, size_t=-1, size_t=-1, size_t=-1> class TProxyGenerator, class TData>
+        template <template <size_t...> class TProxyGenerator, class TData>
         struct vector_base<4, TProxyGenerator, TData>
         {
             union
