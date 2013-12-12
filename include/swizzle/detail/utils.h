@@ -87,55 +87,60 @@ namespace swizzle
             return t;
         }
 
-		namespace mpl
-		{
-			template <size_t Head, size_t... Tail>
-			struct accumulate
-			{
-				static const size_t value = Head + accumulate<Tail...>::value;
-			};
 
-			template <size_t Head>
-			struct accumulate<Head>
-			{
-				static const size_t value = Head;
-			};
+        //! Sum up all the arguments.
+        template <size_t Head, size_t... Tail>
+        struct accumulate
+        {
+            static const size_t value = Head + accumulate<Tail...>::value;
+        };
 
-			template <size_t what, size_t head, size_t... rest>
-			struct contains
-			{
-				static const bool value = what == head || contains<what, rest...>::value;
-			};
+        template <size_t Head>
+        struct accumulate<Head>
+        {
+            static const size_t value = Head;
+        };
 
-			template <size_t what, size_t head>
-			struct contains<what, head>
-			{
-				static const bool value = what == head;
-			};
 
-			template <size_t head, size_t... rest>
-			struct are_unique
-			{
-				static const bool value = !contains<head, rest...>::value && are_unique<rest...>::value;
-			};
+        //! Does the sequence contain "What"?
+        template <size_t What, size_t Head, size_t... Tail>
+        struct contains
+        {
+            static const bool value = What == Head || contains<What, Tail...>::value;
+        };
 
-			template <size_t value1, size_t value2>
-			struct are_unique<value1, value2>
-			{
-				static const bool value = value1 != value2;
-			};
+        template <size_t What, size_t Head>
+        struct contains<What, Head>
+        {
+            static const bool value = What == Head;
+        };
 
-			template <class Head, class... T>
-			struct last
-			{
-				typedef typename last<T...>::type type;
-			};
 
-			template <class T>
-			struct last<T>
-			{
-				typedef T type;
-			};
-		}
+        //! Are all elements unique?
+        template <size_t Head, size_t... Tail>
+        struct are_unique
+        {
+            static const bool value = !contains<Head, Tail...>::value && are_unique<Tail...>::value;
+        };
+
+        template <size_t value1, size_t value2>
+        struct are_unique<value1, value2>
+        {
+            static const bool value = value1 != value2;
+        };
+
+
+        //! Last template parameter.
+        template <class Head, class... T>
+        struct last
+        {
+            typedef typename last<T...>::type type;
+        };
+
+        template <class Head>
+        struct last<Head>
+        {
+            typedef Head type;
+        };
     }
 }
