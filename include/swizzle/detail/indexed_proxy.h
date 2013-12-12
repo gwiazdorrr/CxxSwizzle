@@ -22,11 +22,11 @@ namespace swizzle
 
         public:
             // Can easily count now since -1 must be continuous
-			static const size_t num_of_components = sizeof...(indices);
+            static const size_t num_of_components = sizeof...(indices);
             static_assert(num_of_components >= 2, "Must be at least 2 components");
 
             // Is this proxy writable? All indices must be different, except for -1s
-			static const bool is_writable = mpl::are_unique<indices...>::value;
+            static const bool is_writable = are_unique<indices...>::value;
 
             // Use the traits to define vector and scalar
             typedef VectorType vector_type;
@@ -38,7 +38,7 @@ namespace swizzle
             vector_type decay() const
             {
                 vector_type result;
-				decay_helper<0, indices...> {result, m_data};
+                decay_helper<0, indices...> {result, m_data};
                 return result;
             }
 
@@ -51,7 +51,7 @@ namespace swizzle
             //! Assignment only enabled if proxy is writable -> has unique indexes
             indexed_proxy& operator=(const typename std::conditional<is_writable, vector_type, operation_not_available>::type& vec)
             {
-				decay_helper<0, indices...> {vec, m_data};
+                decay_helper<0, indices...> {vec, m_data};
                 return *this;
             }
 
@@ -83,39 +83,39 @@ namespace swizzle
                 return operator=( decay() / std::forward<T>(o) );
             }
 
-		private:
-			//! Helper type, converts vector to or from data
-			template <size_t VectorIndex, size_t DataIndex, size_t... DataIndexTail>
-			struct decay_helper
-			{
-				//! Convert data into vector.
-				decay_helper(VectorType& vec, const DataType& data)
-				{
-					vec[VectorIndex] = data[DataIndex];
-					decay_helper<VectorIndex + 1, DataIndexTail...>(vec, data);
-				}
-				//! Convert vector into data.
-				decay_helper(const VectorType& vec, DataType& data)
-				{
-					data[DataIndex] = vec[VectorIndex];
-					decay_helper<VectorIndex + 1, DataIndexTail...>(vec, data);
-				}
-			};
+        private:
+            //! Helper type, converts vector to or from data
+            template <size_t VectorIndex, size_t DataIndex, size_t... DataIndexTail>
+            struct decay_helper
+            {
+                //! Convert data into vector.
+                decay_helper(VectorType& vec, const DataType& data)
+                {
+                    vec[VectorIndex] = data[DataIndex];
+                    decay_helper<VectorIndex + 1, DataIndexTail...>(vec, data);
+                }
+                //! Convert vector into data.
+                decay_helper(const VectorType& vec, DataType& data)
+                {
+                    data[DataIndex] = vec[VectorIndex];
+                    decay_helper<VectorIndex + 1, DataIndexTail...>(vec, data);
+                }
+            };
 
-			//! Terminator.
-			template <size_t VectorIndex, size_t DataIndex>
-			struct decay_helper<VectorIndex, DataIndex>
-			{
-				decay_helper(VectorType& vec, const DataType& data)
-				{
-					vec[VectorIndex] = data[DataIndex];
-				}
+            //! Terminator.
+            template <size_t VectorIndex, size_t DataIndex>
+            struct decay_helper<VectorIndex, DataIndex>
+            {
+                decay_helper(VectorType& vec, const DataType& data)
+                {
+                    vec[VectorIndex] = data[DataIndex];
+                }
 
-				decay_helper(const VectorType& vec, DataType& data)
-				{
-					data[DataIndex] = vec[VectorIndex];
-				}
-			};
+                decay_helper(const VectorType& vec, DataType& data)
+                {
+                    data[DataIndex] = vec[VectorIndex];
+                }
+            };
         };
 
 

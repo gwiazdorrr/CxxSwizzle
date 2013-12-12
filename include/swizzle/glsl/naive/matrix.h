@@ -74,18 +74,16 @@ namespace swizzle
                     detail::static_for<0, min_dim>([&](size_t i) -> void { m_data[i][i] = s; });
                 }
 
-				struct terminator {};
-
-				template <class T0, class... T,
-					class = typename std::enable_if< 
-						!(N*M <= detail::get_total_size<T0, T...>::value - detail::get_total_size<typename detail::mpl::last<T0, T...>::type >::value) &&
-						(N*M <= detail::get_total_size<T0, T...>::value),
-						void>::type 
-					>
-				explicit matrix(T0&& t0, T&&... ts)
-				{
-					construct<0>(std::forward<T0>(t0), std::forward<T>(ts)..., terminator{});
-				}
+                template <class T0, class... T,
+                    class = typename std::enable_if< 
+                        !(N*M <= detail::get_total_size<T0, T...>::value - detail::get_total_size<typename detail::last<T0, T...>::type >::value) &&
+                        (N*M <= detail::get_total_size<T0, T...>::value),
+                        void>::type 
+                    >
+                explicit matrix(T0&& t0, T&&... ts)
+                {
+                    construct<0>(std::forward<T0>(t0), std::forward<T>(ts)..., detail::nothing{});
+                }
 
             // OPERATORS
             public:
@@ -259,28 +257,28 @@ namespace swizzle
 
             private:
 
-				template <size_t offset, class T0, class... Tail>
-				void construct(T0&& t0, Tail&&... tail)
-				{
-					// the pyramid of MSVC shame
-					compose<offset>(detail::decay(std::forward<T0>(t0)));
-					construct<offset + detail::get_total_size<T0>::value>(std::forward<Tail>(tail)...);
-				}
+                template <size_t offset, class T0, class... Tail>
+                void construct(T0&& t0, Tail&&... tail)
+                {
+                    // the pyramid of MSVC shame
+                    compose<offset>(detail::decay(std::forward<T0>(t0)));
+                    construct<offset + detail::get_total_size<T0>::value>(std::forward<Tail>(tail)...);
+                }
 
-				template <size_t>
-				void construct(terminator)
-				{}
+                template <size_t>
+                void construct(detail::nothing)
+                {}
 
                 //! Optimised setter used when setting whole column
                 template <size_t CellIdx>
-				typename std::enable_if<CellIdx % N == 0, void>::type compose(const column_type& v)
+                typename std::enable_if<CellIdx % N == 0, void>::type compose(const column_type& v)
                 {
                     column( CellIdx / N ) = v;
                 }
 
                 //! Vector fallback setter, when CellIdx is not align
                 template <size_t CellIdx, class VectorScalarType, size_t VectorSize>
-				typename std::enable_if<CellIdx % N != 0 || VectorSize != N, void>::type compose(const VectorType<VectorScalarType, VectorSize>& v)
+                typename std::enable_if<CellIdx % N != 0 || VectorSize != N, void>::type compose(const VectorType<VectorScalarType, VectorSize>& v)
                 {
                     // do not go over the matrix size!
                     const size_t c_limit = (CellIdx + VectorSize > N * M) ? (N * M) : (CellIdx + VectorSize);
@@ -288,7 +286,7 @@ namespace swizzle
                 }
 
                 template <size_t CellIdx>
-				void compose(scalar_type s)
+                void compose(scalar_type s)
                 {
                     cell( CellIdx % N, CellIdx / N ) = s;
                 }

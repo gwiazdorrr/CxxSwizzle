@@ -62,9 +62,6 @@ namespace swizzle
                 //! Sanity checks
                 static_assert( sizeof(base_type) == sizeof(scalar_type) * Size, "Size of the base class is not equal to size of its components, most likely empty base class optimisation failed");
 
-				//! tudum-tu-tu-tu
-				struct terminator {};
-
             // CONSTRUCTION
             public:
 
@@ -95,16 +92,16 @@ namespace swizzle
                 // Block of generic proxy-constructos calling construct member function. Compiler
                 // will likely optimise this.
 
-				template <class T0, class... T,
-					class = typename std::enable_if< 
-						!(Size <= detail::get_total_size<T0, T...>::value - detail::get_total_size<typename detail::mpl::last<T0, T...>::type >::value) &&
-						 (Size <= detail::get_total_size<T0, T...>::value),
-						void>::type 
-					>
-				explicit vector(T0&& t0, T&&... ts)
-				{
-					construct<0>(std::forward<T0>(t0), std::forward<T>(ts)..., terminator{});
-				}
+                template <class T0, class... T,
+                    class = typename std::enable_if< 
+                        !(Size <= detail::get_total_size<T0, T...>::value - detail::get_total_size<typename detail::last<T0, T...>::type >::value) &&
+                         (Size <= detail::get_total_size<T0, T...>::value),
+                        void>::type 
+                    >
+                explicit vector(T0&& t0, T&&... ts)
+                {
+                    construct<0>(std::forward<T0>(t0), std::forward<T>(ts)..., detail::nothing{});
+                }
 
 
         
@@ -233,14 +230,13 @@ namespace swizzle
                 template <size_t offset, class T0, class... Tail>
                 void construct(T0&& t0, Tail&&... tail)
                 {
-                    // the pyramid of MSVC shame
-					compose<offset>(detail::decay(std::forward<T0>(t0)));
-					construct<offset + detail::get_total_size<T0>::value>(std::forward<Tail>(tail)...);
+                    compose<offset>(detail::decay(std::forward<T0>(t0)));
+                    construct<offset + detail::get_total_size<T0>::value>(std::forward<Tail>(tail)...);
                 }
 
-				template <size_t>
-				void construct(terminator)
-				{}
+                template <size_t>
+                void construct(detail::nothing)
+                {}
 
                 //! Puts scalar at given position. Used only during construction.
                 template <size_t N>

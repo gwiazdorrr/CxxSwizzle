@@ -62,23 +62,23 @@ namespace swizzle
 
 
         //! Defines common vector type for given combination of input types.Scalars are treated as one-component vector.
-		template <class T, class... U>
-		struct get_vector_type
-			: std::conditional<
-				has_vector_type_impl<T>::value,
-				common_vector_type< typename get_vector_type<T>::type, typename get_vector_type<U...>::type >,
-				nothing
-			>::type
-		{};
+        template <class T, class... U>
+        struct get_vector_type
+            : std::conditional<
+                has_vector_type_impl<T>::value,
+                common_vector_type< typename get_vector_type<T>::type, typename get_vector_type<U...>::type >,
+                nothing
+            >::type
+        {};
 
         //! A specialisation for one type; redirects to get_vector_type_impl<T>
         template <class T>
         struct get_vector_type<T> 
-			: std::conditional<
-				has_vector_type_impl<T>::value,
-				get_vector_type_impl<typename remove_reference_cv<T>::type>,
-				nothing
-			>::type
+            : std::conditional<
+                has_vector_type_impl<T>::value,
+                get_vector_type_impl<typename remove_reference_cv<T>::type>,
+                nothing
+            >::type
         {};
 
 
@@ -88,25 +88,25 @@ namespace swizzle
         struct get_vector_size
         {};
 
-		//! 
+        //! 
         template <class T>
         struct get_vector_size<T, std::integral_constant<bool, is_greater<get_vector_type<T>::type::num_of_components, 0>::value> >
             :  std::integral_constant< size_t, get_vector_type<T>::type::num_of_components >
         {};
 
 
-		//!
+        //!
         template <class... T>
-		struct get_total_size
-			: std::conditional<
-				mpl::accumulate<get_vector_size<T>::value...>::value != 0,
-				std::integral_constant< 
-					size_t, 
-					mpl::accumulate<get_vector_size<T>::value...>::value
-				>,
-				nothing
-			>::type
-		{};
+        struct get_total_size
+            : std::conditional<
+                accumulate<get_vector_size<T>::value...>::value != 0,
+                std::integral_constant< 
+                    size_t, 
+                    accumulate<get_vector_size<T>::value...>::value
+                >,
+                nothing
+            >::type
+        {};
 
     }
 }

@@ -22,11 +22,11 @@ namespace swizzle
                 //! These can be incomplete types at this point.
                 typedef std::array<ScalarType, Size> data_type;
 
-				template <size_t... indices>
-				struct proxy_generator
-				{
-					typedef detail::indexed_proxy< vector<ScalarType, sizeof...(indices)>, data_type, indices...> type;
-				};
+                template <size_t... indices>
+                struct proxy_generator
+                {
+                    typedef detail::indexed_proxy< vector<ScalarType, sizeof...(indices)>, data_type, indices...> type;
+                };
 
                 //! A factory of 1-component proxies.
                 template <size_t x>
