@@ -12,13 +12,15 @@ add_subdirectory(unit_test)
 # get all the shaders
 file(GLOB detail RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/include/swizzle/detail/*.h")
 file(GLOB glsl RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/include/swizzle/glsl/*.h")
-file(GLOB packed RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/include/swizzle/glsl/packed/*.h")
+file(GLOB simd RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/include/swizzle/glsl/simd/*.h")
 file(GLOB naive RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/include/swizzle/glsl/naive/*.h")
 
 source_group("swizzle\\detail" FILES ${detail})
 source_group("swizzle\\glsl" FILES ${glsl})
 source_group("swizzle\\glsl\\naive" FILES ${naive})
-source_group("swizzle\\glsl\\packed" FILES ${packed})
+source_group("swizzle\\glsl\\simd" FILES ${simd})
 
-add_library(headers STATIC ${naive} ${detail} ${glsl} ${packed} Readme.md)
+
+
+add_library(headers STATIC ${naive} ${detail} ${glsl} ${simd} Readme.md)
 set_target_properties(headers PROPERTIES LINKER_LANGUAGE CXX)
