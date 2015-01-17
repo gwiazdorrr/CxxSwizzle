@@ -15,11 +15,21 @@ namespace swizzle
             union
             {
                 TData m_data;
-
-                typename TProxyGenerator<0>::type x, r, s;
-                typename TProxyGenerator<0,0>::type xx, rr, ss;
-                typename TProxyGenerator<0,0,0>::type xxx, rrr, sss;
-                typename TProxyGenerator<0,0,0,0>::type xxxx, rrrr, ssss;
+                struct
+                {
+                    typename TProxyGenerator<0>::type x;
+                };
+                struct
+                {
+                    typename TProxyGenerator<0>::type r;
+                };
+                struct
+                {
+                    typename TProxyGenerator<0>::type s;
+                };
+                typename TProxyGenerator<0, 0>::type xx, rr, ss;
+                typename TProxyGenerator<0, 0, 0>::type xxx, rrr, sss;
+                typename TProxyGenerator<0, 0, 0, 0>::type xxxx, rrrr, ssss;
             };
         };
 

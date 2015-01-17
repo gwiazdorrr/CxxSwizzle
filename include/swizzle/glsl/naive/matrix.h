@@ -68,7 +68,7 @@ namespace swizzle
                 }
 
                 //! Init with s diagonally
-                matrix(scalar_type s)
+                matrix(const scalar_type& s)
                 {
                     const size_t min_dim = N > M ? M : N;
                     detail::static_for<0, min_dim>([&](size_t i) -> void { m_data[i][i] = s; });
@@ -102,25 +102,25 @@ namespace swizzle
 
                 // Scalar operators
 
-                matrix_type& operator+=(scalar_type v)
+                matrix_type& operator+=(const scalar_type& v)
                 {
                     detail::static_for<0, M>([&](size_t col) -> void { m_data[col] += v; } );
                     return *this;
                 }
 
-                matrix_type& operator-=(scalar_type v)
+                matrix_type& operator-=(const scalar_type& v)
                 {
                     detail::static_for<0, M>([&](size_t col) -> void { m_data[col] -= v; } );
                     return *this;
                 }
 
-                matrix_type& operator*=(scalar_type v)
+                matrix_type& operator*=(const scalar_type& v)
                 {
                     detail::static_for<0, M>([&](size_t col) -> void { m_data[col] *= v; } );
                     return *this;
                 }
 
-                matrix_type& operator/=(scalar_type v)
+                matrix_type& operator/=(const scalar_type& v)
                 {
                     detail::static_for<0, M>([&](size_t col) -> void { m_data[col] /= v; } );
                     return *this;
@@ -222,7 +222,7 @@ namespace swizzle
 
                     detail::static_for<0, N>([&](size_t row) -> void
                     {
-                        result[row] = v.dot(v, m.row(row));
+                        result[row] = v.call_dot(v, m.row(row));
                     });
 
                     return result;
@@ -249,7 +249,7 @@ namespace swizzle
                     
                     detail::static_for<0, M>([&](size_t col) -> void
                     {
-                        result[col] = v.dot(v, m.column(col));
+                        result[col] = v.call_dot(v, m.column(col));
                     });
 
                     return result;
@@ -286,7 +286,7 @@ namespace swizzle
                 }
 
                 template <size_t CellIdx>
-                void compose(scalar_type s)
+                void compose(const scalar_type& s)
                 {
                     cell( CellIdx % N, CellIdx / N ) = s;
                 }

@@ -77,10 +77,10 @@ vec3 intersect(in vec3 rayOrigin, in vec3 rayDir)
 		float y = (d-0.001)/0.001/(float(MAX_ITER));
 		float z = (0.001-d)/0.001/float(MAX_ITER);
 		if (max(abs(p.y-0.025), abs(p.z)-0.035)<0.001) { // Road
-			float w = smoothstep(mod(p.x*50.0, 4.0), 2.0, 2.01);
-			w -= 1.0-smoothstep(mod(p.x*50.0+2.0, 4.0), 2.0, 1.99);
+            float w = smoothstep(mod(p.x*50.0, 4.0), (float)2.0, (float)2.01);
+            w -= 1.0 - smoothstep(mod(p.x*50.0 + 2.0, 4.0), (float)2.0, (float)1.99);
 			w = fract(w+0.0001);
-			float a = fract(smoothstep(abs(p.z), 0.0025, 0.0026));
+            float a = fract(smoothstep(abs(p.z), (float)0.0025, (float)0.0026));
 			color = vec3((1.0-x-y*2.)*mix(vec3(0.8, 0.8, 0), vec3(0.1), 1.0-(1.0-w)*(1.0-a)));
 		} else {
 			float q = 1.0-x-y*2.+z;

@@ -27,6 +27,8 @@ namespace swizzle
         struct get_vector_type_impl<bool> : get_vector_type_impl_for_scalar<bool>
         {};
 
+#ifndef ENABLE_SIMD
+
         template <>
         struct get_vector_type_impl<float> : get_vector_type_impl_for_scalar<float>
         {};
@@ -34,6 +36,8 @@ namespace swizzle
         template <>
         struct get_vector_type_impl<double> : get_vector_type_impl_for_scalar<double>
         {};
+
+#endif
 
         template <>
         struct get_vector_type_impl<signed int> : get_vector_type_impl_for_scalar<signed int>

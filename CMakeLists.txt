@@ -20,7 +20,5 @@ source_group("swizzle\\glsl" FILES ${glsl})
 source_group("swizzle\\glsl\\naive" FILES ${naive})
 source_group("swizzle\\glsl\\simd" FILES ${simd})
 
-
-
 add_library(headers STATIC ${naive} ${detail} ${glsl} ${simd} Readme.md)
 set_target_properties(headers PROPERTIES LINKER_LANGUAGE CXX)

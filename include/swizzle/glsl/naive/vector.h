@@ -44,13 +44,24 @@ namespace swizzle
             {
                 static_assert(Size >= 1, "Size must be >= 1");
 
+                typedef typename vector_helper<ScalarType, Size> helper_type;
+
                 //! A convenient mnemonic for base type
                 typedef typename vector_helper<ScalarType, Size>::base_type base_type;
                 //! "Hide" m_data from outside and make it locally visible
                 using base_type::m_data;
 
+                
+                
+
             // TYPEDEFS
             public:
+                typedef typename std::remove_reference<decltype(detail::declval<base_type>().m_data[0])>::type internal_scalar_type;
+
+                typedef std::is_same<internal_scalar_type, scalar_type> are_scalar_types_same_t;
+
+                static const bool are_scalar_types_same = are_scalar_types_same_t::value;
+
                 //! Number of components of this vector.
                 static const size_t num_of_components = Size;
                 //! This type.
@@ -68,25 +79,25 @@ namespace swizzle
                 //! Default constructor.
                 vector()
                 {
-                    iterate( [&](size_t i) -> void { m_data[i] = 0; } );
+                    iterate([&](size_t i) -> void { operator[](i) = scalar_type{}; });
                 }
 
                 //! Copy constructor
                 vector( const vector& o )
                 {
-                    iterate( [&](size_t i) -> void { m_data[i] = o[i]; } );
+                    iterate( [&](size_t i) -> void { operator[](i) = o[i]; } );
                 }
 
                 //! Implicit constructor from scalar-convertible only for one-component vector
-                vector( typename std::conditional<Size==1, scalar_type, detail::operation_not_available>::type s )
+                vector(typename std::conditional<Size == 1, const scalar_type&, detail::operation_not_available>::type s)
                 {
-                    iterate( [&](size_t i) -> void { m_data[i] = s; } );
+                    iterate([&](size_t i) -> void { operator[](i) = s; });
                 }
 
                 //! For vectors bigger than 1 conversion from scalar should be explicit.
-                explicit vector( typename std::conditional<Size!=1, scalar_type, detail::operation_not_available>::type s )
+                explicit vector( typename std::conditional<Size!=1, const scalar_type&, detail::operation_not_available>::type s )
                 {
-                    iterate( [&](size_t i) -> void { m_data[i] = s; } );
+                    iterate([&](size_t i) -> void { operator[](i) = s; });
                 }
 
                 // Block of generic proxy-constructos calling construct member function. Compiler
@@ -108,60 +119,78 @@ namespace swizzle
             // OPERATORS
             public:
 
-                // Indexing
-
-                scalar_type& operator[](size_t i)
+                internal_scalar_type& at(size_t i, std::true_type)
                 {
                     return m_data[i];
                 }
-                const scalar_type& operator[](size_t i) const
+                const internal_scalar_type& at(size_t i, std::true_type) const
                 {
                     return m_data[i];
+                }
+                scalar_type& at(size_t i, std::false_type)
+                {
+                    static_assert(sizeof(scalar_type) == sizeof(internal_scalar_type), "");
+                    return *reinterpret_cast<scalar_type*>(&m_data[i]);
+                }
+                const scalar_type& at(size_t i, std::false_type) const
+                {
+                    static_assert(sizeof(scalar_type) == sizeof(internal_scalar_type), "");
+                    return *reinterpret_cast<const scalar_type*>(&m_data[i]);
+                }
+
+                scalar_type& operator[](size_t i)
+                {
+                    return at(i, are_scalar_types_same_t());
+                }
+
+                const scalar_type& operator[](size_t i) const
+                {
+                    return at(i, are_scalar_types_same_t());
                 }
 
                 // Assignment-operation with vector argument
 
                 vector& operator+=(const vector& o)
                 {
-                    iterate( [&](size_t i) -> void { m_data[i] += o[i]; } );
+                    iterate( [&](size_t i) -> void { operator[](i) += o[i]; } );
                     return *this;
                 }
                 vector& operator-=(const vector& o)
                 {
-                    iterate( [&](size_t i) -> void { m_data[i] -= o[i]; } );
+                    iterate([&](size_t i) -> void { operator[](i) -= o[i]; });
                     return *this;
                 }
                 vector& operator*=(const vector& o)
                 {
-                    iterate( [&](size_t i) -> void { m_data[i] *= o[i]; } );
+                    iterate([&](size_t i) -> void { operator[](i) *= o[i]; });
                     return *this;
                 }
                 vector& operator/=(const vector& o)
                 {
-                    iterate( [&](size_t i) -> void { m_data[i] /= o[i]; } );
+                    iterate([&](size_t i) -> void { operator[](i) /= o[i]; });
                     return *this;
                 }
 
                 // Assignment-operation with scalar argument
 
-                vector& operator+=(scalar_type o)
+                vector& operator+=(const scalar_type& o)
                 {
-                    iterate( [&](size_t i) -> void { m_data[i] += o; } );
+                    iterate([&](size_t i) -> void { operator[](i) += o; });
                     return *this;
                 }
-                vector& operator-=(scalar_type o)
+                vector& operator-=(const scalar_type& o)
                 {
-                    iterate( [&](size_t i) -> void { m_data[i] -= o; } );
+                    iterate([&](size_t i) -> void { operator[](i) -= o; });
                     return *this;
                 }
-                vector& operator*=(scalar_type o)
+                vector& operator*=(const scalar_type& o)
                 {
-                    iterate( [&](size_t i) -> void { m_data[i] *= o; } );
+                    iterate([&](size_t i) -> void { operator[](i) *= o; });
                     return *this;
                 }
-                vector& operator/=(scalar_type o)
+                vector& operator/=(const scalar_type& o)
                 {
-                    iterate( [&](size_t i) -> void { m_data[i] /= o; } );
+                    iterate([&](size_t i) -> void { operator[](i) /= o; });
                     return *this;
                 }
 
@@ -175,7 +204,7 @@ namespace swizzle
 
                 vector& operator=(const vector& o)
                 {
-                    iterate( [&](size_t i) -> void { m_data[i] = o[i]; } );
+                    iterate( [&](size_t i) -> void { operator[](i) = o[i]; } );
                     return *this;
                 }
 
@@ -194,7 +223,7 @@ namespace swizzle
                 vector operator-() const
                 {
                     vector result;
-                    iterate([&](size_t i) -> void { result[i] = -m_data[i]; });
+                    iterate([&](size_t i) -> void { result[i] = -operator[](i); });
                     return result;
                 }
 
@@ -240,7 +269,7 @@ namespace swizzle
 
                 //! Puts scalar at given position. Used only during construction.
                 template <size_t N>
-                void compose(scalar_type v)
+                void compose(const scalar_type& v)
                 {
                     operator[](N) = v;
                 }
@@ -250,7 +279,7 @@ namespace swizzle
                 void compose( const vector<TOtherScalar, OtherSize>& v )
                 {
                     const size_t limit = (N + OtherSize > Size) ? Size : (N + OtherSize);
-                    detail::static_for<N, limit>([&](size_t i) -> void { m_data[i] = v[i - N]; });
+                    detail::static_for<N, limit>([&](size_t i) -> void { operator[](i) = v[i - N]; });
                 }
 
                 //! Iterates over the vector, firing Func for each index
