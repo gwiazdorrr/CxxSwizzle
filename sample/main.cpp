@@ -1,22 +1,71 @@
 // CxxSwizzle
 // Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
+#ifdef ENABLE_SIMD
+// VC need to come first or else VC is going to complain.
+
+#include <swizzle/glsl/simd/Vc_support.h>
+typedef Vc::float_v float_type;
+typedef Vc::uint_v uint_type;
+
+static_assert(float_type::Size == uint_type::Size, "Both float and uint types need to have same number of entries");
+const size_t scalar_count = float_type::Size;
+const size_t float_entries_align = Vc::VectorAlignment;
+const size_t uint_entries_align = Vc::VectorAlignment;
+
+template <typename T>
+inline void store_aligned(const Vc::Vector<T>& value, T* target)
+{
+    value.store(target, Vc::Aligned);
+}
+
+template <typename T>
+inline void load_aligned(Vc::Vector<T>& value, const T* data)
+{
+    value.load(data, Vc::Aligned);
+}
+
+#else
+
+#include <type_traits>
+
+typedef float float_type;
+typedef unsigned uint_type;
+
+const size_t scalar_count = 1;
+const size_t float_entries_align = std::alignment_of<float>::value;
+const size_t uint_entries_align = std::alignment_of<unsigned>::value;
+
+template <typename T>
+inline void store_aligned(T&& value, T* target)
+{
+    *target = std::forward<T>(value);
+}
+
+template <typename T>
+inline void load_aligned(T& value, const T* data)
+{
+    value = *data;
+}
+
+#endif
+
 #include <swizzle/glsl/naive/vector.h>
 #include <swizzle/glsl/naive/matrix.h>
 #include <swizzle/glsl/texture_functions.h>
 
-typedef swizzle::glsl::naive::vector< int, 2 > ivec2;
-typedef swizzle::glsl::naive::vector< float, 2 > vec2;
-typedef swizzle::glsl::naive::vector< float, 3 > vec3;
-typedef swizzle::glsl::naive::vector< float, 4 > vec4;
+typedef swizzle::glsl::naive::vector< float_type, 2 > vec2;
+typedef swizzle::glsl::naive::vector< float_type, 3 > vec3;
+typedef swizzle::glsl::naive::vector< float_type, 4 > vec4;
 
-static_assert(sizeof(vec2) == sizeof(float[2]), "Too big");
-static_assert(sizeof(vec3) == sizeof(float[3]), "Too big");
-static_assert(sizeof(vec4) == sizeof(float[4]), "Too big");
+static_assert(sizeof(vec2) == sizeof(float_type[2]), "Too big");
+static_assert(sizeof(vec3) == sizeof(float_type[3]), "Too big");
+static_assert(sizeof(vec4) == sizeof(float_type[4]), "Too big");
 
-typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, float, 2, 2> mat2;
-typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, float, 3, 3> mat3;
-typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, float, 4, 4> mat4;
+typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, vec4::scalar_type, 2, 2> mat2;
+typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, vec4::scalar_type, 3, 3> mat3;
+typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, vec4::scalar_type, 4, 4> mat4;
+
 
 //! A really, really simplistic sampler using SDLImage
 struct SDL_Surface;
@@ -34,7 +83,7 @@ public:
 
     sampler2D(const char* path, WrapMode wrapMode);
     ~sampler2D();
-    vec4 sample(vec2 coord);
+    vec4 sample(const vec2& coord);
 
 private:
     SDL_Surface *m_image;
@@ -54,18 +103,27 @@ namespace glsl_sandbox
         typedef ::vec2& vec2;
         typedef ::vec3& vec3;
         typedef ::vec4& vec4;
+        typedef ::float_type& float_type;
+    }
+
+    namespace in
+    {
+        typedef const ::vec2& vec2;
+        typedef const ::vec3& vec3;
+        typedef const ::vec4& vec4;
+        typedef const ::float_type& float_type;
     }
 
     #include <swizzle/glsl/vector_functions.h>
 
     // constants shaders are using
-    float time;
-    vec2 mouse;
+    vec2::scalar_type time;
+    vec2 mouse(0, 0);
     vec2 resolution;
 
     // constants some shaders from shader toy are using
     vec2& iResolution = resolution;
-    float& iGlobalTime = time;
+    vec2::scalar_type& iGlobalTime = time;
     vec2& iMouse = mouse;
 
     sampler2D diffuse("diffuse.png", sampler2D::Repeat);
@@ -80,10 +138,11 @@ namespace glsl_sandbox
 
     // change meaning of glsl keywords to match sandbox
     #define uniform extern
-    #define in
+    #define in in::
     #define out ref::
     #define inout ref::
     #define main fragment_shader::operator()
+    #define float float_type        
 
     #pragma warning(push)
     #pragma warning(disable: 4244) // disable return implicit conversion warning
@@ -94,17 +153,37 @@ namespace glsl_sandbox
     //#include "shaders/terrain.frag"
     //#include "shaders/complex.frag"
     //#include "shaders/road.frag"
-    //#include "shaders/gears.frag"
+    #include "shaders/gears.frag"
     //#include "shaders/water_turbulence.frag"
-	#include "shaders/sky.frag"
+    //#include "shaders/sky.h"
 
     // be a dear a clean up
     #pragma warning(pop)
+    #undef float
     #undef main
     #undef in
     #undef out
     #undef inout
     #undef uniform
+}
+
+namespace swizzle
+{
+    namespace glsl
+    {
+        namespace naive
+        {
+            template <class T>
+            void wtf()
+            {
+                Vc::float_v v;
+                using namespace std;
+                v = 666.0f;
+                max(v, v);
+            }
+
+        }
+    }
 }
 
 // these headers, especially SDL.h & time.h set up names that are in conflict with sandbox'es;
@@ -178,10 +257,35 @@ bool g_cancelDraw = false;
 //! Quit!
 bool g_quit = false;
 
+const float_type c_one = 1.0f;
+const float_type c_zero = 0.0f;
+
+template <size_t Align, typename T>
+T* alignPtr(T* ptr)
+{
+    static_assert((Align & (Align - 1)) == 0, "Align needs to be a power of two");
+    auto value = reinterpret_cast<ptrdiff_t>(ptr);
+    return reinterpret_cast<T*>((value + Align) & (~(Align - 1)));
+}
 
 //! Thread used for rendering; it invokes the shader
 static int renderThread(void*)
 {
+    using ::swizzle::detail::static_for;
+
+
+
+    float_type offsets;
+    {
+        // initialise offests with 0, 1...
+        uint8_t unalignedBlob[scalar_count * sizeof(float) + float_entries_align];
+        float* aligned = alignPtr<float_entries_align>(reinterpret_cast<float*>(unalignedBlob));
+
+        static_for<0, scalar_count>([&](size_t i) { aligned[i] = static_cast<float>(i); });
+        load_aligned(offsets, aligned);
+    }
+   
+
     while (true)
     {
         auto bmp = g_surface.get();
@@ -201,24 +305,46 @@ static int renderThread(void*)
             int heightEnd = bmp->h;
 #endif
 
+            unsigned unalignedBlob[3 * (scalar_count + uint_entries_align / sizeof(unsigned))];
+            unsigned* pr = alignPtr<uint_entries_align>(unalignedBlob);
+            unsigned* pg = alignPtr<uint_entries_align>(pr + scalar_count);
+            unsigned* pb = alignPtr<uint_entries_align>(pg + scalar_count);
+
             glsl_sandbox::fragment_shader shader;
+            vec2 fragCoord;
             for ( int y = heightStart; !g_cancelDraw && y < heightEnd; ++y )
             {
+                fragCoord.y = static_cast<float>(bmp->h - 1 - y);
+
                 uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch;
-                for (int x = 0; x < bmp->w; ++x )
+
+                int clampedWidth = bmp->w - bmp->w % scalar_count;
+
+                for (int x = 0; x < clampedWidth; x += scalar_count)
                 {
-                    shader.gl_FragCoord = vec2(static_cast<float>(x) , bmp->h - 1.0f - y);
+                    fragCoord.x = static_cast<float>(x) + offsets;
+
+                    shader.gl_FragCoord = fragCoord;
 
                     // vvvvvvvvvvvvvvvvvvvvvvvvvv
                     // THE SHADER IS INVOKED HERE
                     // ^^^^^^^^^^^^^^^^^^^^^^^^^^
                     shader();
 
-                    auto color = glsl_sandbox::clamp(shader.gl_FragColor, 0.0f, 1.0f);
+                    // convert to [0;255]
+                    auto color = glsl_sandbox::clamp(shader.gl_FragColor, c_zero, c_one);
+                    color *= 255 + 0.5f;
 
-                    *ptr++ = static_cast<uint8_t>(255 * color.x + 0.5f);
-                    *ptr++ = static_cast<uint8_t>(255 * color.y + 0.5f);
-                    *ptr++ = static_cast<uint8_t>(255 * color.z + 0.5f);
+                    store_aligned(static_cast<uint_type>(color.r), pr);
+                    store_aligned(static_cast<uint_type>(color.g), pg);
+                    store_aligned(static_cast<uint_type>(color.b), pb);
+
+                    static_for<0, scalar_count>([&](size_t i)
+                    {
+                        *ptr++ = static_cast<uint8_t>(pr[i]);
+                        *ptr++ = static_cast<uint8_t>(pg[i]);
+                        *ptr++ = static_cast<uint8_t>(pb[i]);
+                    });
                 }
             }
         }
@@ -259,7 +385,9 @@ extern C_LINKAGE int main(int argc, char* argv[])
     }
 
     // get initial resolution
-    ivec2 initialResolution(100, 100);
+    swizzle::glsl::naive::vector<int, 2> initialResolution;
+    initialResolution.x = 128;
+    initialResolution.y = 128;
     if (argc == 2)
     {
         std::stringstream s;
@@ -325,7 +453,7 @@ extern C_LINKAGE int main(int argc, char* argv[])
         float timeScale = 1;
         int frame = 0;
         float time = 0;
-        vec2 mousePosition;        
+        vec2 mousePosition(0, 0);
         bool pendingResize = false;
         bool mousePressed = false;
 
@@ -333,6 +461,8 @@ extern C_LINKAGE int main(int argc, char* argv[])
         auto renderThreadInstance = SDL_CreateThread(renderThread, nullptr);
 
         clock_t begin = clock();
+        clock_t frameBegin = begin;
+        float lastFPS = 0;
 
         while (!g_quit) 
         {
@@ -423,6 +553,13 @@ extern C_LINKAGE int main(int argc, char* argv[])
                         pendingResize = false;
                     }
 
+                    if (g_frameReady)
+                    {
+                        auto currClock = clock();
+                        lastFPS = 1 / static_cast<float>((currClock - frameBegin) / double(CLOCKS_PER_SEC));
+                        frameBegin = currClock;
+                    }
+
                     if (!blitNow || g_frameReady)
                     {
                         // transfer variables (resolution is transfered elsewhere)
@@ -441,7 +578,7 @@ extern C_LINKAGE int main(int argc, char* argv[])
                 SDL_Flip( screen );
             }
 
-            cout << "frame: " << frame << "\t time: " << time << "\t timescale: " << timeScale << "         \r";
+            cout << "frame: " << frame << "\t time: " << time << "\t timescale: " << timeScale << "\t fps: " << lastFPS << "     \r";
             cout.flush();
 
             clock_t delta = clock() - begin;
@@ -486,31 +623,31 @@ sampler2D::~sampler2D()
     }
 }
 
-vec4 sampler2D::sample( vec2 coord )
+vec4 sampler2D::sample( const vec2& coord )
 {
     using namespace glsl_sandbox;
-
+    vec2 uv;
     switch (m_wrapMode)
     {
     case Repeat:
-        coord = mod(coord, 1);
+        uv = mod(coord, 1);
         break;
     case MirrorRepeat:
-        coord = abs(mod(coord-1, 2)-1);
+        uv = abs(mod(coord - 1, 2) - 1);
         break;
     case Clamp:
     default:
-        coord = clamp(coord, 0, 1);
+        uv = clamp(coord, 0, 1);
         break;
     }
 
     // OGL uses left-bottom corner as origin...
-    coord.y = 1 - coord.y;
+    uv.y = 1 - uv.y;
 
     if ( !m_image )
     {
         // checkers
-        if ( coord.x < 0.5 && coord.y < 0.5 || coord.x > 0.5 && coord.y > 0.5 )
+        if (uv.x < 0.5 && uv.y < 0.5 || uv.x > 0.5 && uv.y > 0.5)
         {
             return vec4(1, 0, 0, 1);
         }
@@ -521,21 +658,50 @@ vec4 sampler2D::sample( vec2 coord )
     }
     else
     {
-        int x = static_cast<int>(coord.x * (m_image->w - 1) + 0.5);
-        int y = static_cast<int>(coord.y * (m_image->h - 1) + 0.5);
+        uint_type x = static_cast<uint_type>(uv.x * (m_image->w - 1) + 0.5);
+        uint_type y = static_cast<uint_type>(uv.y * (m_image->h - 1) + 0.5);
 
         auto& format = *m_image->format;
-        auto pixelPtr = static_cast<uint8_t*>(m_image->pixels) + (y * m_image->pitch + x * format.BytesPerPixel);
-        uint32_t pixel = 0;
-        for (size_t i = 0; i < format.BytesPerPixel; ++i )
-        {
-            pixel |= (pixelPtr[i] << (i*8));
-        }
+        uint_type index = (y * m_image->pitch + x * format.BytesPerPixel);
 
-        int r = (pixel & format.Rmask) >> format.Rshift;
-        int g = (pixel & format.Gmask) >> format.Gshift;
-        int b = (pixel & format.Bmask) >> format.Bshift;
-        int a = format.Amask ? ((pixel & format.Amask) >> format.Ashift) : 255;
-        return clamp(vec4(r, g, b, a) / 255.0f, 0.0f, 1.0f);
+        // stack-alloc blob for storing indices and color components
+        uint8_t unalignedBlob[5 * (scalar_count * sizeof(unsigned) + uint_entries_align)];
+        unsigned* pindex = alignPtr<uint_entries_align>(reinterpret_cast<unsigned*>(unalignedBlob));
+        unsigned* pr = alignPtr<uint_entries_align>(pindex + scalar_count);
+        unsigned* pg = alignPtr<uint_entries_align>(pr + scalar_count);
+        unsigned* pb = alignPtr<uint_entries_align>(pg + scalar_count);
+        unsigned* pa = alignPtr<uint_entries_align>(pb + scalar_count);
+        
+        // fill the buffers
+        swizzle::detail::static_for<0, scalar_count>([&](size_t i)
+        {
+            auto pixelPtr = static_cast<uint8_t*>(m_image->pixels) + pindex[i];
+            
+            uint32_t pixel = 0;
+            for (size_t i = 0; i < format.BytesPerPixel; ++i)
+            {
+                pixel |= (pixelPtr[i] << (i * 8));
+            }
+
+            pr[i] = (pixel & format.Rmask) >> format.Rshift;
+            pg[i] = (pixel & format.Gmask) >> format.Gshift;
+            pb[i] = (pixel & format.Bmask) >> format.Bshift;
+            pa[i] = format.Amask ? ((pixel & format.Amask) >> format.Ashift) : 255;
+        });
+
+        // load data
+        uint_type r, g, b, a;
+        load_aligned(r, pr);
+        load_aligned(g, pg);
+        load_aligned(b, pb);
+        load_aligned(a, pa);
+
+        vec4 result;
+        result.r = static_cast<float_type>(r);
+        result.g = static_cast<float_type>(g);
+        result.b = static_cast<float_type>(b);
+        result.a = static_cast<float_type>(a);
+
+        return clamp(result / 255.0f, c_zero, c_one);
     }
 }

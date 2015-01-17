@@ -16,7 +16,7 @@ uniform vec2 resolution;
 
 
 // hash based 3d value noise
-float hash( float n )
+float hash( in float n )
 {
     return fract(sin(n)*43758.5453);
 }
@@ -34,9 +34,10 @@ float noise( in vec3 x )
 }
 
 
-vec4 map( vec3 p )
+vec4 map( in vec3 in_p )
 {
-	vec3 r = p;
+    vec3 r = in_p;
+    vec3 p = in_p;
 	
 	float den = -0.6 - p.y;
     // invert space	

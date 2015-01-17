@@ -4,6 +4,7 @@
 
 #include <type_traits>
 #include <swizzle/detail/utils.h>
+#include <swizzle/detail/vector_traits.h>
 
 namespace swizzle
 {
@@ -97,7 +98,7 @@ namespace swizzle
                 //! Convert vector into data.
                 decay_helper(const VectorType& vec, DataType& data)
                 {
-                    data[DataIndex] = vec[VectorIndex];
+                    data[DataIndex] = vec.at(VectorIndex, std::true_type());
                     decay_helper<VectorIndex + 1, DataIndexTail...>(vec, data);
                 }
             };
@@ -113,7 +114,7 @@ namespace swizzle
 
                 decay_helper(const VectorType& vec, DataType& data)
                 {
-                    data[DataIndex] = vec[VectorIndex];
+                    data[DataIndex] = vec.at(VectorIndex, std::true_type());
                 }
             };
         };

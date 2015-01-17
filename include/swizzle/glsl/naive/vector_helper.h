@@ -36,6 +36,11 @@ namespace swizzle
                 };
 
                 typedef detail::vector_base< Size, proxy_generator, data_type > base_type;
+
+                static ScalarType convert_other_scalar_type(const ScalarType& other)
+                {
+                    return other;
+                }
             };
         }
     }

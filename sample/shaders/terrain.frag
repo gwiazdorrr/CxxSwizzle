@@ -5,7 +5,7 @@
 //#define STEREO 
 
 
-float hash( float n )
+float hash( in float n )
 {
     return fract(sin(n)*43758.5453123);
 }
@@ -45,8 +45,9 @@ float noise( in vec2 x )
 
 const mat2 m2 = mat2(1.6,-1.2,1.2,1.6);
 	
-float fbm( vec2 p )
+float fbm( in vec2 in_p )
 {
+    vec2 p = in_p;
     float f = 0.0;
 
     f += 0.5000*noise( p ); p = m2*p*2.02;
@@ -194,7 +195,7 @@ float sinteresct(in vec3 rO, in vec3 rD )
 	return clamp( res, 0.0, 1.0 );
 }
 
-vec3 calcNormal( in vec3 pos, float t )
+vec3 calcNormal( in vec3 pos, in float t )
 {
 	float e = 0.001;
 	e = 0.001*t;
@@ -206,7 +207,7 @@ vec3 calcNormal( in vec3 pos, float t )
     return normalize(nor);
 }
 
-vec3 camPath( float time )
+vec3 camPath( in float time )
 {
     vec2 p = 600.0*vec2( cos(1.4+0.37*time), 
                          cos(3.2+0.31*time) );

@@ -1,0 +1,39 @@
+diff -r src/avx/vector.h src-original/avx/vector.h
+127c127
+<         Vc_ALWAYS_INLINE_L Vector(EntryType a) Vc_ALWAYS_INLINE_R;
+---
+>         explicit Vc_ALWAYS_INLINE_L Vector(EntryType a) Vc_ALWAYS_INLINE_R;
+diff -r src/common/types.h src-original/common/types.h
+28,29d27
+< #include <type_traits>
+< 
+124c122,138
+<         enum { Value = std::is_convertible<From, To>::value };
+---
+> #ifdef VC_MSVC
+>         // MSVC can't compile this code if we pass a type that has large alignment restrictions by
+>         // value
+>         // clang OTOH warns about this code if we pass a null-reference, thus we ifdef the const-ref
+>         // for MSVC only
+>         static yes test(const To &) { return yes(); }
+> #else
+>         static yes test( To) { return yes(); }
+> #endif
+>         static  no test(...) { return  no(); }
+>         enum {
+> #ifdef VC_MSVC
+>             // I want to test whether implicit cast works. If it works MSVC thinks it should give a warning. Wrong. Shut up.
+> #pragma warning(suppress : 4257 4267)
+> #endif
+>             Value = !!(sizeof(test(*static_cast<From *>(0))) == sizeof(yes))
+>         };
+diff -r src/scalar/vector.h src-original/scalar/vector.h
+89c89
+<         Vc_ALWAYS_INLINE Vector(EntryType x) : m_data(x) {}
+---
+>         explicit Vc_ALWAYS_INLINE Vector(EntryType x) : m_data(x) {}
+diff -r src/sse/vector.h src-original/sse/vector.h
+199c199
+<         Vc_INTRINSIC_L Vector(EntryType a) Vc_INTRINSIC_R;
+---
+>         explicit Vc_INTRINSIC_L Vector(EntryType a) Vc_INTRINSIC_R;

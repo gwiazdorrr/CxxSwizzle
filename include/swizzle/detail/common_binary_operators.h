@@ -13,56 +13,59 @@ namespace swizzle
         template <class VectorType, class ScalarType>
         struct common_binary_operators
         {
-            friend VectorType operator+(VectorType v, ScalarType s)
+            typedef const VectorType& vector_arg;
+            typedef const ScalarType& scalar_arg;
+
+            friend VectorType operator+(vector_arg v, scalar_arg s)
             {
-                return v += s;
+                return VectorType(v) += s;
             }
-            friend VectorType operator+(ScalarType s, VectorType v)
+            friend VectorType operator+(scalar_arg s, vector_arg v)
             {
-                return v += s;
+                return VectorType(v) += s;
             }
-            friend VectorType operator+(VectorType v1, const VectorType& v2)
+            friend VectorType operator+(vector_arg v1, vector_arg v2)
             {
-                return v1 += v2;
+                return VectorType(v1) += v2;
             }
 
-            friend VectorType operator*(VectorType v, ScalarType s)
+            friend VectorType operator*(vector_arg v, scalar_arg s)
             {
-                return v *= s;
+                return VectorType(v) *= s;
             }
-            friend VectorType operator*(ScalarType s, VectorType v)
+            friend VectorType operator*(scalar_arg s, vector_arg v)
             {
-                return v *= s;
+                return VectorType(v) *= s;
             }
-            friend VectorType operator*(VectorType v1, const VectorType& v2)
+            friend VectorType operator*(vector_arg v1, vector_arg v2)
             {
-                return v1 *= v2;
+                return VectorType(v1) *= v2;
             }
 
-            friend VectorType operator-(VectorType v, ScalarType s)
+            friend VectorType operator-(vector_arg v, scalar_arg s)
             {
-                return v -= s;
+                return VectorType(v) -= s;
             }
-            friend VectorType operator-(ScalarType s, const VectorType& v)
+            friend VectorType operator-(scalar_arg s, vector_arg v)
             {
                 return VectorType(s) -= v;
             }
-            friend VectorType operator-(VectorType v1, const VectorType& v2)
+            friend VectorType operator-(vector_arg v1, vector_arg v2)
             {
-                return v1 -= v2;
+                return VectorType(v1) -= v2;
             }
 
-            friend VectorType operator/(VectorType v, ScalarType s)
+            friend VectorType operator/(vector_arg v, scalar_arg s)
             {
-                return v /= s;
+                return VectorType(v) /= s;
             }
-            friend VectorType operator/(ScalarType s, const VectorType& v)
+            friend VectorType operator/(scalar_arg s, vector_arg v)
             {
                 return VectorType(s) /= v;
             }
-            friend VectorType operator/(VectorType v1, const VectorType& v2)
+            friend VectorType operator/(vector_arg v1, vector_arg v2)
             {
-                return v1 /= v2;
+                return VectorType(v1) /= v2;
             }
         };
     }

@@ -15,19 +15,19 @@ uniform float time;     // shader playback time (in seconds)
 // * improved gears
 // * improved camera movement
 
-float hash(float x)
+float hash(in float x)
 {
 	return fract(sin(x) * 43758.5453);
 }
 
-vec2 hash(vec2 p)
+vec2 hash(in vec2 p)
 {
-    p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
-	return fract(sin(p) * 43758.5453);
+    vec2 pp = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
+	return fract(sin(pp) * 43758.5453);
 }
 
 // simulates a resonant lowpass filter
-float mechstep(float x, float f, float r)
+float mechstep(in float x, in float f, in float r)
 {
 	float fr = fract(x);
 	float fl = floor(x);
@@ -64,18 +64,19 @@ vec3 voronoi(in vec2 x)
 	return vec3(n + mg, mr);
 }
 
-vec2 rotate(vec2 p, float a)
+vec2 rotate(in vec2 p, in float a)
 {
 	return vec2(p.x * cos(a) - p.y * sin(a), p.x * sin(a) + p.y * cos(a));
 }
 
-float stepfunc(float a)
+float stepfunc(in float a)
 {
-	return step(a, 0.0);
+	return step(a, (float)0.0);
 }
 
-float fan(vec2 p, vec2 at, float ang)
+float fan(in vec2 in_p, in vec2 at, in float ang)
 {
+	vec2 p = in_p;
 	p -= at;
 	p *= 3.0;
 	
@@ -98,8 +99,9 @@ float fan(vec2 p, vec2 at, float ang)
 	return stepfunc(v);
 }
 
-float gear(vec2 p, vec2 at, float teeth, float size, float ang)
+float gear(in vec2 in_p, in vec2 at, in float teeth, in float size, in float ang)
 {
+	vec2 p = in_p;
 	p -= at;
 	float v = 0.0, w;
 	float le = length(p);
@@ -117,8 +119,9 @@ float gear(vec2 p, vec2 at, float teeth, float size, float ang)
 	return stepfunc(v);
 }
 
-float car(vec2 p, vec2 at)
+float car(in vec2 in_p, in vec2 at)
 {
+    vec2 p = in_p;
 	p -= at;
 	float v = 0.0, w;
 	w = length(p + vec2(-0.05, -0.32)) - 0.03;
@@ -132,7 +135,7 @@ float car(vec2 p, vec2 at)
 	return stepfunc(v);
 }
 
-float layerA(vec2 p, float seed)
+float layerA(in vec2 p, in float seed)
 {
 	float v = 0.0, w, a;
 	
@@ -140,8 +143,8 @@ float layerA(vec2 p, float seed)
 	float sr = hash(si + seed * 149.91);
 	vec2 sp = vec2(p.x, mod(p.y, 4.0));
 	float strut = 0.0;
-	strut += step(abs(sp.y), 0.3);
-	strut += step(abs(sp.y - 0.2), 0.1);
+	strut += step(abs(sp.y), (float)0.3);
+	strut += step(abs(sp.y - 0.2), (float)0.1);
 	
 	float st = time + sr;
 	float ct = mod(st * 3.0, 5.0 + sr) - 2.5;
@@ -149,7 +152,7 @@ float layerA(vec2 p, float seed)
 	v = step(2.0, abs(voronoi(p + vec2(0.35, seed * 194.9)).x));
 	
 	w = length(sp - vec2(-2.0, 0.0)) - 0.8;
-	v = min(v, 1.0 - step(w, 0.0));
+	v = min(v, 1.0 - step(w, (float)0.0));
 	
 	
 	a = st;
@@ -160,7 +163,7 @@ float layerA(vec2 p, float seed)
 	return v;
 }
 
-float layerB(vec2 p, float seed)
+float layerB(in vec2 p, in float seed)
 {
 	float v = 0.0, w, a;
 	
@@ -170,8 +173,8 @@ float layerB(vec2 p, float seed)
 	sp.y -= sr * 2.0;
 	
 	float strut = 0.0;
-	strut += step(abs(sp.y), 0.3);
-	strut += step(abs(sp.y - 0.2), 0.1);
+	strut += step(abs(sp.y), (float)0.3);
+	strut += step(abs(sp.y - 0.2), (float)0.1);
 	
 	float st = time + sr;
 	
@@ -184,9 +187,9 @@ float layerB(vec2 p, float seed)
 	v = step(2.0, abs(voronoi(p + vec2(0.35, seed * 194.9)).x) + strut);
 	
 	w = length(sp - vec2(-2.3, 0.6)) - 0.15;
-	v = min(v, 1.0 - step(w, 0.0));
+	v = min(v, 1.0 - step(w, (float)0.0));
 	w = length(sp - vec2(2.3, 0.6)) - 0.15;
-	v = min(v, 1.0 - step(w, 0.0));
+	v = min(v, 1.0 - step(w, (float)0.0));
 	
 	if(v > 0.0)
 		return 1.0;
