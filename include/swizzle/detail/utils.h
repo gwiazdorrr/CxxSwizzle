@@ -67,6 +67,30 @@ namespace swizzle
             static_for_impl( func, std::integral_constant<size_t, Begin>(), std::integral_constant<size_t, End>() );
         }
 
+
+        //! Loop terminator.
+        template <size_t Begin, class Func, typename... Args>
+        inline void static_for_impl2(Func&, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, Begin>, Args&&... args)
+        {
+            // do nothing
+        }
+
+        //! A chain of func calls with each value from [Begin, End) range.
+        template <size_t Begin, size_t End, class Func, typename... Args>
+        inline typename std::enable_if<Begin != End, void>::type static_for_impl2(Func& func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, End>, Args&&... args)
+        {
+            func.operator()<Begin>(std::forward<Args>(args)...);
+            static_for_impl2(func, std::integral_constant<size_t, Begin + 1>(), std::integral_constant<size_t, End>(), std::forward<Args>(args)...);
+        }
+
+        //! Trigger Func for each value from [Begin, End) range.
+        template <size_t Begin, size_t End, class Func, typename... Args>
+        inline void static_for2(Func& func, Args&&... args)
+        {
+            static_for_impl2(func, std::integral_constant<size_t, Begin>(), std::integral_constant<size_t, End>(), std::forward<Args>(args)...);
+        }
+
+
         //! Calls and returns a result of the decay memeber function (provided there's one).
         template <class T>
         inline auto decay(T&& t) -> decltype( t.decay() )

@@ -20,6 +20,8 @@ namespace swizzle
     {
         namespace naive
         {
+
+
             //! A version with Size == 1 is a special case that should not be created explicitly; it only lives in function proxies and
             //! to create a "common" type for different set of parameters. It is implicitly constructible from a scalar and has to-scalar
             //! conversion operator - this combination is a short path to ambiguity errors when combined with operator overloading.
@@ -77,27 +79,32 @@ namespace swizzle
             public:
 
                 //! Default constructor.
-                vector()
+                inline vector()
                 {
-                    iterate([&](size_t i) -> void { operator[](i) = scalar_type{}; });
                 }
 
                 //! Copy constructor
-                vector( const vector& o )
+                inline vector(const vector& o)
                 {
-                    iterate( [&](size_t i) -> void { operator[](i) = o[i]; } );
+                    m_data = o.m_data;
                 }
 
                 //! Implicit constructor from scalar-convertible only for one-component vector
                 vector(typename std::conditional<Size == 1, const scalar_type&, detail::operation_not_available>::type s)
                 {
-                    iterate([&](size_t i) -> void { operator[](i) = s; });
+                    static_at<0>() = s;
+                    static_at<1>() = s;
+                    static_at<2>() = s;
+                    static_at<3>() = s;
                 }
 
                 //! For vectors bigger than 1 conversion from scalar should be explicit.
                 explicit vector( typename std::conditional<Size!=1, const scalar_type&, detail::operation_not_available>::type s )
                 {
-                    iterate([&](size_t i) -> void { operator[](i) = s; });
+                    static_at<0>() = s;
+                    static_at<1>() = s;
+                    static_at<2>() = s;
+                    static_at<3>() = s;
                 }
 
                 // Block of generic proxy-constructos calling construct member function. Compiler
@@ -150,24 +157,85 @@ namespace swizzle
 
                 // Assignment-operation with vector argument
 
+                /*template <size_t i>
+                internal_scalar_type& __static_at(std::true_type, std::false_type)
+                {
+                    return m_data[i];
+                }
+
+                template <size_t i>
+                const internal_scalar_type& __static_at(std::true_type, std::false_type) const
+                {
+                    return m_data[i];
+                }*/
+
+                template <size_t i>
+                scalar_type& __static_at(std::false_type)
+                {
+                    static_assert(sizeof(scalar_type) == sizeof(internal_scalar_type), "");
+                    return *reinterpret_cast<scalar_type*>(&m_data[i]);
+                }
+
+                template <size_t i>
+                const scalar_type& __static_at(std::false_type) const
+                {
+                    static_assert(sizeof(scalar_type) == sizeof(internal_scalar_type), "");
+                    return *reinterpret_cast<const scalar_type*>(&m_data[i]);
+                }
+
+
+
+                template <size_t i>
+                sink __static_at(std::true_type) const
+                {
+                    return{};
+                }
+
+
+                template <size_t i>
+                auto static_at(std::integral_constant<size_t, i> = {}) -> decltype(__static_at<i>(std::integral_constant<bool, (i >= Size)>()))
+                {
+                    return __static_at<i>(std::integral_constant<bool, (i >= Size)>());
+                }
+
+
+                template <size_t i>
+                auto static_at(std::integral_constant<size_t, i> = {}) const -> decltype(__static_at<i>(std::integral_constant<bool, (i >= Size)>()))
+                {
+                    return __static_at<i>(std::integral_constant<bool, (i >= Size)>());
+                }
+
+ 
                 vector& operator+=(const vector& o)
                 {
-                    iterate( [&](size_t i) -> void { operator[](i) += o[i]; } );
+                    static_at<0>() += o.static_at<0>();
+                    static_at<1>() += o.static_at<1>();
+                    static_at<2>() += o.static_at<2>();
+                    static_at<3>() += o.static_at<3>();
                     return *this;
                 }
                 vector& operator-=(const vector& o)
                 {
-                    iterate([&](size_t i) -> void { operator[](i) -= o[i]; });
+                    static_at<0>() -= o.static_at<0>();
+                    static_at<1>() -= o.static_at<1>();
+                    static_at<2>() -= o.static_at<2>();
+                    static_at<3>() -= o.static_at<3>();
                     return *this;
                 }
                 vector& operator*=(const vector& o)
                 {
-                    iterate([&](size_t i) -> void { operator[](i) *= o[i]; });
+                    static_at<0>() *= o.static_at<0>();
+                    static_at<1>() *= o.static_at<1>();
+                    static_at<2>() *= o.static_at<2>();
+                    static_at<3>() *= o.static_at<3>();
                     return *this;
                 }
                 vector& operator/=(const vector& o)
                 {
-                    iterate([&](size_t i) -> void { operator[](i) /= o[i]; });
+                    static_at<0>() /= o.static_at<0>();
+                    static_at<1>() /= o.static_at<1>();
+                    static_at<2>() /= o.static_at<2>();
+                    static_at<3>() /= o.static_at<3>();
                     return *this;
                 }
 
@@ -175,22 +243,34 @@ namespace swizzle
 
                 vector& operator+=(const scalar_type& o)
                 {
-                    iterate([&](size_t i) -> void { operator[](i) += o; });
+                    static_at<0>() += o;
+                    static_at<1>() += o;
+                    static_at<2>() += o;
+                    static_at<3>() += o;
                     return *this;
                 }
                 vector& operator-=(const scalar_type& o)
                 {
-                    iterate([&](size_t i) -> void { operator[](i) -= o; });
+                    static_at<0>() -= o;
+                    static_at<1>() -= o;
+                    static_at<2>() -= o;
+                    static_at<3>() -= o;
                     return *this;
                 }
                 vector& operator*=(const scalar_type& o)
                 {
-                    iterate([&](size_t i) -> void { operator[](i) *= o; });
+                    static_at<0>() *= o;
+                    static_at<1>() *= o;
+                    static_at<2>() *= o;
+                    static_at<3>() *= o;
                     return *this;
                 }
                 vector& operator/=(const scalar_type& o)
                 {
-                    iterate([&](size_t i) -> void { operator[](i) /= o; });
+                    static_at<0>() /= o;
+                    static_at<1>() /= o;
+                    static_at<2>() /= o;
+                    static_at<3>() /= o;
                     return *this;
                 }
 
@@ -204,14 +284,17 @@ namespace swizzle
 
                 vector& operator=(const vector& o)
                 {
-                    iterate( [&](size_t i) -> void { operator[](i) = o[i]; } );
+                    m_data = o.m_data;
                     return *this;
                 }
 
                 bool operator==(const vector& o) const
                 {
-                    bool are_equal = true;
-                    iterate( [&](size_t i) -> void { are_equal &= ( m_data[i] == o[i] ); });
+                    bool are_equal =
+                        static_at<0>() == o.static_at<0>() &&
+                        static_at<1>() == o.static_at<1>() &&
+                        static_at<2>() == o.static_at<2>() &&
+                        static_at<3>() == o.static_at<3>();
                     return are_equal;
                 }
 
@@ -223,7 +306,10 @@ namespace swizzle
                 vector operator-() const
                 {
                     vector result;
-                    iterate([&](size_t i) -> void { result[i] = -operator[](i); });
+                    result.static_at<0>() = -static_at<0>();
+                    result.static_at<1>() = -static_at<1>();
+                    result.static_at<2>() = -static_at<2>();
+                    result.static_at<3>() = -static_at<3>();
                     return result;
                 }
 
