@@ -37,7 +37,7 @@ const size_t float_entries_align = std::alignment_of<float>::value;
 const size_t uint_entries_align = std::alignment_of<unsigned>::value;
 
 template <typename T>
-inline void store_aligned(T&& value, T* target)
+inline void store_aligned(T&& value, typename std::remove_reference<T>::type* target)
 {
     *target = std::forward<T>(value);
 }
@@ -49,6 +49,7 @@ inline void load_aligned(T& value, const T* data)
 }
 
 #endif
+
 
 #include <swizzle/glsl/naive/vector.h>
 #include <swizzle/glsl/naive/matrix.h>
@@ -79,7 +80,7 @@ public:
         MirrorRepeat
     };
 
-    typedef vec2 tex_coord_type;
+    typedef const vec2& tex_coord_type;
 
     sampler2D(const char* path, WrapMode wrapMode);
     ~sampler2D();
@@ -153,9 +154,9 @@ namespace glsl_sandbox
     //#include "shaders/terrain.frag"
     //#include "shaders/complex.frag"
     //#include "shaders/road.frag"
-    #include "shaders/gears.frag"
+    //#include "shaders/gears.frag"
     //#include "shaders/water_turbulence.frag"
-    //#include "shaders/sky.h"
+    #include "shaders/sky.h"
 
     // be a dear a clean up
     #pragma warning(pop)
@@ -165,25 +166,6 @@ namespace glsl_sandbox
     #undef out
     #undef inout
     #undef uniform
-}
-
-namespace swizzle
-{
-    namespace glsl
-    {
-        namespace naive
-        {
-            template <class T>
-            void wtf()
-            {
-                Vc::float_v v;
-                using namespace std;
-                v = 666.0f;
-                max(v, v);
-            }
-
-        }
-    }
 }
 
 // these headers, especially SDL.h & time.h set up names that are in conflict with sandbox'es;
@@ -273,8 +255,6 @@ static int renderThread(void*)
 {
     using ::swizzle::detail::static_for;
 
-
-
     float_type offsets;
     {
         // initialise offests with 0, 1...
@@ -325,7 +305,6 @@ static int renderThread(void*)
                     fragCoord.x = static_cast<float>(x) + offsets;
 
                     shader.gl_FragCoord = fragCoord;
-
                     // vvvvvvvvvvvvvvvvvvvvvvvvvv
                     // THE SHADER IS INVOKED HERE
                     // ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -671,6 +650,8 @@ vec4 sampler2D::sample( const vec2& coord )
         unsigned* pg = alignPtr<uint_entries_align>(pr + scalar_count);
         unsigned* pb = alignPtr<uint_entries_align>(pg + scalar_count);
         unsigned* pa = alignPtr<uint_entries_align>(pb + scalar_count);
+
+        store_aligned(index, pindex);
         
         // fill the buffers
         swizzle::detail::static_for<0, scalar_count>([&](size_t i)
