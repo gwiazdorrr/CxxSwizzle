@@ -9,24 +9,6 @@ namespace swizzle
 {
     namespace glsl
     {
-        struct sink
-        {
-            template <typename T>
-            sink& operator/= (T&& other) { return *this; }
-
-            template <typename T>
-            sink& operator+= (T&& other) { return *this; }
-
-            template <typename T>
-            sink& operator*= (T&& other) { return *this; }
-
-            template <typename T>
-            sink& operator-= (T&& other) { return *this; }
-
-            template <typename T>
-            sink& operator=(T&& other) { return *this; }
-        };
-
         namespace naive
         {
             //! A class providing static functions matching GLSL's vector functions. Uses naive approach, i.e.
@@ -297,7 +279,7 @@ namespace swizzle
                         operator() < i > (result, x, y, a.static_at<i>());
                     }
 
-                    template <size_t i> void operator()(vector_type& result, vector_arg_type x, scalar_arg_type y, scalar_arg_type a)
+                    template <size_t i> void operator()(vector_type& result, vector_arg_type x, vector_arg_type y, scalar_arg_type a)
                     {
                         using namespace std;
                         result.static_at<i>() = x.static_at<i>() + a * (y.static_at<i>() - x.static_at<i>());
@@ -438,7 +420,7 @@ namespace swizzle
                     return construct_static(functor_mix{}, x, y, a);
                 }
 
-                static vector_type call_mix(const vector_type& x, const vector_type& y, scalar_arg_type a)
+                static vector_type call_mix(vector_arg_type x, vector_arg_type y, scalar_arg_type a)
                 {
                     return construct_static(functor_mix{}, x, y, a);
                 }

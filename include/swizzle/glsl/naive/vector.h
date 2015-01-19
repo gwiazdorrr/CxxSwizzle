@@ -13,6 +13,7 @@
 #include <swizzle/glsl/naive/vector_traits_impl.h>
 #include <swizzle/glsl/naive/vector_helper.h>
 #include <swizzle/glsl/naive/matrix.h>
+#include <swizzle/detail/static_functors.h>
 
 namespace swizzle
 {
@@ -20,8 +21,6 @@ namespace swizzle
     {
         namespace naive
         {
-
-
             //! A version with Size == 1 is a special case that should not be created explicitly; it only lives in function proxies and
             //! to create a "common" type for different set of parameters. It is implicitly constructible from a scalar and has to-scalar
             //! conversion operator - this combination is a short path to ambiguity errors when combined with operator overloading.
@@ -46,23 +45,18 @@ namespace swizzle
             {
                 static_assert(Size >= 1, "Size must be >= 1");
 
-                typedef typename vector_helper<ScalarType, Size> helper_type;
-
                 //! A convenient mnemonic for base type
                 typedef typename vector_helper<ScalarType, Size>::base_type base_type;
                 //! "Hide" m_data from outside and make it locally visible
                 using base_type::m_data;
 
-                
-                
-
             // TYPEDEFS
             public:
+                //! Get the real, real internal scalar type. Useful when scalar visible
+                //! externally is different than the internal one (well, hello SIMD)
                 typedef typename std::remove_reference<decltype(detail::declval<base_type>().m_data[0])>::type internal_scalar_type;
-
-                typedef std::is_same<internal_scalar_type, scalar_type> are_scalar_types_same_t;
-
-                static const bool are_scalar_types_same = are_scalar_types_same_t::value;
+                //! A helpful mnemonic
+                typedef std::is_same<internal_scalar_type, scalar_type> are_scalar_types_same;
 
                 //! Number of components of this vector.
                 static const size_t num_of_components = Size;
@@ -70,6 +64,9 @@ namespace swizzle
                 typedef vector vector_type;
                 //! Scalar type.
                 typedef ScalarType scalar_type;
+                //!
+                typedef bool bool_type;
+
                 //! Type static functions return; for single-component they decay to a scalar
                 typedef typename std::conditional<Size==1, scalar_type, vector>::type decay_type;
                 //! Sanity checks
@@ -77,7 +74,6 @@ namespace swizzle
 
             // CONSTRUCTION
             public:
-
                 //! Default constructor.
                 inline vector()
                 {
@@ -92,19 +88,13 @@ namespace swizzle
                 //! Implicit constructor from scalar-convertible only for one-component vector
                 vector(typename std::conditional<Size == 1, const scalar_type&, detail::operation_not_available>::type s)
                 {
-                    static_at<0>() = s;
-                    static_at<1>() = s;
-                    static_at<2>() = s;
-                    static_at<3>() = s;
+                    detail::static_for2_short<detail::functor_assign>(*this, s);
                 }
 
                 //! For vectors bigger than 1 conversion from scalar should be explicit.
                 explicit vector( typename std::conditional<Size!=1, const scalar_type&, detail::operation_not_available>::type s )
                 {
-                    static_at<0>() = s;
-                    static_at<1>() = s;
-                    static_at<2>() = s;
-                    static_at<3>() = s;
+                    detail::static_for2_short<detail::functor_assign>(*this, s);
                 }
 
                 // Block of generic proxy-constructos calling construct member function. Compiler
@@ -134,6 +124,7 @@ namespace swizzle
                 {
                     return m_data[i];
                 }
+
                 scalar_type& at(size_t i, std::false_type)
                 {
                     static_assert(sizeof(scalar_type) == sizeof(internal_scalar_type), "");
@@ -147,131 +138,88 @@ namespace swizzle
 
                 scalar_type& operator[](size_t i)
                 {
-                    return at(i, are_scalar_types_same_t());
+                    return at(i, are_scalar_types_same());
                 }
 
                 const scalar_type& operator[](size_t i) const
                 {
-                    return at(i, are_scalar_types_same_t());
+                    return at(i, are_scalar_types_same());
                 }
 
-                // Assignment-operation with vector argument
-
-                /*template <size_t i>
-                internal_scalar_type& __static_at(std::true_type, std::false_type)
+                template <size_t i>
+                inline internal_scalar_type& static_at(std::true_type)
                 {
                     return m_data[i];
                 }
 
                 template <size_t i>
-                const internal_scalar_type& __static_at(std::true_type, std::false_type) const
+                inline const internal_scalar_type& static_at(std::true_type) const
                 {
                     return m_data[i];
-                }*/
+                }
 
                 template <size_t i>
-                scalar_type& __static_at(std::false_type)
+                inline scalar_type& static_at(std::false_type)
                 {
                     static_assert(sizeof(scalar_type) == sizeof(internal_scalar_type), "");
                     return *reinterpret_cast<scalar_type*>(&m_data[i]);
                 }
 
                 template <size_t i>
-                const scalar_type& __static_at(std::false_type) const
+                inline const scalar_type& static_at(std::false_type) const
                 {
                     static_assert(sizeof(scalar_type) == sizeof(internal_scalar_type), "");
                     return *reinterpret_cast<const scalar_type*>(&m_data[i]);
                 }
 
-
+                template <size_t i>
+                inline scalar_type& static_at()
+                {
+                    return static_at<i>(are_scalar_types_same());
+                }
 
                 template <size_t i>
-                sink __static_at(std::true_type) const
+                inline const scalar_type& static_at() const
                 {
-                    return{};
+                    return static_at<i>(are_scalar_types_same());
                 }
 
+                // Assignment-operation with vector argument
 
-                template <size_t i>
-                auto static_at(std::integral_constant<size_t, i> = {}) -> decltype(__static_at<i>(std::integral_constant<bool, (i >= Size)>()))
+                inline vector& operator+=(const vector& o)
                 {
-                    return __static_at<i>(std::integral_constant<bool, (i >= Size)>());
+                    return detail::static_for2_short<detail::functor_add>(*this, o);
                 }
-
-
-                template <size_t i>
-                auto static_at(std::integral_constant<size_t, i> = {}) const -> decltype(__static_at<i>(std::integral_constant<bool, (i >= Size)>()))
+                inline vector& operator-=(const vector& o)
                 {
-                    return __static_at<i>(std::integral_constant<bool, (i >= Size)>());
+                    return detail::static_for2_short<detail::functor_sub>(*this, o);
                 }
-
- 
-                vector& operator+=(const vector& o)
+                inline vector& operator*=(const vector& o)
                 {
-                    static_at<0>() += o.static_at<0>();
-                    static_at<1>() += o.static_at<1>();
-                    static_at<2>() += o.static_at<2>();
-                    static_at<3>() += o.static_at<3>();
-                    return *this;
+                    return detail::static_for2_short<detail::functor_mul>(*this, o);
                 }
-                vector& operator-=(const vector& o)
+                inline vector& operator/=(const vector& o)
                 {
-                    static_at<0>() -= o.static_at<0>();
-                    static_at<1>() -= o.static_at<1>();
-                    static_at<2>() -= o.static_at<2>();
-                    static_at<3>() -= o.static_at<3>();
-                    return *this;
-                }
-                vector& operator*=(const vector& o)
-                {
-                    static_at<0>() *= o.static_at<0>();
-                    static_at<1>() *= o.static_at<1>();
-                    static_at<2>() *= o.static_at<2>();
-                    static_at<3>() *= o.static_at<3>();
-                    return *this;
-                }
-                vector& operator/=(const vector& o)
-                {
-                    static_at<0>() /= o.static_at<0>();
-                    static_at<1>() /= o.static_at<1>();
-                    static_at<2>() /= o.static_at<2>();
-                    static_at<3>() /= o.static_at<3>();
-                    return *this;
+                    return detail::static_for2_short<detail::functor_div>(*this, o);
                 }
 
                 // Assignment-operation with scalar argument
 
-                vector& operator+=(const scalar_type& o)
+                inline vector& operator+=(const scalar_type& o)
                 {
-                    static_at<0>() += o;
-                    static_at<1>() += o;
-                    static_at<2>() += o;
-                    static_at<3>() += o;
-                    return *this;
+                    return detail::static_for2_short<detail::functor_add>(*this, o);
                 }
-                vector& operator-=(const scalar_type& o)
+                inline vector& operator-=(const scalar_type& o)
                 {
-                    static_at<0>() -= o;
-                    static_at<1>() -= o;
-                    static_at<2>() -= o;
-                    static_at<3>() -= o;
-                    return *this;
+                    return detail::static_for2_short<detail::functor_sub>(*this, o);
                 }
-                vector& operator*=(const scalar_type& o)
+                inline vector& operator*=(const scalar_type& o)
                 {
-                    static_at<0>() *= o;
-                    static_at<1>() *= o;
-                    static_at<2>() *= o;
-                    static_at<3>() *= o;
-                    return *this;
+                    return detail::static_for2_short<detail::functor_mul>(*this, o);
                 }
-                vector& operator/=(const scalar_type& o)
+                inline vector& operator/=(const scalar_type& o)
                 {
-                    static_at<0>() /= o;
-                    static_at<1>() /= o;
-                    static_at<2>() /= o;
-                    static_at<3>() /= o;
-                    return *this;
+                    return detail::static_for2_short<detail::functor_div>(*this, o);
                 }
 
                 // Matrix multiply operation
@@ -282,62 +230,45 @@ namespace swizzle
 
                 // Others
 
-                vector& operator=(const vector& o)
+                inline vector& operator=(const vector& o)
                 {
                     m_data = o.m_data;
                     return *this;
                 }
 
-                bool operator==(const vector& o) const
+                inline bool operator==(const vector& o) const
                 {
-                    bool are_equal =
-                        static_at<0>() == o.static_at<0>() &&
-                        static_at<1>() == o.static_at<1>() &&
-                        static_at<2>() == o.static_at<2>() &&
-                        static_at<3>() == o.static_at<3>();
+                    bool are_equal = true;
+                    detail::static_for2_short<detail::functor_equals>(*this, o, are_equal);
                     return are_equal;
                 }
 
-                bool operator!=(const vector& o) const
+                inline bool operator!=(const vector& o) const
                 {
                     return !(*this == o);
                 }
 
-                vector operator-() const
+                inline vector operator-() const
                 {
                     vector result;
-                    result.static_at<0>() = -static_at<0>();
-                    result.static_at<1>() = -static_at<1>();
-                    result.static_at<2>() = -static_at<2>();
-                    result.static_at<3>() = -static_at<3>();
+                    detail::static_for2_short<detail::functor_neg>(result, *this);
                     return result;
                 }
 
                 // Conversion operator
 
                 //! Auto-decay to scalar type only if this is a 1-sized vector
-                operator typename std::conditional<Size == 1, scalar_type, detail::operation_not_available>::type() const
+                inline  operator typename std::conditional<Size == 1, scalar_type, detail::operation_not_available>::type() const
                 {
-                    return operator[](0);
+                    return static_at<0>();
                 } 
 
             // AUXILIARY
             public:
                 //! Decays the vector. For Size==1 this is going to return a scalar, for all other sizes - same vector
-                decay_type decay() const
+                inline decay_type decay() const
                 {
-                    struct selector
-                    {
-                        const vector& operator()(const vector& x, vector*)
-                        {
-                            return x;
-                        }
-                        const scalar_type& operator()(const vector& x, scalar_type*)
-                        {
-                            return x[0];
-                        }
-                    };
-                    return selector()( *this, static_cast<decay_type*>(nullptr) );
+                    return static_cast<const decay_type&>(*this);
                 }
             
             private:
@@ -357,7 +288,7 @@ namespace swizzle
                 template <size_t N>
                 void compose(const scalar_type& v)
                 {
-                    operator[](N) = v;
+                    static_at<N>() = v;
                 }
 
                 //! Puts a vector (or it's part) at given position. Used only during construction.
@@ -365,7 +296,8 @@ namespace swizzle
                 void compose( const vector<TOtherScalar, OtherSize>& v )
                 {
                     const size_t limit = (N + OtherSize > Size) ? Size : (N + OtherSize);
-                    detail::static_for<N, limit>([&](size_t i) -> void { operator[](i) = v[i - N]; });
+                    detail::functor_compose_from_other_vector<vector, N, vector<TOtherScalar, OtherSize> > functor;
+                    detail::static_for2<N, limit>(functor, *this, v);
                 }
 
                 //! Iterates over the vector, firing Func for each index
@@ -374,6 +306,7 @@ namespace swizzle
                 {
                     detail::static_for<0, Size>(func);
                 }
+
         
             // STL COMPABILITY (not needed, but useful for testing)
             public:

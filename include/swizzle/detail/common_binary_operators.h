@@ -22,7 +22,7 @@ namespace swizzle
             }
             friend VectorType operator+(scalar_arg s, vector_arg v)
             {
-                return VectorType(v) += s;
+                return VectorType(v) + s;
             }
             friend VectorType operator+(vector_arg v1, vector_arg v2)
             {
@@ -35,7 +35,7 @@ namespace swizzle
             }
             friend VectorType operator*(scalar_arg s, vector_arg v)
             {
-                return VectorType(v) *= s;
+                return VectorType(v) * s;
             }
             friend VectorType operator*(vector_arg v1, vector_arg v2)
             {
@@ -48,7 +48,7 @@ namespace swizzle
             }
             friend VectorType operator-(scalar_arg s, vector_arg v)
             {
-                return VectorType(s) -= v;
+                return VectorType(s) - v;
             }
             friend VectorType operator-(vector_arg v1, vector_arg v2)
             {
@@ -61,9 +61,9 @@ namespace swizzle
             }
             friend VectorType operator/(scalar_arg s, vector_arg v)
             {
-                return VectorType(s) /= v;
+                return VectorType(s) / v;
             }
-            friend VectorType operator/(vector_arg v1, vector_arg v2)
+            inline friend VectorType operator/(vector_arg v1, vector_arg v2)
             {
                 return VectorType(v1) /= v2;
             }
