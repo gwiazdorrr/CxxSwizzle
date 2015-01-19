@@ -51,6 +51,18 @@ namespace swizzle
         {
             typedef glsl::naive::vector<Vc::float_v, 1> type;
         };
+
+#ifdef ENABLE_SIMD
+
+        template <>
+        struct get_vector_type_impl<float> : get_vector_type_impl<Vc::float_v>
+        {};
+
+        template <>
+        struct get_vector_type_impl<double> : get_vector_type_impl<Vc::float_v>
+        {};
+
+#endif
     }
 }
 
@@ -59,7 +71,10 @@ namespace Vc
 {
     namespace AVX
     {
-
+        //! Vc's unary operators are defined in a weird way that
+        //! doesn't like ADL and can't do the implicit cast from
+        //! double. Hence this and following operators are
+        //! defined explicitly.
         inline float_v operator+(float x, float_v::AsArg y)
         {
             return float_v(x) + y;
@@ -80,7 +95,9 @@ namespace Vc
             return float_v(x) / y;
         }
 
-        float_v pow(float_v::AsArg x, float_v::AsArg y)
+        //! Vc doesn't come with pow function, so we're gonna go
+        //! with the poor man's version of it.
+        inline float_v pow(float_v::AsArg x, float_v::AsArg y)
         {
             return exp(y * log(x));
         }

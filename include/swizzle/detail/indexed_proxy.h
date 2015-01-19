@@ -92,13 +92,13 @@ namespace swizzle
                 //! Convert data into vector.
                 decay_helper(VectorType& vec, const DataType& data)
                 {
-                    vec[VectorIndex] = data[DataIndex];
+                    vec.static_at<VectorIndex>() = data[DataIndex];
                     decay_helper<VectorIndex + 1, DataIndexTail...>(vec, data);
                 }
                 //! Convert vector into data.
                 decay_helper(const VectorType& vec, DataType& data)
                 {
-                    data[DataIndex] = vec.at(VectorIndex, std::true_type());
+                    data[DataIndex] = vec.static_at<VectorIndex>(std::true_type());
                     decay_helper<VectorIndex + 1, DataIndexTail...>(vec, data);
                 }
             };
