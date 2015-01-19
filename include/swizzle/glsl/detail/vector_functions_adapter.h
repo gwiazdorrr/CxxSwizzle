@@ -7,9 +7,9 @@
 
 namespace swizzle
 {
-    namespace glsl
+    namespace detail
     {
-        namespace naive
+        namespace glsl
         {
             //! A class providing static functions matching GLSL's vector functions. Uses naive approach, i.e.
             //! everything is done components-wise, using stdlib's math functions.
