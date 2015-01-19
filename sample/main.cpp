@@ -51,21 +51,21 @@ inline void load_aligned(T& value, const T* data)
 #endif
 
 
-#include <swizzle/glsl/naive/vector.h>
-#include <swizzle/glsl/naive/matrix.h>
+#include <swizzle/glsl/vector.h>
+#include <swizzle/glsl/matrix.h>
 #include <swizzle/glsl/texture_functions.h>
 
-typedef swizzle::glsl::naive::vector< float_type, 2 > vec2;
-typedef swizzle::glsl::naive::vector< float_type, 3 > vec3;
-typedef swizzle::glsl::naive::vector< float_type, 4 > vec4;
+typedef swizzle::glsl::vector< float_type, 2 > vec2;
+typedef swizzle::glsl::vector< float_type, 3 > vec3;
+typedef swizzle::glsl::vector< float_type, 4 > vec4;
 
 static_assert(sizeof(vec2) == sizeof(float_type[2]), "Too big");
 static_assert(sizeof(vec3) == sizeof(float_type[3]), "Too big");
 static_assert(sizeof(vec4) == sizeof(float_type[4]), "Too big");
 
-typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, vec4::scalar_type, 2, 2> mat2;
-typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, vec4::scalar_type, 3, 3> mat3;
-typedef swizzle::glsl::naive::matrix< swizzle::glsl::naive::vector, vec4::scalar_type, 4, 4> mat4;
+typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 2, 2> mat2;
+typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 3, 3> mat3;
+typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 4, 4> mat4;
 
 
 //! A really, really simplistic sampler using SDLImage
@@ -270,7 +270,7 @@ static int renderThread(void*)
     {
         auto bmp = g_surface.get();
 
-#if !defined(_DEBUG) && OMP_ENABLED
+#if 0
 #pragma omp parallel 
         {
             int thredsCount = omp_get_num_threads();
@@ -364,7 +364,7 @@ extern C_LINKAGE int main(int argc, char* argv[])
     }
 
     // get initial resolution
-    swizzle::glsl::naive::vector<int, 2> initialResolution;
+    swizzle::glsl::vector<int, 2> initialResolution;
     initialResolution.x = 128;
     initialResolution.y = 128;
     if (argc == 2)

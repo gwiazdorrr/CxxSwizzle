@@ -7,37 +7,34 @@ namespace swizzle
 {
     namespace glsl
     {
-        namespace naive
+        typedef Vc::float_v float_v;
+
+        template <size_t Size>
+        struct vector_helper<float_v, Size>
         {
-            typedef Vc::float_v float_v;
+            //! These can be incomplete types at this point.
+            typedef std::array<float_v::VectorType::Base, Size> data_type;
 
-            template <size_t Size>
-            struct vector_helper<float_v, Size>
+            template <size_t... indices>
+            struct proxy_generator
             {
-                //! These can be incomplete types at this point.
-                typedef std::array<float_v::VectorType::Base, Size> data_type;
-
-                template <size_t... indices>
-                struct proxy_generator
-                {
-                    typedef detail::indexed_proxy< vector<float_v, sizeof...(indices)>, data_type, indices...> type;
-                };
-
-                //! A factory of 1-component proxies.
-                template <size_t x>
-                struct proxy_generator<x>
-                {
-                    typedef float_v type;
-                };
-
-                typedef detail::vector_base< Size, proxy_generator, data_type > base_type;
-
-                static float_v::VectorType::Base convert_other_scalar_type(const float_v& other)
-                {
-                    return other.data();
-                }
+                typedef detail::indexed_proxy< vector<float_v, sizeof...(indices)>, data_type, indices...> type;
             };
-        }
+
+            //! A factory of 1-component proxies.
+            template <size_t x>
+            struct proxy_generator<x>
+            {
+                typedef float_v type;
+            };
+
+            typedef detail::vector_base< Size, proxy_generator, data_type > base_type;
+
+            static float_v::VectorType::Base convert_other_scalar_type(const float_v& other)
+            {
+                return other.data();
+            }
+        };
     }
 
     namespace detail
@@ -49,7 +46,7 @@ namespace swizzle
         template <>
         struct get_vector_type_impl<Vc::float_v>
         {
-            typedef glsl::naive::vector<Vc::float_v, 1> type;
+            typedef glsl::vector<Vc::float_v, 1> type;
         };
 
 #ifdef ENABLE_SIMD

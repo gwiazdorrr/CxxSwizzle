@@ -14,11 +14,13 @@ file(GLOB detail RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_
 file(GLOB glsl RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/include/swizzle/glsl/*.h")
 file(GLOB simd RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/include/swizzle/glsl/simd/*.h")
 file(GLOB naive RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/include/swizzle/glsl/naive/*.h")
+file(GLOB glsl_detail RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/include/swizzle/glsl/detail/*.h")
 
 source_group("swizzle\\detail" FILES ${detail})
 source_group("swizzle\\glsl" FILES ${glsl})
+source_group("swizzle\\glsl\\detail" FILES ${glsl_detail})
 source_group("swizzle\\glsl\\naive" FILES ${naive})
 source_group("swizzle\\glsl\\simd" FILES ${simd})
 
-add_library(headers STATIC ${naive} ${detail} ${glsl} ${simd} Readme.md)
+add_library(headers STATIC ${naive} ${detail} ${glsl} ${simd} ${glsl_detail} Readme.md)
 set_target_properties(headers PROPERTIES LINKER_LANGUAGE CXX)
