@@ -67,39 +67,37 @@ namespace swizzle
 }
 
 
+//! Vc's unary operators are defined in a weird way that
+//! doesn't like ADL and can't do the implicit cast from
+//! double. Hence this and following operators are
+//! defined explicitly.
+inline Vc::float_v operator+(float x, Vc::float_v::AsArg y)
+{
+    return Vc::float_v(x) + y;
+}
+
+inline Vc::float_v operator-(float x, Vc::float_v::AsArg y)
+{
+    return Vc::float_v(x) - y;
+}
+
+inline Vc::float_v operator*(float x, Vc::float_v::AsArg y)
+{
+    return Vc::float_v(x) * y;
+}
+
+inline Vc::float_v operator/(float x, Vc::float_v::AsArg y)
+{
+    return Vc::float_v(x) / y;
+}
+
+
 namespace Vc
 {
-    namespace AVX
+    //! Vc doesn't come with pow function, so we're gonna go
+    //! with the poor man's version of it.
+    inline float_v pow(float_v::AsArg x, float_v::AsArg y)
     {
-        //! Vc's unary operators are defined in a weird way that
-        //! doesn't like ADL and can't do the implicit cast from
-        //! double. Hence this and following operators are
-        //! defined explicitly.
-        inline float_v operator+(float x, float_v::AsArg y)
-        {
-            return float_v(x) + y;
-        }
-
-        inline float_v operator-(float x, float_v::AsArg y)
-        {
-            return float_v(x) - y;
-        }
-
-        inline float_v operator*(float x, float_v::AsArg y)
-        {
-            return float_v(x) * y;
-        }
-
-        inline float_v operator/(float x, float_v::AsArg y)
-        {
-            return float_v(x) / y;
-        }
-
-        //! Vc doesn't come with pow function, so we're gonna go
-        //! with the poor man's version of it.
-        inline float_v pow(float_v::AsArg x, float_v::AsArg y)
-        {
-            return exp(y * log(x));
-        }
+        return exp(y * log(x));
     }
 }
