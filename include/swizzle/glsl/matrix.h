@@ -6,6 +6,7 @@
 #include <swizzle/detail/utils.h>
 #include <swizzle/detail/constructor_generator.h>
 #include <swizzle/detail/common_binary_operators.h>
+#include <swizzle/detail/static_functors.h>
 #include <utility>
 
 namespace swizzle

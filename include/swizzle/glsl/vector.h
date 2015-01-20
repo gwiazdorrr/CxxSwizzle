@@ -9,7 +9,7 @@
 #include <swizzle/detail/common_binary_operators.h>
 #include <swizzle/detail/vector_base.h>
 #include <swizzle/detail/indexed_vector_iterator.h>
-#include <swizzle/glsl/detail/vector_functions_adapter.h>
+#include <swizzle/detail/glsl/vector_functions_adapter.h>
 #include <swizzle/glsl/naive/vector_traits_impl.h>
 #include <swizzle/glsl/naive/vector_helper.h>
 #include <swizzle/glsl/matrix.h>
@@ -65,6 +65,9 @@ namespace swizzle
             //!
             typedef bool bool_type;
 
+            typedef const scalar_type& scalar_arg_type;
+            typedef const vector_type& vector_arg_type;
+
             //! Type static functions return; for single-component they decay to a scalar
             typedef typename std::conditional<Size==1, scalar_type, vector>::type decay_type;
             //! Sanity checks
@@ -86,13 +89,13 @@ namespace swizzle
             //! Implicit constructor from scalar-convertible only for one-component vector
             vector(typename std::conditional<Size == 1, const scalar_type&, detail::operation_not_available>::type s)
             {
-                detail::static_for2_short<detail::functor_assign>(*this, s);
+                detail::static_foreach<detail::functor_assign>(*this, s);
             }
 
             //! For vectors bigger than 1 conversion from scalar should be explicit.
             explicit vector( typename std::conditional<Size!=1, const scalar_type&, detail::operation_not_available>::type s )
             {
-                detail::static_for2_short<detail::functor_assign>(*this, s);
+                detail::static_foreach<detail::functor_assign>(*this, s);
             }
 
             // Block of generic proxy-constructos calling construct member function. Compiler
@@ -186,41 +189,42 @@ namespace swizzle
 
             inline vector& operator+=(const vector& o)
             {
-                return detail::static_for2_short<detail::functor_add>(*this, o);
+                return detail::static_foreach<detail::functor_add>(*this, o);
             }
             inline vector& operator-=(const vector& o)
             {
-                return detail::static_for2_short<detail::functor_sub>(*this, o);
+                return detail::static_foreach<detail::functor_sub>(*this, o);
             }
             inline vector& operator*=(const vector& o)
             {
-                return detail::static_for2_short<detail::functor_mul>(*this, o);
+                return detail::static_foreach<detail::functor_mul>(*this, o);
             }
             inline vector& operator/=(const vector& o)
             {
-                return detail::static_for2_short<detail::functor_div>(*this, o);
+                return detail::static_foreach<detail::functor_div>(*this, o);
             }
 
             // Assignment-operation with scalar argument
 
             inline vector& operator+=(const scalar_type& o)
             {
-                return detail::static_for2_short<detail::functor_add>(*this, o);
+                return detail::static_foreach<detail::functor_add>(*this, o);
             }
             inline vector& operator-=(const scalar_type& o)
             {
-                return detail::static_for2_short<detail::functor_sub>(*this, o);
+                return detail::static_foreach<detail::functor_sub>(*this, o);
             }
             inline vector& operator*=(const scalar_type& o)
             {
-                return detail::static_for2_short<detail::functor_mul>(*this, o);
+                return detail::static_foreach<detail::functor_mul>(*this, o);
             }
             inline vector& operator/=(const scalar_type& o)
             {
-                return detail::static_for2_short<detail::functor_div>(*this, o);
+                return detail::static_foreach<detail::functor_div>(*this, o);
             }
 
             // Matrix multiply operation
+
             vector& operator*=(const matrix<::swizzle::glsl::vector, ScalarType, Size, Size>& m)
             {
                 return *this = *this * m;
@@ -237,7 +241,7 @@ namespace swizzle
             inline bool operator==(const vector& o) const
             {
                 bool are_equal = true;
-                detail::static_for2_short<detail::functor_equals>(*this, o, are_equal);
+                detail::static_foreach<detail::functor_equals>(*this, o, are_equal);
                 return are_equal;
             }
 
@@ -249,7 +253,7 @@ namespace swizzle
             inline vector operator-() const
             {
                 vector result;
-                detail::static_for2_short<detail::functor_neg>(result, *this);
+                detail::static_foreach<detail::functor_neg>(result, *this);
                 return result;
             }
 
