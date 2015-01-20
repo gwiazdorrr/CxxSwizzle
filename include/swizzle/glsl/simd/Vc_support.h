@@ -35,6 +35,214 @@ namespace swizzle
                 return other.data();
             }
         };
+
+        template <typename BaseType, typename T, typename U>
+        struct arithmetic_operators : BaseType
+        {
+            typedef T value_type;
+            typedef const T& arg_type;
+            typedef const U& other_arg_type;
+
+            inline friend value_type operator+(arg_type a, other_arg_type b)
+            {
+                return add(a, b);
+            }
+            inline friend value_type operator+(other_arg_type a, arg_type b)
+            {
+                return add(b, a);
+            }
+
+            inline friend value_type operator-(arg_type a, other_arg_type b)
+            {
+                return sub(a, b);
+            }
+            inline friend value_type operator-(other_arg_type a, arg_type b)
+            {
+                return sub(value_type(a), b);
+            }
+
+            inline friend value_type operator*(arg_type a, other_arg_type b)
+            {
+                return mul(a, b);
+            }
+            inline friend value_type operator*(other_arg_type a, arg_type b)
+            {
+                return mul(a, b);
+            }
+
+            inline friend value_type operator/(arg_type a, other_arg_type b)
+            {
+                return div(a, b);
+            }
+            inline friend value_type operator/(other_arg_type a, arg_type b)
+            {
+                return div(value_type(a), b);
+            }
+        };
+
+        template <typename BaseType, typename T>
+        struct arithmetic_operators<BaseType, T, T>
+        {
+            typedef T value_type;
+            typedef const T& arg_type;
+
+            friend value_type operator+(arg_type a, arg_type b)
+            {
+                return add(a, b);
+            }
+            friend value_type operator-(arg_type a, arg_type b)
+            {
+                return sub(a, b);
+            }
+            friend value_type operator*(arg_type a, arg_type b)
+            {
+                return mul(a, b);
+            }
+            friend value_type operator/(arg_type a, arg_type b)
+            {
+                return div(a, b);
+            }
+        };
+
+        template <typename T, typename PrimitiveType>
+        struct maskable_type_wrapper
+        {
+            T data;
+            typedef PrimitiveType primtive_type;
+
+            typedef maskable_type_wrapper this_type;
+            typedef const maskable_type_wrapper& arg_type;
+            typedef const primtive_type& primitive_arg_type;
+
+            maskable_type_wrapper() {}
+            maskable_type_wrapper(const T& data) : data(data) { }
+
+            operator T() const
+            {
+                return data;
+            }
+
+            // assignment -- this is where magic happens
+
+            this_type& operator=(arg_type other)
+            {
+                if (auto mask = MaskPolicy::getMash())
+                {
+
+                }
+            }
+
+            // unary operators
+
+            this_type& operator+=(arg_type other)
+            {
+                return *this = add(*this, other);
+            }
+            this_type& operator-=(arg_type other)
+            {
+                return *this = sub(*this, other);
+            }
+            this_type& operator*=(arg_type other)
+            {
+                return *this = mul(*this, other);
+            }
+            this_type& operator/=(arg_type other)
+            {
+                return *this = div(*this, other);
+            }
+
+            this_type& operator+=(primitive_arg_type other)
+            {
+                return *this = add(*this, other);
+            }
+            this_type& operator-=(primitive_arg_type other)
+            {
+                return *this = sub(*this, other);
+            }
+            this_type& operator*=(primitive_arg_type other)
+            {
+                return *this = mul(*this, other);
+            }
+            this_type& operator/=(primitive_arg_type other)
+            {
+                return *this = div(*this, other);
+            }
+
+            // binary operators
+
+            friend this_type operator+(arg_type a, arg_type b)
+            {
+                return add(a, b);
+            }
+            friend this_type operator-(arg_type a, arg_type b)
+            {
+                return sub(a, b);
+            }
+            friend this_type operator*(arg_type a, arg_type b)
+            {
+                return mul(a, b);
+            }
+            friend this_type operator/(arg_type a, arg_type b)
+            {
+                return div(a, b);
+            }
+
+            inline friend this_type operator+(arg_type a, primitive_arg_type b)
+            {
+                return add(a, b);
+            }
+            inline friend this_type operator+(primitive_arg_type a, arg_type b)
+            {
+                return add(b, a);
+            }
+            inline friend this_type operator-(arg_type a, primitive_arg_type b)
+            {
+                return sub(a, b);
+            }
+            inline friend this_type operator-(primitive_arg_type a, arg_type b)
+            {
+                return sub(value_type(a), b);
+            }
+            inline friend this_type operator*(arg_type a, primitive_arg_type b)
+            {
+                return mul(a, b);
+            }
+            inline friend this_type operator*(primitive_arg_type a, arg_type b)
+            {
+                return mul(a, b);
+            }
+            inline friend this_type operator/(arg_type a, primitive_arg_type b)
+            {
+                return div(a, b);
+            }
+            inline friend this_type operator/(primitive_arg_type a, arg_type b)
+            {
+                return div(value_type(a), b);
+            }
+
+
+            template <typename Other>
+            static this_type add(arg_type a, Other&& b)
+            {
+                return a.data + b;
+            }
+            template <typename Other>
+            static this_type sub(arg_type a, Other&& b)
+            {
+                return a.data - b;
+            }
+            template <typename Other>
+            static this_type mul(arg_type a, Other&& b)
+            {
+                return a.data * b;
+            }
+            template <typename Other>
+            static this_type div(arg_type a, Other&& b)
+            {
+                return a.data / b;
+            }
+        };
+
     }
 
     namespace detail

@@ -92,7 +92,7 @@ namespace swizzle
 
         //! Trigger Func for each value from [Begin, End) range.
         template <template<typename> class Func, typename Arg1, typename... Args>
-        inline Arg1& static_for2_short(Arg1& result, Args&&... args)
+        inline Arg1& static_foreach(Arg1& result, Args&&... args)
         {
             Func<typename std::remove_reference<Arg1>::type> functor {};
             static_for2<0, Arg1::num_of_components>(functor, result, std::forward<Args>(args)...);
