@@ -109,12 +109,12 @@ namespace swizzle
             {
                 decay_helper(VectorType& vec, const DataType& data)
                 {
-                    vec[VectorIndex] = data[DataIndex];
+                    vec.static_at<VectorIndex>(std::true_type()) = data[DataIndex];
                 }
 
                 decay_helper(const VectorType& vec, DataType& data)
                 {
-                    data[DataIndex] = vec.at(VectorIndex, std::true_type());
+                    data[DataIndex] = vec.static_at<VectorIndex>(std::true_type());
                 }
             };
         };
