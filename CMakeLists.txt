@@ -22,5 +22,6 @@ source_group("swizzle\\detail\\glsl" FILES ${glsl_detail})
 source_group("swizzle\\glsl\\naive" FILES ${naive})
 source_group("swizzle\\glsl\\simd" FILES ${simd})
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${Vc_INCLUDE_DIR})
 add_library(headers STATIC ${naive} ${detail} ${glsl} ${simd} ${glsl_detail} Readme.md)
 set_target_properties(headers PROPERTIES LINKER_LANGUAGE CXX)

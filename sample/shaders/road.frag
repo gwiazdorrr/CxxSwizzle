@@ -37,7 +37,7 @@ float map(in vec3 p)
 	z.yz = rotate(z.yz, time*0.05);
 
 	float d = 99999.0;
-	for (float i = 0.0; i < 3.0; i++) {
+	for (int i = 0; i < 3; i++) {
 		z.xz = rotate(z.xz, radians(i*10.0+time));
 		z.zy = rotate(z.yz, radians((i+1.0)*20.0+time*1.1234));
 		z = abs(1.0-mod(z+i/3.0,2.0));
@@ -57,7 +57,7 @@ vec3 intersect(in vec3 rayOrigin, in vec3 rayDir)
 	float total_dist = 0.0;
 	vec3 p = rayOrigin;
 	float d = 1.0;
-	float iter = 0.0;
+	int iter = 0;
 	float mind = 3.14159+sin(time*0.1)*0.2;
 	
 	for (int i = 0; i < MAX_ITER; i++)

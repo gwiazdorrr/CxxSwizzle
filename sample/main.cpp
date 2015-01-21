@@ -4,14 +4,27 @@
 #ifdef ENABLE_SIMD
 // VC need to come first or else VC is going to complain.
 
+
+
 #include <swizzle/glsl/simd/Vc_support.h>
-typedef Vc::float_v float_type;
+
+typedef swizzle::glsl::masked_float_v masked_float_v;
+
+typedef masked_float_v masked_float_type;
+typedef masked_float_v float_type;
+typedef Vc::float_v internal_float_type;
 typedef Vc::uint_v uint_type;
 
-static_assert(float_type::Size == uint_type::Size, "Both float and uint types need to have same number of entries");
-const size_t scalar_count = float_type::Size;
+static_assert(internal_float_type::Size == uint_type::Size, "Both float and uint types need to have same number of entries");
+const size_t scalar_count = internal_float_type::Size;
 const size_t float_entries_align = Vc::VectorAlignment;
 const size_t uint_entries_align = Vc::VectorAlignment;
+
+void test()
+{
+    masked_float_v a, b;
+    a >= b;
+}
 
 template <typename T>
 inline void store_aligned(const Vc::Vector<T>& value, T* target)
@@ -25,11 +38,20 @@ inline void load_aligned(Vc::Vector<T>& value, const T* data)
     value.load(data, Vc::Aligned);
 }
 
+
+typedef Vc::float_v::Mask mask_type;
+typedef decltype(std::declval<mask_type>().data())::Base raw_mask_type;
+
+
+
+
+
 #else
 
 #include <type_traits>
-
+typedef float masked_float_type;
 typedef float float_type;
+typedef float internal_float_type;
 typedef unsigned uint_type;
 
 const size_t scalar_count = 1;
@@ -47,6 +69,9 @@ inline void load_aligned(T& value, const T* data)
 {
     value = *data;
 }
+
+typedef bool mask_type;
+typedef bool raw_mask_type;
 
 #endif
 
@@ -67,6 +92,63 @@ typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 2, 2> m
 typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 3, 3> mat3;
 typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 4, 4> mat4;
 
+
+__declspec(thread) raw_mask_type g_masks[16];
+__declspec(thread) bool g_notEmpty[16];
+__declspec(thread) int g_currentMask = -1;
+
+#ifdef ENABLE_SIMD
+void swizzle::glsl::masked_assign_policy::assign(Vc::float_v& target, const Vc::float_v& value)
+{
+    if (g_currentMask >= 0)
+    {
+        target(g_masks[g_currentMask]) = value;
+    }
+    else
+    {
+        target = value;
+    }
+}
+#endif
+
+struct mask_pusher
+{
+    inline mask_pusher(const raw_mask_type& mask, bool hasSomething)
+    {
+        g_masks[++g_currentMask] = mask;
+        g_notEmpty[g_currentMask] = hasSomething;
+    }
+
+    inline ~mask_pusher()
+    {
+        --g_currentMask;
+    }
+
+    inline operator bool() const
+    {
+        return g_notEmpty[g_currentMask];
+    }
+};
+
+mask_pusher push_mask(bool value)
+{
+    return{ reinterpret_cast<const raw_mask_type&>(mask_type{ value }), value };
+}
+
+#ifdef ENABLE_SIMD
+mask_pusher push_mask(const mask_type& mask)
+{
+    return{ reinterpret_cast<const raw_mask_type&>(mask), !mask.isEmpty() };
+}
+#endif
+
+struct invert {};
+
+mask_pusher push_mask(invert)
+{
+    auto neg = !mask_type(g_masks[g_currentMask + 1]);
+    return{ reinterpret_cast<const raw_mask_type&>(neg), !g_notEmpty[g_currentMask + 1] };
+}
 
 //! A really, really simplistic sampler using SDLImage
 struct SDL_Surface;
@@ -104,7 +186,7 @@ namespace glsl_sandbox
         typedef ::vec2& vec2;
         typedef ::vec3& vec3;
         typedef ::vec4& vec4;
-        typedef ::float_type& float_type;
+        typedef ::masked_float_type& masked_float_type;
     }
 
     namespace in
@@ -112,19 +194,19 @@ namespace glsl_sandbox
         typedef const ::vec2& vec2;
         typedef const ::vec3& vec3;
         typedef const ::vec4& vec4;
-        typedef const ::float_type& float_type;
+        typedef const ::masked_float_type& masked_float_type;
     }
 
     #include <swizzle/glsl/vector_functions.h>
 
     // constants shaders are using
-    vec2::scalar_type time;
+    masked_float_type time;
     vec2 mouse(0, 0);
     vec2 resolution;
 
     // constants some shaders from shader toy are using
     vec2& iResolution = resolution;
-    vec2::scalar_type& iGlobalTime = time;
+    masked_float_type& iGlobalTime = time;
     vec2& iMouse = mouse;
 
     sampler2D diffuse("diffuse.png", sampler2D::Repeat);
@@ -143,7 +225,12 @@ namespace glsl_sandbox
     #define out ref::
     #define inout ref::
     #define main fragment_shader::operator()
-    #define float float_type        
+    #define float masked_float_type   
+
+    
+    //#define if(x) if(auto xxx = push_mask(x))
+    //#define else if(invert{}) 
+    
 
     #pragma warning(push)
     #pragma warning(disable: 4244) // disable return implicit conversion warning
@@ -151,12 +238,15 @@ namespace glsl_sandbox
     
     //#include "shaders/sampler.frag"
     //#include "shaders/leadlight.frag"
-    //#include "shaders/terrain.frag"
+    #include "shaders/terrain.frag"
     //#include "shaders/complex.frag"
     //#include "shaders/road.frag"
     //#include "shaders/gears.frag"
     //#include "shaders/water_turbulence.frag"
-    #include "shaders/sky.h"
+    //#include "shaders/sky.frag"
+
+    #undef if
+    #undef else
 
     // be a dear a clean up
     #pragma warning(pop)
@@ -255,7 +345,7 @@ static int renderThread(void*)
 {
     using ::swizzle::detail::static_for;
 
-    float_type offsets;
+    internal_float_type offsets;
     {
         // initialise offests with 0, 1...
         uint8_t unalignedBlob[scalar_count * sizeof(float) + float_entries_align];
@@ -303,7 +393,7 @@ static int renderThread(void*)
                 for (int x = 0; x < clampedWidth; x += scalar_count)
                 {
                     fragCoord.x = static_cast<float>(x) + offsets;
-
+                    
                     shader.gl_FragCoord = fragCoord;
                     // vvvvvvvvvvvvvvvvvvvvvvvvvv
                     // THE SHADER IS INVOKED HERE
@@ -314,9 +404,9 @@ static int renderThread(void*)
                     auto color = glsl_sandbox::clamp(shader.gl_FragColor, c_zero, c_one);
                     color *= 255 + 0.5f;
 
-                    store_aligned(static_cast<uint_type>(color.r), pr);
-                    store_aligned(static_cast<uint_type>(color.g), pg);
-                    store_aligned(static_cast<uint_type>(color.b), pb);
+                    store_aligned(static_cast<uint_type>(static_cast<internal_float_type>(color.r)), pr);
+                    store_aligned(static_cast<uint_type>(static_cast<internal_float_type>(color.g)), pg);
+                    store_aligned(static_cast<uint_type>(static_cast<internal_float_type>(color.b)), pb);
 
                     static_for<0, scalar_count>([&](size_t i)
                     {
@@ -626,19 +716,22 @@ vec4 sampler2D::sample( const vec2& coord )
     if ( !m_image )
     {
         // checkers
-        if (uv.x < 0.5 && uv.y < 0.5 || uv.x > 0.5 && uv.y > 0.5)
+        auto s = step(0.5f, uv);
+        auto m2 = abs(s.x - s.y);
+        return mix(vec4(1, 0, 0, 1), vec4(0, 1, 0, 1), m2);
+        /*if (uv_x < 0.5 && uv_y < 0.5 || uv_x > 0.5 && uv_y > 0.5)
         {
             return vec4(1, 0, 0, 1);
         }
         else
         {
             return vec4(0, 1, 0, 1);
-        }
+        }*/
     }
     else
     {
-        uint_type x = static_cast<uint_type>(uv.x * (m_image->w - 1) + 0.5);
-        uint_type y = static_cast<uint_type>(uv.y * (m_image->h - 1) + 0.5);
+        uint_type x = static_cast<uint_type>(static_cast<internal_float_type>(uv.x * (m_image->w - 1) + 0.5));
+        uint_type y = static_cast<uint_type>(static_cast<internal_float_type>(uv.y * (m_image->h - 1) + 0.5));
 
         auto& format = *m_image->format;
         uint_type index = (y * m_image->pitch + x * format.BytesPerPixel);
@@ -678,10 +771,10 @@ vec4 sampler2D::sample( const vec2& coord )
         load_aligned(a, pa);
 
         vec4 result;
-        result.r = static_cast<float_type>(r);
-        result.g = static_cast<float_type>(g);
-        result.b = static_cast<float_type>(b);
-        result.a = static_cast<float_type>(a);
+        result.r = static_cast<internal_float_type>(r);
+        result.g = static_cast<internal_float_type>(g);
+        result.b = static_cast<internal_float_type>(b);
+        result.a = static_cast<internal_float_type>(a);
 
         return clamp(result / 255.0f, c_zero, c_one);
     }
