@@ -290,13 +290,13 @@ namespace swizzle
                 {
                     template <size_t i> void operator()(vector_type& result, vector_arg_type edge, vector_arg_type x)
                     {
-                        operator() < i > (result, x, edge.static_at<i>(), x);
+                        operator() < i > (result, edge.static_at<i>(), x);
                     }
 
                     template <size_t i> void operator()(vector_type& result, scalar_arg_type edge, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = x > edge ? 1 : 0;
+                        result.static_at<i>() = step(edge, x.static_at<i>());
                     }
                 };
 
