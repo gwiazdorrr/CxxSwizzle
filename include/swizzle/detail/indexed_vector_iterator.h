@@ -17,7 +17,7 @@ namespace swizzle
         class indexed_vector_iterator 
             : public std::iterator< 
                 std::bidirectional_iterator_tag, 
-                typename std::remove_reference< decltype(declval<VectorType>()[0]) >::type 
+                typename std::remove_reference< decltype(std::declval<VectorType>()[0]) >::type 
             > 
         {
         private:
@@ -70,13 +70,13 @@ namespace swizzle
                 return tmp;
             }
 
-            auto operator*() -> decltype( declval<VectorType>()[0] )
+            auto operator*() -> decltype( std::declval<VectorType>()[0] )
             {
                 assert(m_index < VectorType::num_of_components);
                 return m_vector[m_index];
             }
 
-            auto operator->() -> decltype( &declval<VectorType>()[0] )
+            auto operator->() -> decltype( &std::declval<VectorType>()[0] )
             {
                 assert(m_index < VectorType::num_of_components);
                 return &m_vector[m_index];

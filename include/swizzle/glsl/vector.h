@@ -52,7 +52,7 @@ namespace swizzle
         public:
             //! Get the real, real internal scalar type. Useful when scalar visible
             //! externally is different than the internal one (well, hello SIMD)
-            typedef typename std::remove_reference<decltype(detail::declval<base_type>().m_data[0])>::type internal_scalar_type;
+            typedef typename std::remove_reference<decltype(std::declval<base_type>().m_data[0])>::type internal_scalar_type;
             //! A helpful mnemonic
             typedef std::is_same<internal_scalar_type, scalar_type> are_scalar_types_same;
 

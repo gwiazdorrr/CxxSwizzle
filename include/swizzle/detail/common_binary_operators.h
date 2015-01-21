@@ -2,6 +2,8 @@
 // Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 #pragma once
 
+#include "static_functors.h"
+
 namespace swizzle
 {
     namespace detail
@@ -18,54 +20,54 @@ namespace swizzle
 
             friend VectorType operator+(vector_arg v, scalar_arg s)
             {
-                return VectorType(v) += s;
+                return static_foreach<functor_add>(VectorType(v), s);
             }
             friend VectorType operator+(scalar_arg s, vector_arg v)
             {
-                return VectorType(v) + s;
+                return v + s;
             }
             friend VectorType operator+(vector_arg v1, vector_arg v2)
             {
-                return VectorType(v1) += v2;
+                return static_foreach<functor_add>(VectorType(v1), v2);
             }
 
             friend VectorType operator*(vector_arg v, scalar_arg s)
             {
-                return VectorType(v) *= s;
+                return static_foreach<functor_mul>(VectorType(v), s);
             }
             friend VectorType operator*(scalar_arg s, vector_arg v)
             {
-                return VectorType(v) * s;
+                return v * s;
             }
             friend VectorType operator*(vector_arg v1, vector_arg v2)
             {
-                return VectorType(v1) *= v2;
+                return static_foreach<functor_mul>(VectorType(v1), v2);
             }
 
             friend VectorType operator-(vector_arg v, scalar_arg s)
             {
-                return VectorType(v) -= s;
+                return static_foreach<functor_sub>(VectorType(v), s);
             }
             friend VectorType operator-(scalar_arg s, vector_arg v)
             {
-                return VectorType(s) - v;
+                return static_foreach<functor_sub>(VectorType(s), v);
             }
             friend VectorType operator-(vector_arg v1, vector_arg v2)
             {
-                return VectorType(v1) -= v2;
+                return static_foreach<functor_sub>(VectorType(v1), v2);
             }
 
             friend VectorType operator/(vector_arg v, scalar_arg s)
             {
-                return VectorType(v) /= s;
+                return static_foreach<functor_div>(VectorType(v), s);
             }
             friend VectorType operator/(scalar_arg s, vector_arg v)
             {
-                return VectorType(s) / v;
+                return static_foreach<functor_div>(VectorType(s), v);
             }
             inline friend VectorType operator/(vector_arg v1, vector_arg v2)
             {
-                return VectorType(v1) /= v2;
+                return static_foreach<functor_div>(VectorType(v1), v2);
             }
         };
     }
