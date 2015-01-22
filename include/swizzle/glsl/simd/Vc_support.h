@@ -6,6 +6,7 @@
 
 #include <swizzle/glsl/naive/vector_helper.h>
 #include <swizzle/detail/primitive_wrapper.h>
+#include <type_traits>
 
 namespace swizzle
 {
@@ -13,9 +14,72 @@ namespace swizzle
     {
         namespace Vc
         {
+            template <typename MaskType>
+            class wrapped_mask
+            {
+            public:
+                typedef MaskType mask_type;
+                typedef decltype(std::declval<mask_type>().data()) raw_interal_type_alias;
+                typedef typename raw_interal_type_alias::Base raw_internal_type;
+                typedef wrapped_mask this_type;
+                typedef const wrapped_mask& this_arg;
+
+            private:
+                mask_type data;
+
+            public:
+                wrapped_mask()
+                {}
+
+                wrapped_mask(const mask_type& data)
+                    : data(data)
+                { }
+
+                wrapped_mask(const raw_internal_type& data)
+                    : data(data)
+                { }
+
+
+                // logic operators
+
+                inline friend this_type operator&(this_arg a, this_arg b)
+                {
+                    return a.data & b.data;
+                }
+                inline this_type operator!() const
+                {
+                    return !data;
+                }
+
+                // casts
+
+                //! To avoid ADL-hell, cast is explicit.
+                inline explicit operator mask_type() const
+                {
+                    return data;
+                }
+
+                inline explicit operator raw_internal_type() const
+                {
+                    return data.data();
+                }
+
+                // comparisons
+
+                inline bool full() const
+                {
+                    return a.data.isFull();
+                }
+
+                inline bool empty() const
+                {
+                    return a.data.isEmpty();
+                }
+            };
+
             //! Create a mnemonic for a wrapped float_v.
             template<typename AssignPolicy = detail::nothing>
-            using wrapped_float_v = detail::primitive_wrapper < ::Vc::float_v, ::Vc::float_v::EntryType, ::Vc::float_v::VectorType::Base, ::Vc::float_v::Mask, AssignPolicy >;
+            using wrapped_float_v = detail::primitive_wrapper < ::Vc::float_v, ::Vc::float_v::EntryType, ::Vc::float_v::VectorType::Base, wrapped_mask<::Vc::float_m>, AssignPolicy >;
         }
 
         template <typename AssignPolicy, size_t Size>

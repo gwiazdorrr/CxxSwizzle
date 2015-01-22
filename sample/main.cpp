@@ -7,6 +7,11 @@
 #include <swizzle/glsl/simd/Vc_support.h>
 
 typedef swizzle::glsl::Vc::wrapped_float_v<> masked_float_v;
+//typedef swizzle::glsl::Vc::wrapped_mask<> masked_bool;
+
+
+//static_assert(sizeof(masked_bool) != 0, "aaaa");
+//static_assert(sizeof(swizzle::detail::primitive_wrapper < ::Vc::float_v, ::Vc::float_v::EntryType, ::Vc::float_v::VectorType::Base, masked_bool, swizzle::detail::nothing >) != 0, "aaaa");
 
 typedef masked_float_v masked_float_type;
 typedef masked_float_v float_type;
@@ -90,10 +95,14 @@ typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 2, 2> m
 typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 3, 3> mat3;
 typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 4, 4> mat4;
 
+static const size_t c_max_depth = 16;
 
-__declspec(thread) raw_mask_type g_masks[16];
-__declspec(thread) bool g_notEmpty[16];
-__declspec(thread) int g_currentMask = -1;
+__declspec(thread) raw_mask_type g_currentMask;
+__declspec(thread) raw_mask_type g_multipliedMasks[c_max_depth];
+__declspec(thread) raw_mask_type g_singleMasks[c_max_depth];
+__declspec(thread) bool g_notEmpty[c_max_depth];
+__declspec(thread) size_t g_masksCount = -1;
+
 
 #ifdef ENABLE_SIMD
 //struct masked_assign_policy
@@ -113,45 +122,52 @@ __declspec(thread) int g_currentMask = -1;
 //    }
 //}
 #endif
-
-struct mask_pusher
-{
-    inline mask_pusher(const raw_mask_type& mask, bool hasSomething)
-    {
-        g_masks[++g_currentMask] = mask;
-        g_notEmpty[g_currentMask] = hasSomething;
-    }
-
-    inline ~mask_pusher()
-    {
-        --g_currentMask;
-    }
-
-    inline operator bool() const
-    {
-        return g_notEmpty[g_currentMask];
-    }
-};
-
-mask_pusher push_mask(bool value)
-{
-    return{ reinterpret_cast<const raw_mask_type&>(mask_type{ value }), value };
-}
-
-#ifdef ENABLE_SIMD
-mask_pusher push_mask(const mask_type& mask)
-{
-    return{ reinterpret_cast<const raw_mask_type&>(mask), !mask.isEmpty() };
-}
-#endif
-
-struct invert {};
-
-mask_pusher push_mask(invert)
-{
-    auto neg = !mask_type(g_masks[g_currentMask + 1]);
-    return{ reinterpret_cast<const raw_mask_type&>(neg), !g_notEmpty[g_currentMask + 1] };
-}
+//
+//struct mask_pusher
+//{
+//    inline mask_pusher(const mask_type& mask, bool hasSomething)
+//    {
+//        auto m = mask & static_cast<mask_type>(g_currentMask);
+//
+//        ++g_masksCount;
+//        g_singleMasks[g_masksCount] = mask;
+//        g_currentMask = g_multipliedMasks[g_masksCount] = m;
+//
+//
+//        //g_masks[++g_currentMask] = mask;
+//        //g_notEmpty[g_currentMask] = hasSomething;
+//    }
+//
+//    inline ~mask_pusher()
+//    {
+//        //--g_currentMask;
+//    }
+//
+//    inline operator bool() const
+//    {
+//        return g_notEmpty[g_currentMask];
+//    }
+//};
+//
+//mask_pusher push_mask(bool value)
+//{
+//    return{ reinterpret_cast<const raw_mask_type&>(mask_type{ value }), value };
+//}
+//
+//#ifdef ENABLE_SIMD
+//mask_pusher push_mask(const mask_type& mask)
+//{
+//    return{ reinterpret_cast<const raw_mask_type&>(mask), !mask.isEmpty() };
+//}
+//#endif
+//
+//struct invert {};
+//
+//mask_pusher push_mask(invert)
+//{
+//    auto neg = !mask_type(g_masks[g_currentMask + 1]);
+//    return{ reinterpret_cast<const raw_mask_type&>(neg), !g_notEmpty[g_currentMask + 1] };
+//}
 
 //! A really, really simplistic sampler using SDLImage
 struct SDL_Surface;
@@ -241,12 +257,12 @@ namespace glsl_sandbox
     
     //#include "shaders/sampler.frag"
     //#include "shaders/leadlight.frag"
-    #include "shaders/terrain.frag"
+    //#include "shaders/terrain.frag"
     //#include "shaders/complex.frag"
     //#include "shaders/road.frag"
     //#include "shaders/gears.frag"
     //#include "shaders/water_turbulence.frag"
-    //#include "shaders/sky.frag"
+    #include "shaders/sky.frag"
 
     #undef if
     #undef else

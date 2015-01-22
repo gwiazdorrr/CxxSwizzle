@@ -17,6 +17,8 @@ namespace swizzle
         template <class ScalarType, size_t Size>
         struct vector_helper
         {
+            static_assert(std::is_pod<ScalarType>::value, "Needs to be a POD");
+
             //! These can be incomplete types at this point.
             typedef std::array<ScalarType, Size> data_type;
 
