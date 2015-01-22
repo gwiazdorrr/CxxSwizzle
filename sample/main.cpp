@@ -3,12 +3,10 @@
 
 #ifdef ENABLE_SIMD
 // VC need to come first or else VC is going to complain.
-
-
-
+#include <Vc/vector.h>
 #include <swizzle/glsl/simd/Vc_support.h>
 
-typedef swizzle::glsl::masked_float_v masked_float_v;
+typedef swizzle::glsl::Vc::wrapped_float_v<> masked_float_v;
 
 typedef masked_float_v masked_float_type;
 typedef masked_float_v float_type;
@@ -98,17 +96,22 @@ __declspec(thread) bool g_notEmpty[16];
 __declspec(thread) int g_currentMask = -1;
 
 #ifdef ENABLE_SIMD
-void swizzle::glsl::masked_assign_policy::assign(Vc::float_v& target, const Vc::float_v& value)
-{
-    if (g_currentMask >= 0)
-    {
-        target(g_masks[g_currentMask]) = value;
-    }
-    else
-    {
-        target = value;
-    }
-}
+//struct masked_assign_policy
+//{
+//    static void assign(Vc::float_v& target, const Vc::float_v& value);
+//    typedef Vc::float_v::Mask mask_type;
+//};
+//void swizzle::glsl::masked_assign_policy::assign(Vc::float_v& target, const Vc::float_v& value)
+//{
+//    if (g_currentMask >= 0)
+//    {
+//        target(g_masks[g_currentMask]) = value;
+//    }
+//    else
+//    {
+//        target = value;
+//    }
+//}
 #endif
 
 struct mask_pusher
