@@ -9,13 +9,13 @@ namespace swizzle
 {
     namespace detail
     {
-        template <typename InternalType, typename ExternalType, typename OptionalInitType = nothing, typename ComparisonResultType = bool, typename AssignPolicy = nothing>
+        template <typename InternalType, typename ExternalType, typename RawInternalType = InternalType, typename ComparisonResultType = bool, typename AssignPolicy = nothing>
         class primitive_wrapper
         {
         public:
             typedef InternalType internal_type;
             typedef ExternalType external_type;
-            typedef OptionalInitType optional_init_type;
+            typedef RawInternalType raw_internal_type;
             typedef primitive_wrapper this_type;
             typedef AssignPolicy assign_policy_type;
 
@@ -33,7 +33,7 @@ namespace swizzle
                 : data(data)
             { }
 
-            primitive_wrapper(const optional_init_type& data)
+            primitive_wrapper(const std::conditional_t<std::is_same<raw_internal_type, internal_type>::value, nothing, raw_internal_type> & data)
                 : data(data)
             { }
 
@@ -275,13 +275,6 @@ namespace swizzle
             inline friend ComparisonResultType operator!=(this_arg a, this_arg b)
             {
                 return a.data != b.data;
-            }
-
-
-            // for CxxSwizzle's ADL
-            inline this_type decay() const
-            {
-                return *this;
             }
 
         private:

@@ -1,7 +1,6 @@
 #pragma once
 
-// get's rid of automatic 
-//#define VC_NO_AUTOMATIC_BOOL_FROM_MASK
+// to get rid of automatic mask->bool conversions, define VC_NO_AUTOMATIC_BOOL_FROM_MASK somewhere
 #include <vc/vector.h>
 
 
@@ -12,84 +11,52 @@ namespace swizzle
 {
     namespace glsl
     {
-        typedef Vc::float_v float_v;
-
-        struct no_assign_policy;
-
-        struct masked_assign_policy
+        namespace Vc
         {
-            static void assign(Vc::float_v& target, const Vc::float_v& value);
+            //! Create a mnemonic for a wrapped float_v.
+            template<typename AssignPolicy = detail::nothing>
+            using wrapped_float_v = detail::primitive_wrapper < ::Vc::float_v, ::Vc::float_v::EntryType, ::Vc::float_v::VectorType::Base, ::Vc::float_v::Mask, AssignPolicy >;
+        }
 
-            typedef Vc::float_v::Mask mask_type;
-
-        };
-
-        
-
-        typedef detail::primitive_wrapper<Vc::float_v, Vc::float_v::EntryType, Vc::float_v::VectorType::Base, Vc::float_v::Mask, detail::nothing> masked_float_v;
-
-        template <size_t Size>
-        struct vector_helper<masked_float_v, Size>
+        template <typename AssignPolicy, size_t Size>
+        struct vector_helper<Vc::wrapped_float_v<AssignPolicy>, Size>
         {
-            //! These can be incomplete types at this point.
-            typedef std::array<float_v::VectorType::Base, Size> data_type;
+            //! Array needs to be like a steak - the rawest possible
+            typedef std::array<typename Vc::wrapped_float_v<AssignPolicy>::raw_internal_type, Size> data_type;
 
             template <size_t... indices>
             struct proxy_generator
             {
-                typedef detail::indexed_proxy< vector<masked_float_v, sizeof...(indices)>, data_type, indices...> type;
+                typedef detail::indexed_proxy< vector<Vc::wrapped_float_v<AssignPolicy>, sizeof...(indices)>, data_type, indices...> type;
             };
 
             //! A factory of 1-component proxies.
             template <size_t x>
             struct proxy_generator<x>
             {
-                typedef masked_float_v type;
+                typedef Vc::wrapped_float_v<AssignPolicy> type;
             };
 
             typedef detail::vector_base< Size, proxy_generator, data_type > base_type;
-            
-            typedef Vc::float_v static_at_type;
-        };
-
-
-
-        template <size_t Size>
-        struct vector_helper<float_v, Size>
-        {
-            //! These can be incomplete types at this point.
-            typedef std::array<float_v::VectorType::Base, Size> data_type;
-
-            template <size_t... indices>
-            struct proxy_generator
-            {
-                typedef detail::indexed_proxy< vector<float_v, sizeof...(indices)>, data_type, indices...> type;
-            };
-
-            //! A factory of 1-component proxies.
-            template <size_t x>
-            struct proxy_generator<x>
-            {
-                typedef masked_float_v type;
-            };
-
-            typedef detail::vector_base< Size, proxy_generator, data_type > base_type;
-            typedef masked_float_v masked_scalar_type;
-            static float_v::VectorType::Base convert_other_scalar_type(const float_v& other)
-            {
-                return other.data();
-            }
         };
 
     }
 
     namespace detail
     {
-        template <>
-        struct get_vector_type_impl<glsl::masked_float_v>
+        //! CxxSwizzle needs to know which vector to create if it needs to
+        template <typename AssignPolicy>
+        struct get_vector_type_impl< ::swizzle::glsl::Vc::wrapped_float_v<AssignPolicy> >
         {
-            typedef glsl::vector<glsl::masked_float_v, 1> type;
+            typedef ::swizzle::glsl::vector<::swizzle::glsl::Vc::wrapped_float_v<AssignPolicy>, 1> type;
         };
+
+        //! ... and if the type decays to something (it doesn't)
+        template <typename AssignPolicy>
+        inline ::swizzle::glsl::Vc::wrapped_float_v<AssignPolicy> decay(const ::swizzle::glsl::Vc::wrapped_float_v<AssignPolicy>& value)
+        {
+            return value;
+        }
     }
 }
 
@@ -122,7 +89,13 @@ namespace swizzle
 namespace Vc
 {
     // Vc generally supports it all...
+#ifdef VC_IMPL_Scalar
+    namespace Scalar
+#elif defined(VC_IMPL_AVX)
     namespace AVX
+#elif defined(VC_IMPL_SSE)
+    namespace SSE
+#endif
     {
         template <typename T>
         inline Vector<T> step(const Vector<T>& edge, const Vector<T>& x)
