@@ -57,37 +57,62 @@ vec3 intersect(in vec3 rayOrigin, in vec3 rayDir)
 	float total_dist = 0.0;
 	vec3 p = rayOrigin;
 	float d = 1.0;
-	int iter = 0;
+    float iter = 0;
 	float mind = 3.14159+sin(time*0.1)*0.2;
 	
 	for (int i = 0; i < MAX_ITER; i++)
 	{		
-		if (d < 0.0001) continue;
-		
-		d = map(p);
-		p += d*vec3(rayDir.x, rotate(rayDir.yz, sin(mind)));
-		mind = min(mind, d);
-		total_dist += d;
-		iter++;
+		if (d < 0.0001)
+        { 
+
+        }
+        else
+        {
+            d = map(p);
+            p += d*vec3(rayDir.x, rotate(rayDir.yz, sin(mind)));
+            mind = min(mind, d);
+            total_dist += d;
+            iter+=1;
+        }
 	}
 
 	vec3 color = vec3(0.0);
-	if (d < 0.0001) {
-		float x = (iter/float(MAX_ITER));
-		float y = (d-0.001)/0.001/(float(MAX_ITER));
-		float z = (0.001-d)/0.001/float(MAX_ITER);
-		if (max(abs(p.y-0.025), abs(p.z)-0.035)<0.001) { // Road
-            float w = smoothstep(mod(p.x*50.0, 4.0), (float)2.0, (float)2.01);
-            w -= 1.0 - smoothstep(mod(p.x*50.0 + 2.0, 4.0), (float)2.0, (float)1.99);
-			w = fract(w+0.0001);
-            float a = fract(smoothstep(abs(p.z), (float)0.0025, (float)0.0026));
-			color = vec3((1.0-x-y*2.)*mix(vec3(0.8, 0.8, 0), vec3(0.1), 1.0-(1.0-w)*(1.0-a)));
-		} else {
-			float q = 1.0-x-y*2.+z;
-			color = hsv(q*0.2+0.85, 1.0-q*0.2, q);
-		}
-	} else
-		color = hsv(d, 1.0, 1.0)*mind*100.0; // Background
+
+    float step_outer = step(0.0001, d);
+    {
+        float x = (iter / float(MAX_ITER));
+        float y = (d - 0.001) / 0.001 / (float(MAX_ITER));
+        float z = (0.001 - d) / 0.001 / float(MAX_ITER);
+        float step_inner = step(0.001, max(abs(p.y - 0.025), abs(p.z) - 0.035));
+
+        
+        float w = smoothstep(mod(p.x*50.0, 4.0), (float)2.0, (float)2.01);
+        w -= 1.0 - smoothstep(mod(p.x*50.0 + 2.0, 4.0), (float)2.0, (float)1.99);
+        w = fract(w + 0.0001);
+        float a = fract(smoothstep(abs(p.z), (float)0.0025, (float)0.0026));
+        color = step_inner * vec3((1.0 - x - y*2.)*mix(vec3(0.8, 0.8, 0), vec3(0.1), 1.0 - (1.0 - w)*(1.0 - a)));
+        
+        float q = 1.0 - x - y*2. + z;
+        color = (1 - step_inner) * hsv(q*0.2 + 0.85, 1.0 - q*0.2, q);
+        
+    }
+
+	//if (d < 0.0001) {
+	//	float x = (iter/float(MAX_ITER));
+	//	float y = (d-0.001)/0.001/(float(MAX_ITER));
+	//	float z = (0.001-d)/0.001/float(MAX_ITER);
+	//	if (max(abs(p.y-0.025), abs(p.z)-0.035)<0.001) { // Road
+ //           float w = smoothstep(mod(p.x*50.0, 4.0), (float)2.0, (float)2.01);
+ //           w -= 1.0 - smoothstep(mod(p.x*50.0 + 2.0, 4.0), (float)2.0, (float)1.99);
+	//		w = fract(w+0.0001);
+ //           float a = fract(smoothstep(abs(p.z), (float)0.0025, (float)0.0026));
+	//		color = vec3((1.0-x-y*2.)*mix(vec3(0.8, 0.8, 0), vec3(0.1), 1.0-(1.0-w)*(1.0-a)));
+	//	} else {
+	//		float q = 1.0-x-y*2.+z;
+	//		color = hsv(q*0.2+0.85, 1.0-q*0.2, q);
+	//	}
+	//} else
+	//	color = hsv(d, 1.0, 1.0)*mind*100.0; // Background
 	return color;
 }
 
@@ -104,4 +129,7 @@ void main()
 	vec3 rayDir = normalize(u * screenPos.x + v * screenPos.y + cameraDir*(1.0-length(screenPos)*0.5));
 	
 	gl_FragColor = vec4(intersect(cameraOrigin, rayDir), 1.0);
+
+
+
 } 

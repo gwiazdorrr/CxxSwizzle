@@ -64,7 +64,7 @@ namespace swizzle
         {};
 
         template <>
-        struct get_vector_type_impl<double> : get_vector_type_impl_for_scalar<double>
+        struct get_vector_type_impl<double> : get_vector_type_impl_for_scalar<float>
         {};
 
         template <>
@@ -102,4 +102,6 @@ namespace std
     {
         return 1.0f / sqrt(x);
     }
+
+
 }

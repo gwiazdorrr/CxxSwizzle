@@ -123,7 +123,7 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x, scalar_arg_type y)
                     {
                         using namespace std;
-                        result.static_at<i>() = pow(x.static_at<i>(), y);
+                        result.static_at<i>() = std::pow(x.static_at<i>(), y);
                     }
 
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x, vector_arg_type y)

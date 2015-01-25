@@ -234,7 +234,7 @@ namespace swizzle
 
             inline vector& operator=(const vector& o)
             {
-                m_data = o.m_data;
+                detail::static_foreach<detail::functor_assign>(*this, o);
                 return *this;
             }
 
