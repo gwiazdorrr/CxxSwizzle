@@ -9,7 +9,7 @@ namespace swizzle
 {
     namespace detail
     {
-        template <typename InternalType, typename ExternalType, typename RawInternalType = InternalType, typename ComparisonResultType = bool, typename AssignPolicy = nothing>
+        template <typename InternalType, typename ExternalType, typename RawInternalType = InternalType, typename BoolType = bool, typename AssignPolicy = nothing>
         class primitive_wrapper
         {
         public:
@@ -18,6 +18,7 @@ namespace swizzle
             typedef RawInternalType raw_internal_type;
             typedef primitive_wrapper this_type;
             typedef AssignPolicy assign_policy_type;
+            typedef BoolType bool_type;
 
             typedef const primitive_wrapper& this_arg;
             typedef const external_type& external_type_arg;
@@ -252,27 +253,27 @@ namespace swizzle
 
             // comparisons
 
-            inline friend ComparisonResultType operator>(this_arg a, this_arg b)
+            inline friend bool_type operator>(this_arg a, this_arg b)
             {
                 return a.data > b.data;
             }
-            inline friend ComparisonResultType operator>=(this_arg a, this_arg b)
+            inline friend bool_type operator>=(this_arg a, this_arg b)
             {
                 return a.data >= b.data;
             }
-            inline friend ComparisonResultType operator<(this_arg a, this_arg b)
+            inline friend bool_type operator<(this_arg a, this_arg b)
             {
                 return a.data < b.data;
             }
-            inline friend ComparisonResultType operator<=(this_arg a, this_arg b)
+            inline friend bool_type operator<=(this_arg a, this_arg b)
             {
                 return a.data <= b.data;
             }
-            inline friend ComparisonResultType operator==(this_arg a, this_arg b)
+            inline friend bool_type operator==(this_arg a, this_arg b)
             {
                 return a.data == b.data;
             }
-            inline friend ComparisonResultType operator!=(this_arg a, this_arg b)
+            inline friend bool_type operator!=(this_arg a, this_arg b)
             {
                 return a.data != b.data;
             }

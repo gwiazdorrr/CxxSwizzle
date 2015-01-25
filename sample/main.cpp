@@ -6,7 +6,13 @@
 #include <Vc/vector.h>
 #include <swizzle/glsl/simd/Vc_support.h>
 
-typedef swizzle::glsl::Vc::wrapped_float_v<> masked_float_v;
+struct masked_assign_policy
+{
+    static void assign(Vc::float_v& target, const Vc::float_v& value);
+    typedef Vc::float_v::Mask mask_type;
+};
+
+typedef swizzle::glsl::Vc::wrapped_float_v<masked_assign_policy> masked_float_v;
 //typedef swizzle::glsl::Vc::wrapped_mask<> masked_bool;
 
 
@@ -18,10 +24,15 @@ typedef masked_float_v float_type;
 typedef Vc::float_v internal_float_type;
 typedef Vc::uint_v uint_type;
 
+typedef masked_float_type::bool_type mask_type;
+typedef mask_type::raw_internal_type raw_mask_type;
+
 static_assert(internal_float_type::Size == uint_type::Size, "Both float and uint types need to have same number of entries");
 const size_t scalar_count = internal_float_type::Size;
 const size_t float_entries_align = Vc::VectorAlignment;
 const size_t uint_entries_align = Vc::VectorAlignment;
+
+
 
 void test()
 {
@@ -42,8 +53,6 @@ inline void load_aligned(Vc::Vector<T>& value, const T* data)
 }
 
 
-typedef Vc::float_v::Mask mask_type;
-typedef decltype(std::declval<mask_type>().data())::Base raw_mask_type;
 
 
 
@@ -97,57 +106,65 @@ typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 4, 4> m
 
 static const size_t c_max_depth = 16;
 
+//! Current mask, ready to use.
 __declspec(thread) raw_mask_type g_currentMask;
+//! Stack of all masks.
 __declspec(thread) raw_mask_type g_multipliedMasks[c_max_depth];
+//!
 __declspec(thread) raw_mask_type g_singleMasks[c_max_depth];
 __declspec(thread) bool g_notEmpty[c_max_depth];
-__declspec(thread) size_t g_masksCount = -1;
+__declspec(thread) int g_masksCount = 0;
 
 
 #ifdef ENABLE_SIMD
-//struct masked_assign_policy
-//{
-//    static void assign(Vc::float_v& target, const Vc::float_v& value);
-//    typedef Vc::float_v::Mask mask_type;
-//};
-//void swizzle::glsl::masked_assign_policy::assign(Vc::float_v& target, const Vc::float_v& value)
-//{
-//    if (g_currentMask >= 0)
-//    {
-//        target(g_masks[g_currentMask]) = value;
-//    }
-//    else
-//    {
-//        target = value;
-//    }
-//}
+
+void masked_assign_policy::assign(Vc::float_v& target, const Vc::float_v& value)
+{
+    target(g_currentMask) = value;
+}
 #endif
 //
-//struct mask_pusher
-//{
-//    inline mask_pusher(const mask_type& mask, bool hasSomething)
-//    {
-//        auto m = mask & static_cast<mask_type>(g_currentMask);
-//
-//        ++g_masksCount;
-//        g_singleMasks[g_masksCount] = mask;
-//        g_currentMask = g_multipliedMasks[g_masksCount] = m;
-//
-//
-//        //g_masks[++g_currentMask] = mask;
-//        //g_notEmpty[g_currentMask] = hasSomething;
-//    }
-//
-//    inline ~mask_pusher()
-//    {
-//        //--g_currentMask;
-//    }
-//
-//    inline operator bool() const
-//    {
-//        return g_notEmpty[g_currentMask];
-//    }
-//};
+
+struct mask_pusher
+{
+    inline mask_pusher(const mask_type& mask)
+    {
+        // compute the new mask
+        auto newMask = mask & static_cast<mask_type>(g_currentMask);
+
+        ++g_masksCount;
+        g_singleMasks[g_masksCount] = static_cast<raw_mask_type>(mask);
+        g_currentMask = g_multipliedMasks[g_masksCount] = static_cast<raw_mask_type>(newMask);
+    }
+
+    inline ~mask_pusher()
+    {
+        --g_masksCount;
+        g_currentMask = g_multipliedMasks[g_masksCount];
+    }
+
+    inline operator bool() const
+    {
+        return static_cast<bool>(static_cast<mask_type>(g_currentMask));
+    }
+};
+
+struct invert {};
+
+
+
+template <typename T>
+mask_pusher push_mask(T&& condition)
+{
+    return{ static_cast<mask_type>(condition) };
+}
+
+mask_pusher push_mask(invert)
+{
+    return{ !static_cast<const mask_type&>(g_singleMasks[g_masksCount + 1]) };
+}
+
+
 //
 //mask_pusher push_mask(bool value)
 //{
@@ -219,7 +236,7 @@ namespace glsl_sandbox
     #include <swizzle/glsl/vector_functions.h>
 
     // constants shaders are using
-    masked_float_type time;
+    masked_float_type time = 1;
     vec2 mouse(0, 0);
     vec2 resolution;
 
@@ -247,8 +264,8 @@ namespace glsl_sandbox
     #define float masked_float_type   
 
     
-    //#define if(x) if(auto xxx = push_mask(x))
-    //#define else if(invert{}) 
+    #define if(x) if(mask_pusher __pusher = push_mask(x))
+    #define else if(invert{}) 
     
 
     #pragma warning(push)
@@ -259,10 +276,10 @@ namespace glsl_sandbox
     //#include "shaders/leadlight.frag"
     //#include "shaders/terrain.frag"
     //#include "shaders/complex.frag"
-    //#include "shaders/road.frag"
+    #include "shaders/road.frag"
     //#include "shaders/gears.frag"
     //#include "shaders/water_turbulence.frag"
-    #include "shaders/sky.frag"
+    //#include "shaders/sky.frag"
 
     #undef if
     #undef else
@@ -394,6 +411,10 @@ static int renderThread(void*)
             int heightEnd = bmp->h;
 #endif
 
+            g_currentMask = static_cast<raw_mask_type>(mask_type(true));
+            g_multipliedMasks[0] = g_currentMask;
+            g_singleMasks[0] = g_currentMask;
+
             unsigned unalignedBlob[3 * (scalar_count + uint_entries_align / sizeof(unsigned))];
             unsigned* pr = alignPtr<uint_entries_align>(unalignedBlob);
             unsigned* pg = alignPtr<uint_entries_align>(pr + scalar_count);
@@ -462,6 +483,11 @@ static int renderThread(void*)
 
 extern C_LINKAGE int main(int argc, char* argv[])
 {
+    g_currentMask = static_cast<raw_mask_type>(mask_type(true));
+    g_multipliedMasks[0] = g_currentMask;
+    g_singleMasks[0] = g_currentMask;
+
+
     using namespace std;
 
     // initialise SDLImage

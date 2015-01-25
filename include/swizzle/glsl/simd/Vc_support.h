@@ -35,6 +35,10 @@ namespace swizzle
                     : data(data)
                 { }
 
+                explicit wrapped_mask(bool data)
+                    : data(data)
+                { }
+
                 wrapped_mask(const raw_internal_type& data)
                     : data(data)
                 { }
@@ -74,6 +78,11 @@ namespace swizzle
                 inline bool empty() const
                 {
                     return a.data.isEmpty();
+                }
+
+                inline explicit operator bool() const
+                {
+                    return !data.isEmpty();
                 }
             };
 
