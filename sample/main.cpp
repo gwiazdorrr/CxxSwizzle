@@ -411,12 +411,12 @@ static int renderThread(void*)
             int thredsCount = omp_get_num_threads();
             int threadNum = omp_get_thread_num();
 
-            int heightPerThread = thredsCount;
+            int heightStep = thredsCount;
             int heightStart = threadNum;
             int heightEnd = bmp->h;
 #else
         {
-            int heightPerThread = 1;
+            int heightStep = 1;
             int heightStart = 0;
             int heightEnd = bmp->h;
 #endif
@@ -432,17 +432,26 @@ static int renderThread(void*)
 
             glsl_sandbox::fragment_shader shader;
             vec2 fragCoord;
-            for (int y = heightStart; !g_cancelDraw && y < heightEnd; y += heightPerThread)
+
+            for (int y = heightStart; !g_cancelDraw && y < heightEnd; y += heightStep)
             {
                 fragCoord.y = static_cast<float>(bmp->h - 1 - y);
 
                 uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch;
 
-                int danglingWidth = bmp->w % scalar_count;
-                int clampedWidth = bmp->w - bmp->w % scalar_count;
-
-                for (int x = 0; x < clampedWidth; x += scalar_count)
+                int limitX = bmp->w - scalar_count;
+                for (int x = 0; x < bmp->w; x += scalar_count)
                 {
+                    // since we are likely moving by more than one pixel,
+                    // this will shift x and ptr left in case of width and scalar_count
+                    // not being aligned; will redraw up to (scalar_count-1) pixels,
+                    // but well, what you gonna do.
+                    if (x > limitX)
+                    {
+                        ptr -= 3 * (x - limitX);
+                        x = limitX;
+                    }
+
                     fragCoord.x = static_cast<float>(x) + offsets;
                     
                     shader.gl_FragCoord = fragCoord;
@@ -455,6 +464,7 @@ static int renderThread(void*)
                     auto color = glsl_sandbox::clamp(shader.gl_FragColor, c_zero, c_one);
                     color *= 255 + 0.5f;
 
+                    // save in the bitmap
                     store_aligned(static_cast<uint_type>(static_cast<internal_float_type>(color.r)), pr);
                     store_aligned(static_cast<uint_type>(static_cast<internal_float_type>(color.g)), pg);
                     store_aligned(static_cast<uint_type>(static_cast<internal_float_type>(color.b)), pb);
