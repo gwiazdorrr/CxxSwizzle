@@ -12,7 +12,7 @@ struct masked_assign_policy
     typedef Vc::float_v::Mask mask_type;
 };
 
-typedef swizzle::glsl::Vc::wrapped_float_v<masked_assign_policy> masked_float_v;
+typedef swizzle::glsl::Vc::wrapped_float_v<> masked_float_v;
 //typedef swizzle::glsl::Vc::wrapped_mask<> masked_bool;
 
 
@@ -164,6 +164,13 @@ mask_pusher push_mask(invert)
     return{ !static_cast<const mask_type&>(g_singleMasks[g_masksCount + 1]) };
 }
 
+struct lask_mask_all_true {};
+
+bool push_mask(lask_mask_all_true)
+{
+    return static_cast<mask_type>(g_currentMask) == static_cast<mask_type>(true);
+}
+
 
 //
 //mask_pusher push_mask(bool value)
@@ -263,9 +270,10 @@ namespace glsl_sandbox
     #define main fragment_shader::operator()
     #define float masked_float_type   
 
-    
-    #define if(x) if(mask_pusher __pusher = push_mask(x))
+
+    #define if(x) if(auto __pusher = push_mask(x))
     #define else if(invert{}) 
+    //#define break if(lask_mask_all_true{}) break
     
 
     #pragma warning(push)
@@ -274,15 +282,16 @@ namespace glsl_sandbox
     
     //#include "shaders/sampler.frag"
     //#include "shaders/leadlight.frag"
-    //#include "shaders/terrain.frag"
+    #include "shaders/terrain.frag"
     //#include "shaders/complex.frag"
-    #include "shaders/road.frag"
+    //#include "shaders/road.frag"
     //#include "shaders/gears.frag"
     //#include "shaders/water_turbulence.frag"
     //#include "shaders/sky.frag"
 
     #undef if
     #undef else
+    #undef break
 
     // be a dear a clean up
     #pragma warning(pop)
@@ -396,17 +405,18 @@ static int renderThread(void*)
     {
         auto bmp = g_surface.get();
 
-#if 0
+#if 1
 #pragma omp parallel 
         {
             int thredsCount = omp_get_num_threads();
             int threadNum = omp_get_thread_num();
 
-            int heightPerThread = bmp->h / thredsCount;
-            int heightStart = threadNum * heightPerThread;
-            int heightEnd = (threadNum == thredsCount - 1) ? bmp->h : (heightStart + heightPerThread);
+            int heightPerThread = thredsCount;
+            int heightStart = threadNum;
+            int heightEnd = bmp->h;
 #else
         {
+            int heightPerThread = 1;
             int heightStart = 0;
             int heightEnd = bmp->h;
 #endif
@@ -422,12 +432,13 @@ static int renderThread(void*)
 
             glsl_sandbox::fragment_shader shader;
             vec2 fragCoord;
-            for ( int y = heightStart; !g_cancelDraw && y < heightEnd; ++y )
+            for (int y = heightStart; !g_cancelDraw && y < heightEnd; y += heightPerThread)
             {
                 fragCoord.y = static_cast<float>(bmp->h - 1 - y);
 
                 uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch;
 
+                int danglingWidth = bmp->w % scalar_count;
                 int clampedWidth = bmp->w - bmp->w % scalar_count;
 
                 for (int x = 0; x < clampedWidth; x += scalar_count)
