@@ -55,6 +55,15 @@ namespace swizzle
                     return !data;
                 }
 
+                inline bool operator==(const this_type& other)
+                {
+                    return data == other.data;
+                }
+                inline bool operator!=(const this_type& other)
+                {
+                    return data != other.data;
+                }
+
                 // casts
 
                 //! To avoid ADL-hell, cast is explicit.
