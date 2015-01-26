@@ -27,7 +27,8 @@ if(SDL_FOUND AND SDL_IMAGE_FOUND)
 	target_link_libraries (sample ${SDL_LIBRARY} ${SDL_IMAGE_LIBRARY})
 	
 	if(Vc_FOUND)
-		add_executable(sample_simd main.cpp ${shaders})
+		source_group("" FILES shader.h)
+		add_executable(sample_simd main.cpp shader.h ${shaders})
 		
 		set_target_properties(sample_simd PROPERTIES COMPILE_FLAGS "${Vc_DEFINITIONS} -DENABLE_SIMD")
 		target_link_libraries(sample_simd ${SDL_LIBRARY} ${SDL_IMAGE_LIBRARY} ${Vc_LIBRARIES})
