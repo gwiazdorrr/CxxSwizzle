@@ -31,7 +31,7 @@
 #define SWIZZLE_FORWARD_FUNC(name) \
     template <class T, class... U> inline auto name(T&& t, U&&... u) -> \
     decltype(::swizzle::detail::decay(std::declval<typename ::swizzle::detail::get_vector_type<T, U...>::type>().call_##name(t, u...))) \
-{ return ::swizzle::detail::get_vector_type<T, U...>::type::call_##name(std::forward<T>(t), std::forward<U>(u)...); }
+    { return ::swizzle::detail::get_vector_type<T, U...>::type::call_##name(std::forward<T>(t), std::forward<U>(u)...); }
 
 
 SWIZZLE_FORWARD_FUNC(radians)

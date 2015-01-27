@@ -1,82 +1,13 @@
 // CxxSwizzle
 // Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
-#ifdef ENABLE_SIMD
-// VC need to come first or else VC is going to complain.
-#include <Vc/vector.h>
-#include <swizzle/glsl/simd/Vc_support.h>
-
-typedef swizzle::glsl::Vc::wrapped_float_v<> masked_float_v;
-
-typedef masked_float_v masked_float_type;
-typedef masked_float_v float_type;
-typedef Vc::float_v internal_float_type;
-typedef Vc::uint_v uint_type;
-
-typedef masked_float_type::bool_type mask_type;
-typedef mask_type::raw_internal_type raw_mask_type;
-
-static_assert(internal_float_type::Size == uint_type::Size, "Both float and uint types need to have same number of entries");
-const size_t scalar_count = internal_float_type::Size;
-const size_t float_entries_align = Vc::VectorAlignment;
-const size_t uint_entries_align = Vc::VectorAlignment;
-
-#include "masked_assign_policy.h"
-
-
-void test()
-{
-    masked_float_v a, b;
-    a >= b;
-}
-
-template <typename T>
-inline void store_aligned(const Vc::Vector<T>& value, T* target)
-{
-    value.store(target, Vc::Aligned);
-}
-
-template <typename T>
-inline void load_aligned(Vc::Vector<T>& value, const T* data)
-{
-    value.load(data, Vc::Aligned);
-}
-
-
-
-
-
-
-
+#if defined(USE_SIMD)
+#include "use_simd.h"
+#elif defined(USE_SIMD_MASKED)
+#include "use_simd_masked.h"
 #else
-
-#include <type_traits>
-typedef float masked_float_type;
-typedef float float_type;
-typedef float internal_float_type;
-typedef unsigned uint_type;
-
-const size_t scalar_count = 1;
-const size_t float_entries_align = std::alignment_of<float>::value;
-const size_t uint_entries_align = std::alignment_of<unsigned>::value;
-
-template <typename T>
-inline void store_aligned(T&& value, typename std::remove_reference<T>::type* target)
-{
-    *target = std::forward<T>(value);
-}
-
-template <typename T>
-inline void load_aligned(T& value, const T* data)
-{
-    value = *data;
-}
-
-typedef bool mask_type;
-typedef bool raw_mask_type;
-
+#include "use_scalar.h"
 #endif
-
 
 #include <swizzle/glsl/vector.h>
 #include <swizzle/glsl/matrix.h>
@@ -93,13 +24,6 @@ static_assert(sizeof(vec4) == sizeof(float_type[4]), "Too big");
 typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 2, 2> mat2;
 typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 3, 3> mat3;
 typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 4, 4> mat4;
-
-
-
-
-
-//
-
 
 
 //! A really, really simplistic sampler using SDLImage
@@ -138,7 +62,7 @@ namespace glsl_sandbox
         typedef ::vec2& vec2;
         typedef ::vec3& vec3;
         typedef ::vec4& vec4;
-        typedef ::masked_float_type& masked_float_type;
+        typedef ::float_type& float_type;
     }
 
     namespace in
@@ -146,19 +70,19 @@ namespace glsl_sandbox
         typedef const ::vec2& vec2;
         typedef const ::vec3& vec3;
         typedef const ::vec4& vec4;
-        typedef const ::masked_float_type& masked_float_type;
+        typedef const ::float_type& float_type;
     }
 
     #include <swizzle/glsl/vector_functions.h>
 
     // constants shaders are using
-    masked_float_type time = 1;
+    float_type time = 1;
     vec2 mouse(0, 0);
     vec2 resolution;
 
     // constants some shaders from shader toy are using
     vec2& iResolution = resolution;
-    masked_float_type& iGlobalTime = time;
+    float_type& iGlobalTime = time;
     vec2& iMouse = mouse;
 
     sampler2D diffuse("diffuse.png", sampler2D::Repeat);
@@ -177,11 +101,12 @@ namespace glsl_sandbox
     #define out ref::
     #define inout ref::
     #define main fragment_shader::operator()
-    #define float masked_float_type   
+    #define float float_type   
+    #define bool bool_type
 
 
-    #define if(x) MASKED_IF(x)
-    #define else MASKED_ELSE
+    //#define if(x) MASKED_IF(x)
+    //#define else MASKED_ELSE
     //#define break if(lask_mask_all_true{}) break
     
 
@@ -198,12 +123,13 @@ namespace glsl_sandbox
     //#include "shaders/water_turbulence.frag"
     //#include "shaders/sky.frag"
 
-    #undef if
-    #undef else
-    #undef break
+    //#undef if
+    //#undef else
+    //#undef break
 
     // be a dear a clean up
     #pragma warning(pop)
+    #undef bool
     #undef float
     #undef main
     #undef in
@@ -299,13 +225,18 @@ static int renderThread(void*)
 {
     using ::swizzle::detail::static_for;
 
+    // feel with 0...scalar_count
     internal_float_type offsets;
     {
-        // initialise offests with 0, 1...
+        // well... this calls for an explanation: why not std::aligned_storage?
+        // turns out there's a thing like max_align_t that defines max possible
+        // align; SSE/AVX data has greater align than max_align_t on compilers
+        // I checked, so std::aligned_storage is useless here.
+
         uint8_t unalignedBlob[scalar_count * sizeof(float) + float_entries_align];
         float* aligned = alignPtr<float_entries_align>(reinterpret_cast<float*>(unalignedBlob));
-
         static_for<0, scalar_count>([&](size_t i) { aligned[i] = static_cast<float>(i); });
+
         load_aligned(offsets, aligned);
     }
    
@@ -329,22 +260,17 @@ static int renderThread(void*)
             int heightStart = 0;
             int heightEnd = bmp->h;
 #endif
-
-            g_currentMask = static_cast<raw_mask_type>(mask_type(true));
-            g_multipliedMasks[0] = g_currentMask;
-            g_singleMasks[0] = g_currentMask;
-
+            // check the comment above for explanation
             unsigned unalignedBlob[3 * (scalar_count + uint_entries_align / sizeof(unsigned))];
             unsigned* pr = alignPtr<uint_entries_align>(unalignedBlob);
             unsigned* pg = alignPtr<uint_entries_align>(pr + scalar_count);
             unsigned* pb = alignPtr<uint_entries_align>(pg + scalar_count);
 
             glsl_sandbox::fragment_shader shader;
-            vec2 fragCoord;
-
+  
             for (int y = heightStart; !g_cancelDraw && y < heightEnd; y += heightStep)
             {
-                fragCoord.y = static_cast<float>(bmp->h - 1 - y);
+                shader.gl_FragCoord.y = static_cast<float>(bmp->h - 1 - y);
 
                 uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch;
 
@@ -361,9 +287,8 @@ static int renderThread(void*)
                         x = limitX;
                     }
 
-                    fragCoord.x = static_cast<float>(x) + offsets;
+                    shader.gl_FragCoord.x = static_cast<float>(x) + offsets;
                     
-                    shader.gl_FragCoord = fragCoord;
                     // vvvvvvvvvvvvvvvvvvvvvvvvvv
                     // THE SHADER IS INVOKED HERE
                     // ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -413,11 +338,6 @@ static int renderThread(void*)
 
 extern C_LINKAGE int main(int argc, char* argv[])
 {
-    g_currentMask = static_cast<raw_mask_type>(mask_type(true));
-    g_multipliedMasks[0] = g_currentMask;
-    g_singleMasks[0] = g_currentMask;
-
-
     using namespace std;
 
     // initialise SDLImage

@@ -10,8 +10,7 @@
 #include <swizzle/detail/vector_base.h>
 #include <swizzle/detail/indexed_vector_iterator.h>
 #include <swizzle/detail/glsl/vector_functions_adapter.h>
-#include <swizzle/glsl/naive/vector_traits_impl.h>
-#include <swizzle/glsl/naive/vector_helper.h>
+#include <swizzle/glsl/vector_helper.h>
 #include <swizzle/glsl/matrix.h>
 #include <swizzle/detail/static_functors.h>
 
@@ -358,6 +357,15 @@ namespace swizzle
                 });
                 return is;
             }
+        };
+    }
+
+    namespace detail
+    {
+        template <class ScalarType, size_t Size>
+        struct get_vector_type_impl< ::swizzle::glsl::vector<ScalarType, Size> >
+        {
+            typedef ::swizzle::glsl::vector<ScalarType, Size> type;
         };
     }
 }

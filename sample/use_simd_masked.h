@@ -10,6 +10,90 @@
 #define thread_local __declspec(thread)
 #endif
 
+namespace Vc
+{
+    template <typename MaskType>
+    class wrapped_mask
+    {
+    public:
+        typedef MaskType mask_type;
+        typedef decltype(std::declval<mask_type>().data()) raw_interal_type_alias;
+        typedef typename raw_interal_type_alias::Base raw_internal_type;
+        typedef wrapped_mask this_type;
+        typedef const wrapped_mask& this_arg;
+
+    private:
+        mask_type data;
+
+    public:
+        wrapped_mask()
+        {}
+
+        wrapped_mask(const mask_type& data)
+            : data(data)
+        { }
+
+        explicit wrapped_mask(bool data)
+            : data(data)
+        { }
+
+        wrapped_mask(const raw_internal_type& data)
+            : data(data)
+        { }
+
+
+        // logic operators
+
+        inline friend this_type operator&(this_arg a, this_arg b)
+        {
+            return a.data & b.data;
+        }
+        inline this_type operator!() const
+        {
+            return !data;
+        }
+
+        inline bool operator==(const this_type& other)
+        {
+            return data == other.data;
+        }
+        inline bool operator!=(const this_type& other)
+        {
+            return data != other.data;
+        }
+
+        // casts
+
+        //! To avoid ADL-hell, cast is explicit.
+        inline explicit operator mask_type() const
+        {
+            return data;
+        }
+
+        inline explicit operator raw_internal_type() const
+        {
+            return data.data();
+        }
+
+        // comparisons
+
+        inline bool full() const
+        {
+            return a.data.isFull();
+        }
+
+        inline bool empty() const
+        {
+            return a.data.isEmpty();
+        }
+
+        inline explicit operator bool() const
+        {
+            return !data.isEmpty();
+        }
+    };
+}
+
 namespace
 {
     static const size_t c_max_depth = 16;
