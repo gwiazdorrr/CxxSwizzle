@@ -103,5 +103,8 @@ namespace std
         return 1.0f / sqrt(x);
     }
 
-
+    inline float sign(float x)
+    {
+        return (0 < x) - (x < 0);
+    }
 }

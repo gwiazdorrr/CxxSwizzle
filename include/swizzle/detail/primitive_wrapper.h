@@ -278,6 +278,13 @@ namespace swizzle
                 return a.data != b.data;
             }
 
+            // for CxxSwizzle ADL-magic
+
+            this_type decay() const
+            {
+                return *this;
+            }
+
         private:
             inline void assign(this_arg other, std::false_type)
             {
