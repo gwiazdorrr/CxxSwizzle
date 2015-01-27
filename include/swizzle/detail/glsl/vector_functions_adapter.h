@@ -5,6 +5,31 @@
 #include <cmath>
 #include <swizzle/detail/utils.h>
 
+#define CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(name) \
+    static vector_type call_##name(vector_arg_type x) { return construct_static(functor_##name{}, x); }
+
+#define CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VV(name) \
+    static vector_type call_##name(vector_arg_type x, vector_arg_type y) { return construct_static(functor_##name{}, x, y); }
+
+#define CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VS(name) \
+    static vector_type call_##name(vector_arg_type x, scalar_arg_type y) { return construct_static(functor_##name{}, x, y); }
+
+#define CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_SV(name) \
+    static vector_type call_##name(scalar_arg_type x, vector_arg_type y) { return construct_static(functor_##name{}, x, y); }
+
+#define CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VVV(name) \
+    static vector_type call_##name(vector_arg_type x, vector_arg_type y, vector_arg_type z) { return construct_static(functor_##name{}, x, y, z); }
+
+#define CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VVS(name) \
+    static vector_type call_##name(vector_arg_type x, vector_arg_type y, scalar_arg_type z) { return construct_static(functor_##name{}, x, y, z); }
+
+#define CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VSS(name) \
+    static vector_type call_##name(vector_arg_type x, scalar_arg_type y, scalar_arg_type z) { return construct_static(functor_##name{}, x, y, z); }
+
+#define CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_SSV(name) \
+    static vector_type call_##name(scalar_arg_type x, scalar_arg_type y, vector_arg_type z) { return construct_static(functor_##name{}, x, y, z); }
+
+
 namespace swizzle
 {
     namespace detail
@@ -13,7 +38,6 @@ namespace swizzle
         {
             //! A class providing static functions matching GLSL's vector functions. Uses naive approach, i.e.
             //! everything is done components-wise, using stdlib's math functions.
-            //! VectorType must have arithmetic operators, binary and unary.
             template <class Base, template <class, size_t> class VectorType, class ScalarType, size_t Size>
             class vector_functions_adapter : public Base
             {
@@ -49,6 +73,30 @@ namespace swizzle
 
 
             private:
+
+                struct functor_radians
+                {
+                    template <size_t i> void operator()(vector_type& result, vector_arg_type x)
+                    {
+                        result.static_at<i>() = x.static_at<i>() * scalar_type(3.14159265358979323846 / 180);
+                    }
+                };
+
+                struct functor_degrees
+                {
+                    template <size_t i> void operator()(vector_type& result, vector_arg_type x)
+                    {
+                        result.static_at<i>() = x.static_at<i>() * scalar_type(180 / 3.14159265358979323846);
+                    }
+                };
+
+                struct functor_mul
+                {
+                    template <size_t i> void operator()(vector_type& result, vector_arg_type x, scalar_arg_type y)
+                    {
+                        result.static_at<i>() = x.static_at<i>() * y;
+                    }
+                };
 
                 struct functor_sin
                 {
@@ -107,14 +155,6 @@ namespace swizzle
                     {
                         using namespace std;
                         result.static_at<i>() = atan2(y.static_at<i>(), x.static_at<i>());
-                    }
-                };
-
-                struct functor_mul
-                {
-                    template <size_t i> void operator()(vector_type& result, vector_arg_type x, scalar_arg_type y)
-                    {
-                        result.static_at<i>() = x.static_at<i>() * y;
                     }
                 };
 
@@ -346,104 +386,50 @@ namespace swizzle
 
             public:
 
-                static vector_type call_radians(vector_arg_type degrees)
-                {
-                    static const scalar_type deg_to_rad = 3.14159265358979323846 / 180;
-                    return construct_static(functor_mul{}, degrees, deg_to_rad);
-                }
+                // these functions do component-wise transform
 
-                static vector_type call_degrees(vector_arg_type radians)
-                {
-                    static const scalar_type deg_to_rad = 3.14159265358979323846 / 180;
-                    return construct_static(functor_mul{}, degrees, deg_to_rad);
-                }
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(degrees)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(radians)
 
-                #define SIMPLE_TRANSFORM_UNARY(name) \
-                static vector_type call_##name(vector_arg_type x) \
-                {\
-                    return construct_static(functor_##name{}, x);\
-                }
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(sin)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(cos)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(tan)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(asin)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(acos)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(atan)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VV(atan)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(abs)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VV(pow)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VS(pow)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(exp)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(log)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(exp2)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(log2)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(sqrt)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(inversesqrt)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(sign)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(fract)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(floor)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(ceil)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VV(mod)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VS(mod)
 
-                #define SIMPLE_TRANSFORM_BINARY_V_V(name) \
-                static vector_type call_##name(vector_arg_type x, vector_arg_type y) \
-                {\
-                    return construct_static(functor_##name{}, x, y);\
-                }
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VV(min)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VS(min)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VV(max)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VS(max)
 
-                #define SIMPLE_TRANSFORM_BINARY_V_S(name) \
-                static vector_type call_##name(vector_arg_type x, scalar_arg_type y) \
-                {\
-                    return construct_static(functor_##name{}, x, y);\
-                }
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VVV(clamp)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VSS(clamp)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VVV(mix)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VVS(mix)
 
-                SIMPLE_TRANSFORM_UNARY(sin)
-                SIMPLE_TRANSFORM_UNARY(cos)
-                SIMPLE_TRANSFORM_UNARY(tan)
-                SIMPLE_TRANSFORM_UNARY(asin)
-                SIMPLE_TRANSFORM_UNARY(acos)
-                SIMPLE_TRANSFORM_UNARY(atan)
-                SIMPLE_TRANSFORM_BINARY_V_V(atan)
-                SIMPLE_TRANSFORM_UNARY(abs)
-                SIMPLE_TRANSFORM_BINARY_V_V(pow)
-                SIMPLE_TRANSFORM_BINARY_V_S(pow)
-                SIMPLE_TRANSFORM_UNARY(exp)
-                SIMPLE_TRANSFORM_UNARY(log)
-                SIMPLE_TRANSFORM_UNARY(exp2)
-                SIMPLE_TRANSFORM_UNARY(log2)
-                SIMPLE_TRANSFORM_UNARY(sqrt)
-                SIMPLE_TRANSFORM_UNARY(inversesqrt)
-                SIMPLE_TRANSFORM_UNARY(sign)
-                SIMPLE_TRANSFORM_UNARY(fract)
-                SIMPLE_TRANSFORM_UNARY(floor)
-                SIMPLE_TRANSFORM_UNARY(ceil)
-                SIMPLE_TRANSFORM_BINARY_V_V(mod)
-                SIMPLE_TRANSFORM_BINARY_V_S(mod)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VV(step)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_SV(step)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VVV(smoothstep)
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_SSV(smoothstep)
 
-                SIMPLE_TRANSFORM_BINARY_V_V(min)
-                SIMPLE_TRANSFORM_BINARY_V_S(min)
-                SIMPLE_TRANSFORM_BINARY_V_V(max)
-                SIMPLE_TRANSFORM_BINARY_V_S(max)
-
-
-                static vector_type call_clamp(vector_arg_type x, vector_arg_type minVal, vector_arg_type maxVal)
-                {
-                    return construct_static(functor_clamp{}, x, minVal, maxVal);
-                }
-
-                static vector_type call_clamp(vector_arg_type x, scalar_arg_type minVal, scalar_arg_type maxVal)
-                {
-                    return construct_static(functor_clamp{}, x, minVal, maxVal);
-                }
-
-                static vector_type call_mix(vector_arg_type x, vector_arg_type y, vector_arg_type a)
-                {
-                    return construct_static(functor_mix{}, x, y, a);
-                }
-
-                static vector_type call_mix(vector_arg_type x, vector_arg_type y, scalar_arg_type a)
-                {
-                    return construct_static(functor_mix{}, x, y, a);
-                }
-
-                static vector_type call_step(vector_arg_type edge, vector_arg_type x)
-                {
-                    return construct_static(functor_step{}, edge, x);
-                }
-
-                static vector_type call_step(scalar_arg_type edge, vector_arg_type x)
-                {
-                    return construct_static(functor_step{}, edge, x);
-                }
-
-                static vector_type call_smoothstep(vector_arg_type edge0, vector_arg_type edge1, vector_arg_type x)
-                {
-                    return construct_static(functor_smoothstep{}, edge0, edge1, x);
-                }
-
-                static vector_type call_smoothstep(scalar_arg_type edge0, scalar_arg_type edge1, vector_arg_type x)
-                {
-                    return construct_static(functor_smoothstep{}, edge0, edge1, x);
-                }
+                // these are more complex
 
                 static vector_type call_reflect(vector_arg_type I, vector_arg_type N)
                 {
@@ -460,6 +446,7 @@ namespace swizzle
                 // Geometric functions
                 static scalar_type call_length(vector_arg_type x)
                 {
+                    using namespace std;
                     scalar_type dot = call_dot(x, x);
                     return sqrt(dot);
                 }
@@ -543,3 +530,12 @@ namespace swizzle
         }
     }
 }
+
+#undef CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V
+#undef CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VV
+#undef CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VS
+#undef CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_SV
+#undef CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VVV
+#undef CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VVS
+#undef CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VSS
+#undef CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_SSV

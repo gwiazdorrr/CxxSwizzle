@@ -19,18 +19,17 @@ if(SDL_FOUND AND SDL_IMAGE_FOUND)
 	# get all the shaders
 	file(GLOB shaders RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag")
 
-	source_group("" FILES main.cpp)
+	source_group("" FILES main.cpp use_scalar.h use_simd.h use_simd_masked.h )
 	source_group("shaders" FILES ${shaders})
 	
-	add_executable (sample main.cpp ${shaders})
+	add_executable (sample_scalar main.cpp use_scalar.h ${shaders})
 	include_directories(${SDL_INCLUDE_DIR} ${SDL_IMAGE_INCLUDE_DIR} ${CxxSwizzle_SOURCE_DIR}/include)
-	target_link_libraries (sample ${SDL_LIBRARY} ${SDL_IMAGE_LIBRARY})
+	set_target_properties(sample_scalar PROPERTIES COMPILE_FLAGS "-DUSE_SCALAR")
+	target_link_libraries (sample_scalar ${SDL_LIBRARY} ${SDL_IMAGE_LIBRARY})
 	
 	if(Vc_FOUND)
-		source_group("" FILES shader.h)
-		add_executable(sample_simd main.cpp shader.h ${shaders})
-		
-		set_target_properties(sample_simd PROPERTIES COMPILE_FLAGS "${Vc_DEFINITIONS} -DENABLE_SIMD")
+		add_executable(sample_simd main.cpp use_simd.h ${shaders})
+		set_target_properties(sample_simd PROPERTIES COMPILE_FLAGS "${Vc_DEFINITIONS} -DUSE_SIMD")
 		target_link_libraries(sample_simd ${SDL_LIBRARY} ${SDL_IMAGE_LIBRARY} ${Vc_LIBRARIES})
 		target_include_directories(sample_simd PRIVATE  ${Vc_INCLUDE_DIR})
 	endif()

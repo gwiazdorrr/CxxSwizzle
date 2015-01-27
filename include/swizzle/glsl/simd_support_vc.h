@@ -2,9 +2,10 @@
 
 // VC needs to come first or else it's going to complain (damn I hate these)
 #include <Vc/vector.h>
-#include <swizzle/glsl/naive/vector_helper.h>
-#include <swizzle/detail/primitive_wrapper.h>
 #include <type_traits>
+#include <swizzle/detail/primitive_wrapper.h>
+#include <swizzle/glsl/vector_helper.h>
+
 
 namespace swizzle
 {
