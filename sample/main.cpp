@@ -101,13 +101,7 @@ namespace glsl_sandbox
     #define main fragment_shader::operator()
     #define float float_type   
     #define bool bool_type
-
-
-    //#define if(x) MASKED_IF(x)
-    //#define else MASKED_ELSE
-    //#define break if(lask_mask_all_true{}) break
     
-
     #pragma warning(push)
     #pragma warning(disable: 4244) // disable return implicit conversion warning
     #pragma warning(disable: 4305) // disable truncation warning
@@ -120,10 +114,6 @@ namespace glsl_sandbox
     //#include "shaders/gears.frag"
     //#include "shaders/water_turbulence.frag"
     //#include "shaders/sky.frag"
-
-    //#undef if
-    //#undef else
-    //#undef break
 
     // be a dear a clean up
     #pragma warning(pop)
@@ -243,7 +233,7 @@ static int renderThread(void*)
     {
         auto bmp = g_surface.get();
 
-#if 1
+#if !defined(_DEBUG) && OMP_ENABLED
 #pragma omp parallel 
         {
             int thredsCount = omp_get_num_threads();
