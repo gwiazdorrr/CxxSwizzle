@@ -59,7 +59,7 @@ namespace swizzle
                 static vector_type construct_static(Func func, Args&&... args)
                 {
                     vector_type result;
-                    detail::static_for2<0, Size>(func, result, std::forward<Args>(args)...);
+                    detail::static_for_with_static_call<0, Size>(func, result, std::forward<Args>(args)...);
                     return result;
                 }
 
@@ -459,7 +459,7 @@ namespace swizzle
                 static scalar_type call_dot(vector_arg_type x, vector_arg_type y)
                 {
                     scalar_type result = 0;
-                    detail::static_for2<0, Size>(functor_dot{}, result, x, y);
+                    detail::static_for_with_static_call<0, Size>(functor_dot{}, result, x, y);
                     return result;
                 }
 
