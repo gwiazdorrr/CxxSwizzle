@@ -298,7 +298,7 @@ namespace swizzle
             {
                 const size_t limit = (N + OtherSize > Size) ? Size : (N + OtherSize);
                 detail::functor_compose_from_other_vector<vector, N, vector<TOtherScalar, OtherSize> > functor;
-                detail::static_for2<N, limit>(functor, *this, v);
+                detail::static_for_with_static_call<N, limit>(functor, *this, v);
             }
 
             //! Iterates over the vector, firing Func for each index
