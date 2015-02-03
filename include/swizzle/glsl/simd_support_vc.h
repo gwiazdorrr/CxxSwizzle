@@ -16,7 +16,11 @@ namespace swizzle
         {
             //! Array needs to be like a steak - the rawest possible
             //! (Wow - I managed to WTF myself upon reading the above after a week or two)
+#ifdef VC_UNCONDITIONAL_AVX2_INTRINSICS
             typedef std::array<typename ::Vc::Vector<ScalarType>::VectorType::Base, Size> data_type;
+#else
+            typedef std::array<typename ::Vc::Vector<ScalarType>::VectorType, Size> data_type;
+#endif
 
             template <size_t... indices>
             struct proxy_generator
