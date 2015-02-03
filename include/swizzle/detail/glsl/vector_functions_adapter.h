@@ -78,7 +78,7 @@ namespace swizzle
                 {
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
-                        result.static_at<i>() = x.static_at<i>() * scalar_type(3.14159265358979323846 / 180);
+                        result.at(i) = x.at(i) * scalar_type(3.14159265358979323846 / 180);
                     }
                 };
 
@@ -86,7 +86,7 @@ namespace swizzle
                 {
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
-                        result.static_at<i>() = x.static_at<i>() * scalar_type(180 / 3.14159265358979323846);
+                        result.at(i) = x.at(i) * scalar_type(180 / 3.14159265358979323846);
                     }
                 };
 
@@ -94,7 +94,7 @@ namespace swizzle
                 {
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x, scalar_arg_type y)
                     {
-                        result.static_at<i>() = x.static_at<i>() * y;
+                        result.at(i) = x.at(i) * y;
                     }
                 };
 
@@ -103,7 +103,7 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = sin(x.static_at<i>());
+                        result.at(i) = sin(x.at(i));
                     }
                 };
 
@@ -112,7 +112,7 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = cos(x.static_at<i>());
+                        result.at(i) = cos(x.at(i));
                     }
                 };
 
@@ -121,7 +121,7 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = tan(x.static_at<i>());
+                        result.at(i) = tan(x.at(i));
                     }
                 };
 
@@ -130,7 +130,7 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = asin(x.static_at<i>());
+                        result.at(i) = asin(x.at(i));
                     }
                 };
 
@@ -139,7 +139,7 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = acos(x.static_at<i>());
+                        result.at(i) = acos(x.at(i));
                     }
                 };
 
@@ -148,13 +148,13 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = atan(x.static_at<i>());
+                        result.at(i) = atan(x.at(i));
                     }
 
                     template <size_t i> void operator()(vector_type& result, vector_arg_type y, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = atan2(y.static_at<i>(), x.static_at<i>());
+                        result.at(i) = atan2(y.at(i), x.at(i));
                     }
                 };
 
@@ -163,13 +163,13 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x, scalar_arg_type y)
                     {
                         using namespace std;
-                        result.static_at<i>() = pow(x.static_at<i>(), y);
+                        result.at(i) = pow(x.at(i), y);
                     }
 
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x, vector_arg_type y)
                     {
                         using namespace std;
-                        result.static_at<i>() = pow(x.static_at<i>(), y.static_at<i>());
+                        result.at(i) = pow(x.at(i), y.at(i));
                     }
                 };
 
@@ -178,7 +178,7 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = abs(x.static_at<i>());
+                        result.at(i) = abs(x.at(i));
                     }
                 };
 
@@ -187,7 +187,7 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = exp(x.static_at<i>());
+                        result.at(i) = exp(x.at(i));
                     }
                 };
 
@@ -196,7 +196,7 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = log(x.static_at<i>());
+                        result.at(i) = log(x.at(i));
                     }
                 };
 
@@ -205,7 +205,7 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = exp2(x.static_at<i>());
+                        result.at(i) = exp2(x.at(i));
                     }
                 };
 
@@ -214,7 +214,7 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = log2(x.static_at<i>());
+                        result.at(i) = log2(x.at(i));
                     }
                 };
 
@@ -223,7 +223,7 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = sqrt(x.static_at<i>());
+                        result.at(i) = sqrt(x.at(i));
                     }
                 };
 
@@ -232,7 +232,7 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = rsqrt(x.static_at<i>());
+                        result.at(i) = rsqrt(x.at(i));
                     }
                 };
 
@@ -241,7 +241,7 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = sign(x.static_at<i>());
+                        result.at(i) = sign(x.at(i));
                     }
                 };
 
@@ -250,8 +250,8 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
                         using namespace std;
-                        scalar_type xx = x.static_at<i>();
-                        result.static_at<i>() = xx - floor(xx);
+                        scalar_type xx = x.at(i);
+                        result.at(i) = xx - floor(xx);
                     }
                 };
 
@@ -259,14 +259,14 @@ namespace swizzle
                 {
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x, vector_arg_type y)
                     {
-                        operator() < i > (result, x, y.static_at<i>());
+                        operator() < i > (result, x, y.at(i));
                     }
 
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x, scalar_arg_type y)
                     {
                         using namespace std;
-                        auto xx = x.static_at<i>();
-                        result.static_at<i>() = xx - y * floor(xx / y);
+                        auto xx = x.at(i);
+                        result.at(i) = xx - y * floor(xx / y);
                     }
                 };
 
@@ -274,13 +274,13 @@ namespace swizzle
                 {
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x, vector_arg_type y)
                     {
-                        operator() < i > (result, x, y.static_at<i>());
+                        operator() < i > (result, x, y.at(i));
                     }
 
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x, scalar_arg_type y)
                     {
                         using namespace std;
-                        result.static_at<i>() = min(x.static_at<i>(), y);
+                        result.at(i) = min(x.at(i), y);
                     }
                 };
 
@@ -288,13 +288,13 @@ namespace swizzle
                 {
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x, vector_arg_type y)
                     {
-                        operator() < i > (result, x, y.static_at<i>());
+                        operator() < i > (result, x, y.at(i));
                     }
 
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x, scalar_arg_type y)
                     {
                         using namespace std;
-                        result.static_at<i>() = max(x.static_at<i>(), y);
+                        result.at(i) = max(x.at(i), y);
                     }
                 };
 
@@ -302,13 +302,13 @@ namespace swizzle
                 {
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x, vector_arg_type a, vector_arg_type b)
                     {
-                        operator() < i > (result, x, a.static_at<i>(), b.static_at<i>());
+                        operator() < i > (result, x, a.at(i), b.at(i));
                     }
 
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x, scalar_arg_type a, scalar_arg_type b)
                     {
                         using namespace std;
-                        result.static_at<i>() = max(min(x.static_at<i>(), b), a);
+                        result.at(i) = max(min(x.at(i), b), a);
                     }
                 };
 
@@ -316,13 +316,13 @@ namespace swizzle
                 {
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x, vector_arg_type y, vector_arg_type a)
                     {
-                        operator() < i > (result, x, y, a.static_at<i>());
+                        operator() < i > (result, x, y, a.at(i));
                     }
 
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x, vector_arg_type y, scalar_arg_type a)
                     {
                         using namespace std;
-                        result.static_at<i>() = x.static_at<i>() + a * (y.static_at<i>() - x.static_at<i>());
+                        result.at(i) = x.at(i) + a * (y.at(i) - x.at(i));
                     }
                 };
 
@@ -330,13 +330,13 @@ namespace swizzle
                 {
                     template <size_t i> void operator()(vector_type& result, vector_arg_type edge, vector_arg_type x)
                     {
-                        operator() < i > (result, edge.static_at<i>(), x);
+                        operator() < i > (result, edge.at(i), x);
                     }
 
                     template <size_t i> void operator()(vector_type& result, scalar_arg_type edge, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = step(edge, x.static_at<i>());
+                        result.at(i) = step(edge, x.at(i));
                     }
                 };
 
@@ -345,15 +345,15 @@ namespace swizzle
                 {
                     template <size_t i> void operator()(vector_type& result, vector_arg_type edge0, vector_arg_type edge1, vector_arg_type x)
                     {
-                        operator() < i > (result, edge0.static_at<i>(), edge1.static_at<i>(), x);
+                        operator() < i > (result, edge0.at(i), edge1.at(i), x);
                     }
 
                     template <size_t i> void operator()(vector_type& result, scalar_arg_type edge0, scalar_arg_type edge1, vector_arg_type x)
                     {
                         using namespace std;
-                        auto t = (x.static_at<i>() - edge0) / (edge1 - edge0);
+                        auto t = (x.at(i) - edge0) / (edge1 - edge0);
                         t = min(max(t, scalar_arg_type(0)), scalar_arg_type(1));
-                        result.static_at<i>() = t * t * (3 - 2 * t);
+                        result.at(i) = t * t * (3 - 2 * t);
                     }
                 };
 
@@ -361,7 +361,7 @@ namespace swizzle
                 {
                     template <size_t i> void operator()(scalar_type& result, vector_arg_type x, vector_arg_type y)
                     {
-                        result += x.static_at<i>() * y.static_at<i>();
+                        result += x.at(i) * y.at(i);
                     }
                 };
 
@@ -370,7 +370,7 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = floor(x.static_at<i>());
+                        result.at(i) = floor(x.at(i));
                     }
                 };
 
@@ -379,7 +379,7 @@ namespace swizzle
                     template <size_t i> void operator()(vector_type& result, vector_arg_type x)
                     {
                         using namespace std;
-                        result.static_at<i>() = ceil(x.static_at<i>());
+                        result.at(i) = ceil(x.at(i));
                     }
                 };
 

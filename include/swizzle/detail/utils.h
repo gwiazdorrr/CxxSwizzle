@@ -4,6 +4,7 @@
 
 #include <type_traits>
 #include <cstddef>
+#include <utility>
 
 namespace swizzle
 {
@@ -76,7 +77,13 @@ namespace swizzle
         template <size_t Begin, size_t End, class Func, typename... Args>
         inline typename std::enable_if<Begin != End, void>::type static_for_with_static_call_impl(Func func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, End>, Args&&... args)
         {
+#ifdef _MSC_VER
+            // VC is happy with this syntax, but unhappy with the alternative...
             func.operator()<Begin>(std::forward<Args>(args)...);
+#else
+            // ... that's the only option for g++. WTF?!
+            func.template operator()<Begin>(std::forward<Args>(args)...);
+#endif
             static_for_with_static_call_impl(func, std::integral_constant<size_t, Begin + 1>(), std::integral_constant<size_t, End>(), std::forward<Args>(args)...);
         }
 

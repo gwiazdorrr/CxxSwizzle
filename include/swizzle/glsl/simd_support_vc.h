@@ -45,7 +45,7 @@ namespace swizzle
         };
 
         //! For some ADL magic.
-        ::Vc::float_v decay(const Vc::float_v& arg)
+        inline ::Vc::float_v decay(const Vc::float_v& arg)
         {
             return arg;
         }

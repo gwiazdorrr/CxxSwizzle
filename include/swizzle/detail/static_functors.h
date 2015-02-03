@@ -11,12 +11,12 @@ namespace swizzle
         {
             template <size_t i> inline void operator()(VectorType& result, const VectorType& other)
             {
-                operator()<i>(result, other.static_at<i>());
+                operator()<i>(result, other.at(i));
             }
 
             template <size_t i> inline void operator()(VectorType& result, const typename VectorType::scalar_type& other)
             {
-                result.static_at<i>() = other;
+                result.at(i) = other;
             }
         };
 
@@ -25,12 +25,12 @@ namespace swizzle
         {
             template <size_t i> inline void operator()(VectorType& result, const VectorType& other)
             {
-                operator()<i>(result, other.static_at<i>());
+                operator()<i>(result, other.at(i));
             }
 
             template <size_t i> inline void operator()(VectorType& result, const typename VectorType::scalar_type& other)
             {
-                result.static_at<i>() += other;
+                result.at(i) += other;
             }
         };
 
@@ -39,12 +39,12 @@ namespace swizzle
         {
             template <size_t i> void operator()(VectorType& result, const VectorType& other)
             {
-                operator()<i>(result, other.static_at<i>());
+                operator()<i>(result, other.at(i));
             }
 
             template <size_t i> void operator()(VectorType& result, const typename VectorType::scalar_type& other)
             {
-                result.static_at<i>() -= other;
+                result.at(i) -= other;
             }
         };
 
@@ -53,12 +53,12 @@ namespace swizzle
         {
             template <size_t i> void operator()(VectorType& result, const VectorType& other)
             {
-                operator()<i>(result, other.static_at<i>());
+                operator()<i>(result, other.at(i));
             }
 
             template <size_t i> void operator()(VectorType& result, const typename VectorType::scalar_type& other)
             {
-                result.static_at<i>() *= other;
+                result.at(i) *= other;
             }
         };
 
@@ -67,12 +67,12 @@ namespace swizzle
         {
             template <size_t i> void operator()(VectorType& result, const VectorType& other)
             {
-                operator()<i>(result, other.static_at<i>());
+                operator()<i>(result, other.at(i));
             }
 
             template <size_t i> void operator()(VectorType& result, const typename VectorType::scalar_type& other)
             {
-                result.static_at<i>() /= other;
+                result.at(i) /= other;
             }
         };
 
@@ -81,12 +81,12 @@ namespace swizzle
         {
             template <size_t i> void operator()(VectorType& result, const VectorType& other)
             {
-                operator()<i>(result, other.static_at<i>());
+                operator()<i>(result, other.at(i));
             }
 
             template <size_t i> void operator()(VectorType& result, const typename VectorType::scalar_type& other)
             {
-                result.static_at<i>() = -other;
+                result.at(i) = -other;
             }
         };
 
@@ -95,7 +95,7 @@ namespace swizzle
         {
             template <size_t i> void operator()(const VectorType& a, const VectorType& b, typename VectorType::bool_type& result)
             {
-                result && = a.static_at<i>() == b.static_at<i>();
+                result &= (a.at(i) == b.at(i));
             }
         };
 
@@ -104,7 +104,7 @@ namespace swizzle
         {
             template <size_t i> void operator()(VectorType& result, const OtherVectorType& other)
             {
-                result.static_at<i>() = other.static_at<i - offset>();
+                result.at(i) = other.at(i - offset);
             }
         };
     }

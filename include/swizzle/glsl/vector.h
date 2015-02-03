@@ -52,8 +52,7 @@ namespace swizzle
             //! Get the real, real internal scalar type. Useful when scalar visible
             //! externally is different than the internal one (well, hello SIMD)
             typedef typename std::remove_reference<decltype(std::declval<base_type>().m_data[0])>::type internal_scalar_type;
-            //! A helpful mnemonic
-            typedef std::is_same<internal_scalar_type, scalar_type> are_scalar_types_same;
+
 
             //! Number of components of this vector.
             static const size_t num_of_components = Size;
@@ -61,6 +60,10 @@ namespace swizzle
             typedef vector vector_type;
             //! Scalar type.
             typedef ScalarType scalar_type;
+
+            //! A helpful mnemonic
+            typedef std::is_same<internal_scalar_type, scalar_type> are_scalar_types_same;
+
             //!
             typedef bool bool_type;
 
@@ -136,6 +139,16 @@ namespace swizzle
                 return *reinterpret_cast<const scalar_type*>(&m_data[i]);
             }
 
+            scalar_type& at(size_t i)
+            {
+                return at(i, are_scalar_types_same());
+            }
+
+            const scalar_type& at(size_t i) const
+            {
+                return at(i, are_scalar_types_same());
+            }
+
             scalar_type& operator[](size_t i)
             {
                 return at(i, are_scalar_types_same());
@@ -146,43 +159,15 @@ namespace swizzle
                 return at(i, are_scalar_types_same());
             }
 
+            // what the...
+
             template <size_t i>
             inline internal_scalar_type& static_at(std::true_type)
             {
                 return m_data[i];
             }
 
-            template <size_t i>
-            inline const internal_scalar_type& static_at(std::true_type) const
-            {
-                return m_data[i];
-            }
 
-            template <size_t i>
-            inline scalar_type& static_at(std::false_type)
-            {
-                static_assert(sizeof(scalar_type) == sizeof(internal_scalar_type), "");
-                return *reinterpret_cast<scalar_type*>(&m_data[i]);
-            }
-
-            template <size_t i>
-            inline const scalar_type& static_at(std::false_type) const
-            {
-                static_assert(sizeof(scalar_type) == sizeof(internal_scalar_type), "");
-                return *reinterpret_cast<const scalar_type*>(&m_data[i]);
-            }
-
-            template <size_t i>
-            inline scalar_type& static_at()
-            {
-                return static_at<i>(are_scalar_types_same());
-            }
-
-            template <size_t i>
-            inline const scalar_type& static_at() const
-            {
-                return static_at<i>(are_scalar_types_same());
-            }
 
             // Assignment-operation with vector argument
 
@@ -261,7 +246,7 @@ namespace swizzle
             //! Auto-decay to scalar type only if this is a 1-sized vector
             inline  operator typename std::conditional<Size == 1, scalar_type, detail::operation_not_available>::type() const
             {
-                return static_at<0>();
+                return at(0);
             } 
 
         // AUXILIARY
@@ -289,7 +274,7 @@ namespace swizzle
             template <size_t N>
             void compose(const scalar_type& v)
             {
-                static_at<N>() = v;
+                at(N) = v;
             }
 
             //! Puts a vector (or it's part) at given position. Used only during construction.
