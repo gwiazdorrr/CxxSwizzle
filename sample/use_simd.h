@@ -18,7 +18,7 @@ typedef Vc::uint_v uint_type;
 //! is the safest bet here.
 typedef bool bool_type;
 
-static_assert(float_type::Size == uint_type::Size, "Both float and uint types need to have same number of entries");
+static_assert(static_cast<size_t>(float_type::Size) == static_cast<size_t>(uint_type::Size), "Both float and uint types need to have same number of entries");
 const size_t scalar_count = float_type::Size;
 const size_t float_entries_align = Vc::VectorAlignment;
 const size_t uint_entries_align = Vc::VectorAlignment;
