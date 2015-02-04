@@ -11,10 +11,16 @@ namespace swizzle
 {
     namespace glsl
     {
+#ifdef VC_UNCONDITIONAL_AVX2_INTRINSICS
+        typedef ::Vc::float_v::VectorType::Base raw_simd_type;
+#else
+        typedef ::Vc::float_v::VectorType raw_simd_type;
+#endif
+
         //! ::Vc::float_v has a tiny bit different semantics than what we need,
         //! so let's wrap it.
         template<typename BoolType = ::Vc::float_m, typename AssignPolicy = detail::nothing>
-        using vc_float = detail::primitive_wrapper < ::Vc::float_v, ::Vc::float_v::EntryType, ::Vc::float_v::VectorType::Base, BoolType, AssignPolicy >;
+        using vc_float = detail::primitive_wrapper < ::Vc::float_v, ::Vc::float_v::EntryType, raw_simd_type, BoolType, AssignPolicy >;
 
 
         //! Specialise vector_helper so that it knows what to do.
