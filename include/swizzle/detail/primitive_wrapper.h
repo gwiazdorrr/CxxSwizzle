@@ -34,7 +34,7 @@ namespace swizzle
                 : data(data)
             { }
 
-            primitive_wrapper(const std::conditional_t<std::is_same<raw_internal_type, internal_type>::value, nothing, raw_internal_type> & data)
+            primitive_wrapper(const typename std::conditional<std::is_same<raw_internal_type, internal_type>::value, nothing, raw_internal_type>::type & data)
                 : data(data)
             { }
 

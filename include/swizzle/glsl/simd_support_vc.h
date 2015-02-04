@@ -3,6 +3,7 @@
 // VC needs to come first or else it's going to complain (damn I hate these)
 #include <Vc/vector.h>
 #include <type_traits>
+#include <swizzle/detail/primitive_wrapper.h>
 #include <swizzle/glsl/vector_helper.h>
 
 
@@ -10,61 +11,54 @@ namespace swizzle
 {
     namespace glsl
     {
-        template <typename ScalarType, size_t Size>
-        struct vector_helper<::Vc::Vector<ScalarType>, Size>
+        //! ::Vc::float_v has a tiny bit different semantics than what we need,
+        //! so let's wrap it.
+        template<typename BoolType = ::Vc::float_m, typename AssignPolicy = detail::nothing>
+        using vc_float = detail::primitive_wrapper < ::Vc::float_v, ::Vc::float_v::EntryType, ::Vc::float_v::VectorType::Base, BoolType, AssignPolicy >;
+
+
+        //! Specialise vector_helper so that it knows what to do.
+        template <typename BoolType, typename AssignPolicy, size_t Size>
+        struct vector_helper<vc_float<BoolType, AssignPolicy>, Size>
         {
             //! Array needs to be like a steak - the rawest possible
             //! (Wow - I managed to WTF myself upon reading the above after a week or two)
-#ifdef VC_UNCONDITIONAL_AVX2_INTRINSICS
-            typedef std::array<typename ::Vc::Vector<ScalarType>::VectorType::Base, Size> data_type;
-#else
-            typedef std::array<typename ::Vc::Vector<ScalarType>::VectorType, Size> data_type;
-#endif
+            typedef std::array<typename vc_float<BoolType, AssignPolicy>::raw_internal_type, Size> data_type;
 
             template <size_t... indices>
             struct proxy_generator
             {
-                typedef detail::indexed_proxy< vector<::Vc::Vector<ScalarType>, sizeof...(indices)>, data_type, indices...> type;
+                typedef detail::indexed_proxy< vector<vc_float<BoolType, AssignPolicy>, sizeof...(indices)>, data_type, indices...> type;
             };
 
             //! A factory of 1-component proxies.
             template <size_t x>
             struct proxy_generator<x>
             {
-                typedef ::Vc::Vector<ScalarType> type;
+                typedef vc_float<BoolType, AssignPolicy> type;
             };
 
             typedef detail::vector_base< Size, proxy_generator, data_type > base_type;
         };
+
     }
 
     namespace detail
     {
         //! CxxSwizzle needs to know which vector to create if it needs to
-        template <typename ScalarType>
-        struct get_vector_type_impl< ::Vc::Vector<ScalarType> >
+        template <typename BoolType, typename AssignPolicy>
+        struct get_vector_type_impl< ::swizzle::glsl::vc_float<BoolType, AssignPolicy> >
         {
-            typedef ::swizzle::glsl::vector<::Vc::Vector<ScalarType>, 1> type;
+            typedef ::swizzle::glsl::vector<::swizzle::glsl::vc_float<BoolType, AssignPolicy>, 1> type;
         };
-
-        //! For some ADL magic.
-        inline ::Vc::float_v decay(const Vc::float_v& arg)
-        {
-            return arg;
-        }
     }
 }
 
 // Vc generally supports it all, but it lacks some crucial functions.
-// Also some binary operators need to be mention explicitly for ADL
-// to kick in when there's implicit conversion going on.
-
-// Also do keep in mind that Vc version needs to come with implicit
-// from scalar constructors, otherwise it's just not going to work.
 
 namespace Vc
 {
-    
+
 #ifdef VC_IMPL_Scalar
     namespace Scalar
 #elif defined(VC_IMPL_AVX)
@@ -73,26 +67,6 @@ namespace Vc
     namespace SSE
 #endif
     {
-        inline float_v operator+(float f, float_v::AsArg v)
-        {
-            return v + f;
-        }
-
-        inline float_v operator-(float f, float_v::AsArg v)
-        {
-            return float_v{ f } -v;
-        }
-
-        inline float_v operator*(float f, float_v::AsArg v)
-        {
-            return v * f;
-        }
-
-        inline float_v operator/(float f, float_v::AsArg v)
-        {
-            return float_v{ f } /v;
-        }
-
         template <typename T>
         inline Vector<T> step(const Vector<T>& edge, const Vector<T>& x)
         {
