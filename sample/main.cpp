@@ -133,7 +133,11 @@ namespace glsl_sandbox
 #include <iostream>
 #include <sstream>
 #include <SDL.h>
+
+#ifdef SDLIMAGE_FOUND
 #include <SDL_image.h>
+#endif
+
 #include <time.h>
 #include <memory>
 #include <functional>
@@ -324,10 +328,11 @@ static int renderThread(void*)
 
 
 
-extern C_LINKAGE int main(int argc, char* argv[])
+extern "C" int main(int argc, char* argv[])
 {
     using namespace std;
 
+#ifdef SDLIMAGE_FOUND
     // initialise SDLImage
     int flags = IMG_INIT_JPG | IMG_INIT_PNG;
     int initted = IMG_Init(flags);
@@ -335,6 +340,7 @@ extern C_LINKAGE int main(int argc, char* argv[])
     {
         cerr << "WARNING: failed to initialise required jpg and png support: " << IMG_GetError() << endl;
     }
+#endif
 
     // get initial resolution
     swizzle::glsl::vector<int, 2> initialResolution;
@@ -560,7 +566,7 @@ sampler2D::sampler2D( const char* path, WrapMode wrapMode )
     : m_wrapMode(wrapMode)
     , m_image(nullptr)
 {
-#ifdef SDL_IMAGE_FOUND
+#ifdef SDLIMAGE_FOUND
     m_image = IMG_Load(path);
     if (!m_image)
     {
@@ -575,13 +581,11 @@ sampler2D::sampler2D( const char* path, WrapMode wrapMode )
 
 sampler2D::~sampler2D()
 {
-#ifdef SDL_IMAGE_FOUND
     if ( m_image )
     {
         SDL_FreeSurface(m_image);
         m_image = nullptr;
     }
-#endif
 }
 
 vec4 sampler2D::sample( const vec2& coord )
