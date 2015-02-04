@@ -10,7 +10,8 @@
 // to use simd (like sin(1))
 #include <swizzle/glsl/scalar_support.h>
 
-typedef Vc::float_v float_type;
+typedef swizzle::glsl::vc_float<> float_type;
+typedef float_type::internal_type raw_float_type;
 typedef Vc::uint_v uint_type;
 
 //! By default Vc's masks (result of comparisons) decay to bools but
@@ -18,8 +19,8 @@ typedef Vc::uint_v uint_type;
 //! is the safest bet here.
 typedef bool bool_type;
 
-static_assert(static_cast<size_t>(float_type::Size) == static_cast<size_t>(uint_type::Size), "Both float and uint types need to have same number of entries");
-const size_t scalar_count = float_type::Size;
+static_assert(static_cast<size_t>(raw_float_type::Size) == static_cast<size_t>(uint_type::Size), "Both float and uint types need to have same number of entries");
+const size_t scalar_count = raw_float_type::Size;
 const size_t float_entries_align = Vc::VectorAlignment;
 const size_t uint_entries_align = Vc::VectorAlignment;
 

@@ -7,6 +7,7 @@
 #include <swizzle/glsl/scalar_support.h>
 
 typedef float float_type;
+typedef float raw_float_type;
 typedef unsigned uint_type;
 typedef bool bool_type;
 

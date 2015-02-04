@@ -109,10 +109,10 @@ namespace glsl_sandbox
     //#include "shaders/sampler.frag"
     //#include "shaders/leadlight.frag"
     //#include "shaders/terrain.frag"
-    #include "shaders/complex.frag"
+    //#include "shaders/complex.frag"
     //#include "shaders/road.frag"
     //#include "shaders/gears.frag"
-    //#include "shaders/water_turbulence.frag"
+    #include "shaders/water_turbulence.frag"
     //#include "shaders/sky.frag"
 
     // be a dear a clean up
@@ -214,7 +214,7 @@ static int renderThread(void*)
     using ::swizzle::detail::static_for;
 
     // feel with 0...scalar_count
-    float_type offsets;
+    raw_float_type offsets;
     {
         // well... this calls for an explanation: why not std::aligned_storage?
         // turns out there's a thing like max_align_t that defines max possible
@@ -287,9 +287,9 @@ static int renderThread(void*)
                     color *= 255 + 0.5f;
 
                     // save in the bitmap
-                    store_aligned(static_cast<uint_type>(color.r), pr);
-                    store_aligned(static_cast<uint_type>(color.g), pg);
-                    store_aligned(static_cast<uint_type>(color.b), pb);
+                    store_aligned(static_cast<uint_type>(static_cast<raw_float_type>(color.r)), pr);
+                    store_aligned(static_cast<uint_type>(static_cast<raw_float_type>(color.g)), pg);
+                    store_aligned(static_cast<uint_type>(static_cast<raw_float_type>(color.b)), pb);
 
                     static_for<0, scalar_count>([&](size_t i)
                     {
@@ -613,8 +613,8 @@ vec4 sampler2D::sample( const vec2& coord )
     }
     else
     {
-        uint_type x = static_cast<uint_type>(uv.x * (m_image->w - 1) + 0.5);
-        uint_type y = static_cast<uint_type>(uv.y * (m_image->h - 1) + 0.5);
+        uint_type x = static_cast<uint_type>(static_cast<raw_float_type>(uv.x * (m_image->w - 1) + 0.5));
+        uint_type y = static_cast<uint_type>(static_cast<raw_float_type>(uv.y * (m_image->h - 1) + 0.5));
 
         auto& format = *m_image->format;
         uint_type index = (y * m_image->pitch + x * format.BytesPerPixel);
@@ -654,10 +654,10 @@ vec4 sampler2D::sample( const vec2& coord )
         load_aligned(a, pa);
 
         vec4 result;
-        result.r = static_cast<float_type>(r);
-        result.g = static_cast<float_type>(g);
-        result.b = static_cast<float_type>(b);
-        result.a = static_cast<float_type>(a);
+        result.r = static_cast<raw_float_type>(r);
+        result.g = static_cast<raw_float_type>(g);
+        result.b = static_cast<raw_float_type>(b);
+        result.a = static_cast<raw_float_type>(a);
 
         return clamp(result / 255.0f, c_zero, c_one);
     }
