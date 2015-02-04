@@ -556,23 +556,32 @@ extern C_LINKAGE int main(int argc, char* argv[])
 }
 
 
-sampler2D::sampler2D( const char* path, WrapMode wrapMode ) : m_wrapMode(wrapMode)
+sampler2D::sampler2D( const char* path, WrapMode wrapMode ) 
+    : m_wrapMode(wrapMode)
+    , m_image(nullptr)
 {
+#ifdef SDL_IMAGE_FOUND
     m_image = IMG_Load(path);
     if (!m_image)
     {
         std::cerr << "WARNING: Failed to load texture " << path << "\n";
         std::cerr << "  SDL_Image message: " << IMG_GetError() << "\n";
     }
+#else
+    std::cerr << "WARNING: Texture " << path << " won't be loaded, SDL_image was not found.\n";
+#endif
+
 }
 
 sampler2D::~sampler2D()
 {
+#ifdef SDL_IMAGE_FOUND
     if ( m_image )
     {
         SDL_FreeSurface(m_image);
         m_image = nullptr;
     }
+#endif
 }
 
 vec4 sampler2D::sample( const vec2& coord )
