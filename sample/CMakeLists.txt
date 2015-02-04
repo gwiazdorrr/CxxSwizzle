@@ -15,7 +15,7 @@ else()
 	find_package(Vc)
 endif()
 
-if(SDL_FOUND AND SDL_IMAGE_FOUND)
+if(SDL_FOUND)
 
 	if (OPENMP_FOUND)
 		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -DOMP_ENABLED=1")
