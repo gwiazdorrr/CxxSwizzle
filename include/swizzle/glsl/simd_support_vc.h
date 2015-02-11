@@ -1,3 +1,5 @@
+// CxxSwizzle
+// Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 #pragma once
 
 // VC needs to come first or else it's going to complain (damn I hate these)
