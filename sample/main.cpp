@@ -1,5 +1,5 @@
 // CxxSwizzle
-// Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
+// Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
 #if defined(USE_SIMD)
 #include "use_simd.h"
@@ -112,8 +112,8 @@ namespace glsl_sandbox
     //#include "shaders/complex.frag"
     //#include "shaders/road.frag"
     //#include "shaders/gears.frag"
-    #include "shaders/water_turbulence.frag"
-    //#include "shaders/sky.frag"
+    //#include "shaders/water_turbulence.frag"
+    #include "shaders/sky.frag"
 
     // be a dear a clean up
     #pragma warning(pop)
@@ -514,7 +514,7 @@ extern "C" int main(int argc, char* argv[])
                     if (g_frameReady)
                     {
                         auto currClock = clock();
-                        lastFPS = 1 / static_cast<float>((currClock - frameBegin) / double(CLOCKS_PER_SEC));
+                        lastFPS = 1.0f / static_cast<float>((currClock - frameBegin) / double(CLOCKS_PER_SEC));
                         frameBegin = currClock;
                     }
 
