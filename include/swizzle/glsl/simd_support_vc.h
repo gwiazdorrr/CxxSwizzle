@@ -20,7 +20,7 @@ namespace swizzle
         //! ::Vc::float_v has a tiny bit different semantics than what we need,
         //! so let's wrap it.
         template<typename BoolType = ::Vc::float_m, typename AssignPolicy = detail::nothing>
-        using vc_float = detail::primitive_wrapper < ::Vc::float_v, ::Vc::float_v::EntryType, raw_simd_type, BoolType, AssignPolicy >;
+        using vc_float = detail::primitive_wrapper < ::Vc::float_v, ::Vc::float_v::EntryType, BoolType, AssignPolicy >;
 
 
         //! Specialise vector_helper so that it knows what to do.
@@ -29,7 +29,7 @@ namespace swizzle
         {
             //! Array needs to be like a steak - the rawest possible
             //! (Wow - I managed to WTF myself upon reading the above after a week or two)
-            typedef std::array<typename vc_float<BoolType, AssignPolicy>::raw_internal_type, Size> data_type;
+            typedef std::array<raw_simd_type, Size> data_type;
 
             template <size_t... indices>
             struct proxy_generator
