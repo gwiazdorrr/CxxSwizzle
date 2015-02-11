@@ -9,13 +9,12 @@ namespace swizzle
 {
     namespace detail
     {
-        template <typename InternalType, typename ExternalType, typename RawInternalType = InternalType, typename BoolType = bool, typename AssignPolicy = nothing>
+        template <typename InternalType, typename ExternalType, typename BoolType = bool, typename AssignPolicy = nothing>
         class primitive_wrapper
         {
         public:
             typedef InternalType internal_type;
             typedef ExternalType external_type;
-            typedef RawInternalType raw_internal_type;
             typedef primitive_wrapper this_type;
             typedef AssignPolicy assign_policy_type;
             typedef BoolType bool_type;
@@ -34,8 +33,9 @@ namespace swizzle
                 : data(data)
             { }
 
-            primitive_wrapper(const typename std::conditional<std::is_same<raw_internal_type, internal_type>::value, nothing, raw_internal_type>::type & data)
-                : data(data)
+            template <typename T>
+            primitive_wrapper(T && data, typename std::enable_if< std::is_convertible<T, internal_type>::value >::type* = nullptr)
+                : data(std::forward<T>(data))
             { }
 
             primitive_wrapper(external_type_arg data)

@@ -12,15 +12,15 @@ namespace swizzle
         //! and a scalar as friend inline functions (only accessible with ADL). The reason for that,
         //! contrary to having global template operators is there's less typing and types decaying
         //! to a vector/scalar (proxies!) can use these operators too.
-        template <class VectorType, class ScalarType>
+        template <typename VectorType, typename ScalarType, typename VectorArgType = const VectorType&, typename ScalarArgType = const ScalarType&>
         struct common_binary_operators
         {
-            typedef const VectorType& vector_arg;
-            typedef const ScalarType& scalar_arg;
+            typedef VectorArgType vector_arg;
+            typedef ScalarArgType scalar_arg;
 
             friend VectorType operator+(vector_arg v, scalar_arg s)
             {
-                VectorType result = v;
+                VectorType result(v);
                 return static_foreach<functor_add>(result, s);
             }
             friend VectorType operator+(scalar_arg s, vector_arg v)
@@ -29,13 +29,13 @@ namespace swizzle
             }
             friend VectorType operator+(vector_arg v1, vector_arg v2)
             {
-                VectorType result = v1;
+                VectorType result(v1);
                 return static_foreach<functor_add>(result, v2);
             }
 
             friend VectorType operator*(vector_arg v, scalar_arg s)
             {
-                VectorType result = v;
+                VectorType result(v);
                 return static_foreach<functor_mul>(result, s);
             }
             friend VectorType operator*(scalar_arg s, vector_arg v)
@@ -44,13 +44,13 @@ namespace swizzle
             }
             friend VectorType operator*(vector_arg v1, vector_arg v2)
             {
-                VectorType result = v1;
+                VectorType result(v1);
                 return static_foreach<functor_mul>(result, v2);
             }
 
             friend VectorType operator-(vector_arg v, scalar_arg s)
             {
-                VectorType result = v;
+                VectorType result(v);
                 return static_foreach<functor_sub>(result, s);
             }
             friend VectorType operator-(scalar_arg s, vector_arg v)
@@ -60,13 +60,13 @@ namespace swizzle
             }
             friend VectorType operator-(vector_arg v1, vector_arg v2)
             {
-                VectorType result = v1;
+                VectorType result(v1);
                 return static_foreach<functor_sub>(result, v2);
             }
 
             friend VectorType operator/(vector_arg v, scalar_arg s)
             {
-                VectorType result = v;
+                VectorType result(v);
                 return static_foreach<functor_div>(result, s);
             }
             friend VectorType operator/(scalar_arg s, vector_arg v)
@@ -76,7 +76,7 @@ namespace swizzle
             }
             inline friend VectorType operator/(vector_arg v1, vector_arg v2)
             {
-                VectorType result = v1;
+                VectorType result(v1);
                 return static_foreach<functor_div>(result, v2);
             }
         };
