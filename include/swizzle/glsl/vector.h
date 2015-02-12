@@ -80,6 +80,7 @@ namespace swizzle
             //! Default constructor.
             inline vector()
             {
+                m_data = {};
             }
 
             //! Copy constructor
