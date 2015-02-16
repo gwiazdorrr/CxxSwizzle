@@ -138,6 +138,17 @@ namespace swizzle
             static const size_t value = Head;
         };
 
+        template <template <class> class Predicate, class Head, class... Tail>
+        struct all
+        {
+            static const bool value = Predicate<Head>::value && all<Predicate, Tail...>::value;
+        };
+
+        template <template <class> class Predicate, class Head>
+        struct all < Predicate, Head >
+        {
+            static const bool value = Predicate<Head>::value;
+        };
 
         //! Does the sequence contain "What"?
         template <size_t What, size_t Head, size_t... Tail>

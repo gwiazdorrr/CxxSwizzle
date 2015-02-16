@@ -85,8 +85,7 @@ namespace swizzle
 
         //! A shortcut for getting the number of vector's components.
         template <class T, class = std::true_type >
-        struct get_vector_size
-        {};
+        struct get_vector_size;
 
         //! 
         template <class T>
@@ -95,18 +94,22 @@ namespace swizzle
         {};
 
 
-        //!
-        template <class... T>
-        struct get_total_size
-            : std::conditional<
-                accumulate<get_vector_size<T>::value...>::value != 0,
-                std::integral_constant< 
-                    size_t, 
-                    accumulate<get_vector_size<T>::value...>::value
-                >,
-                nothing
-            >::type
-        {};
 
+        //! To get SFINAE-usable total vector size, we need to introduce helper type, or else g++ will fall on it's face.
+        template <bool DoAllHaveVectorSizes, class... T>
+        struct get_total_size_helper {};
+
+        template <class... T>
+        struct get_total_size_helper<true, T...> 
+            : std::integral_constant<size_t, accumulate<get_vector_size<T>::value...>::value>{};
+
+        //! Only expand get_vector_size if *all* types have vector type impl defined.
+        template <class... T>
+        struct get_total_size 
+            : get_total_size_helper< 
+                all<has_vector_type_impl, T...>::value, 
+                T...
+            > 
+        {};
     }
 }
