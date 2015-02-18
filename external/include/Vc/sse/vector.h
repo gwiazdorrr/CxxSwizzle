@@ -196,7 +196,7 @@ template<typename T> class Vector
 
         ///////////////////////////////////////////////////////////////////////////////////////////
         // broadcast
-        Vc_INTRINSIC_L Vector(EntryType a) Vc_INTRINSIC_R;
+        explicit Vc_INTRINSIC_L Vector(EntryType a) Vc_INTRINSIC_R;
         template<typename TT> Vc_INTRINSIC Vector(TT x, VC_EXACT_TYPE(TT, EntryType, void *) = 0) : d(HT::set(x)) {}
         static Vc_INTRINSIC Vector broadcast4(const EntryType *x) { return Vector<T>(x); }
         Vc_ALWAYS_INLINE Vector &operator=(EntryType a) { d.v() = HT::set(a); return *this; }

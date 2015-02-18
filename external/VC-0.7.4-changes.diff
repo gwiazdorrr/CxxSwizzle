@@ -1,18 +1,6 @@
-diff -ruN src-original/avx/vector.h src/avx/vector.h
---- src-original/avx/vector.h	2014-05-15 13:38:24 +0200
-+++ src/avx/vector.h	2015-01-14 22:19:11 +0100
-@@ -124,7 +124,7 @@
- 
-         ///////////////////////////////////////////////////////////////////////////////////////////
-         // broadcast
--        explicit Vc_ALWAYS_INLINE_L Vector(EntryType a) Vc_ALWAYS_INLINE_R;
-+        Vc_ALWAYS_INLINE_L Vector(EntryType a) Vc_ALWAYS_INLINE_R;
-         template<typename TT> Vc_INTRINSIC Vector(TT x, VC_EXACT_TYPE(TT, EntryType, void *) = 0) : d(HT::set(x)) {}
-         Vc_ALWAYS_INLINE Vector &operator=(EntryType a) { d.v() = HT::set(a); return *this; }
- 
-diff -ruN src-original/common/types.h src/common/types.h
---- src-original/common/types.h	2014-05-15 13:38:24 +0200
-+++ src/common/types.h	2015-01-14 22:21:14 +0100
+diff -rupN original/common/types.h new/common/types.h
+--- original/common/types.h	Thu May 15 13:38:24 2014
++++ new/common/types.h	Wed Jan 14 22:21:14 2015
 @@ -25,6 +25,8 @@
  #include <cstdio>
  #endif
@@ -22,7 +10,7 @@ diff -ruN src-original/common/types.h src/common/types.h
  /*OUTER_NAMESPACE_BEGIN*/
  namespace Vc
  {
-@@ -119,23 +121,7 @@
+@@ -119,23 +121,7 @@ namespace
  
      template<typename From, typename To> struct HasImplicitCast
      {
@@ -47,27 +35,3 @@ diff -ruN src-original/common/types.h src/common/types.h
      };
  #if defined(VC_GCC) && VC_GCC < 0x40300
      // GCC 4.1 is very noisy because of the float->int and double->int type trait tests. We get
-diff -ruN src-original/scalar/vector.h src/scalar/vector.h
---- src-original/scalar/vector.h	2014-05-15 13:38:24 +0200
-+++ src/scalar/vector.h	2015-01-14 22:19:30 +0100
-@@ -86,7 +86,7 @@
- 
-         ///////////////////////////////////////////////////////////////////////////////////////////
-         // broadcast
--        explicit Vc_ALWAYS_INLINE Vector(EntryType x) : m_data(x) {}
-+        Vc_ALWAYS_INLINE Vector(EntryType x) : m_data(x) {}
-         template<typename TT> Vc_ALWAYS_INLINE Vector(TT x, VC_EXACT_TYPE(TT, EntryType, void *) = 0) : m_data(x) {}
-         Vc_ALWAYS_INLINE Vector &operator=(EntryType a) { m_data = a; return *this; }
- 
-diff -ruN src-original/sse/vector.h src/sse/vector.h
---- src-original/sse/vector.h	2014-05-15 13:38:24 +0200
-+++ src/sse/vector.h	2015-01-14 22:19:46 +0100
-@@ -196,7 +196,7 @@
- 
-         ///////////////////////////////////////////////////////////////////////////////////////////
-         // broadcast
--        explicit Vc_INTRINSIC_L Vector(EntryType a) Vc_INTRINSIC_R;
-+        Vc_INTRINSIC_L Vector(EntryType a) Vc_INTRINSIC_R;
-         template<typename TT> Vc_INTRINSIC Vector(TT x, VC_EXACT_TYPE(TT, EntryType, void *) = 0) : d(HT::set(x)) {}
-         static Vc_INTRINSIC Vector broadcast4(const EntryType *x) { return Vector<T>(x); }
-         Vc_ALWAYS_INLINE Vector &operator=(EntryType a) { d.v() = HT::set(a); return *this; }

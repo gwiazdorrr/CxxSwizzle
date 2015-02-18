@@ -86,7 +86,7 @@ class Vector
 
         ///////////////////////////////////////////////////////////////////////////////////////////
         // broadcast
-        Vc_ALWAYS_INLINE Vector(EntryType x) : m_data(x) {}
+        explicit Vc_ALWAYS_INLINE Vector(EntryType x) : m_data(x) {}
         template<typename TT> Vc_ALWAYS_INLINE Vector(TT x, VC_EXACT_TYPE(TT, EntryType, void *) = 0) : m_data(x) {}
         Vc_ALWAYS_INLINE Vector &operator=(EntryType a) { m_data = a; return *this; }
 
