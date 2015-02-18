@@ -31,7 +31,7 @@ namespace swizzle
         {};
 
         template <>
-        struct get_vector_type_impl<double> : get_vector_type_impl_for_scalar<float>
+        struct get_vector_type_impl<double> : get_vector_type_impl_for_scalar<double>
         {};
 
         template <>

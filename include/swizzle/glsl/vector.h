@@ -64,9 +64,10 @@ namespace swizzle
             //! A helpful mnemonic
             typedef std::is_same<internal_scalar_type, scalar_type> are_scalar_types_same;
 
-            //!
+            //! Will be less pain when chaning to some magic mask type...
             typedef bool bool_type;
 
+            //! Well, passing by value is not supported for aligned types in VC++, so let's pass by reference ;(
             typedef const scalar_type& scalar_arg_type;
             typedef const vector_type& vector_arg_type;
 
@@ -84,26 +85,25 @@ namespace swizzle
             }
 
             //! Copy constructor
-            inline vector(const vector& o)
+            inline vector(vector_arg_type o)
             {
                 m_data = o.m_data;
             }
 
             //! Implicit constructor from scalar-convertible only for one-component vector
-            vector(typename std::conditional<Size == 1, const scalar_type&, detail::operation_not_available>::type s)
+            vector(typename std::conditional<Size == 1, scalar_arg_type, detail::operation_not_available>::type s)
             {
                 detail::static_foreach<detail::functor_assign>(*this, s);
             }
 
             //! For vectors bigger than 1 conversion from scalar should be explicit.
-            explicit vector( typename std::conditional<Size!=1, const scalar_type&, detail::operation_not_available>::type s )
+            explicit vector( typename std::conditional<Size!=1, scalar_arg_type, detail::operation_not_available>::type s )
             {
                 detail::static_foreach<detail::functor_assign>(*this, s);
             }
 
             // Block of generic proxy-constructos calling construct member function. Compiler
             // will likely optimise this.
-
             template <class T0, class... T,
                 class = typename std::enable_if< 
                     !(Size <= detail::get_total_size<T0, T...>::value - detail::get_total_size<typename detail::last<T0, T...>::type >::value) &&
@@ -120,90 +120,52 @@ namespace swizzle
         // OPERATORS
         public:
 
-            internal_scalar_type& at(size_t i, std::true_type)
-            {
-                return m_data[i];
-            }
-            const internal_scalar_type& at(size_t i, std::true_type) const
-            {
-                return m_data[i];
-            }
-
-            scalar_type& at(size_t i, std::false_type)
-            {
-                static_assert(sizeof(scalar_type) == sizeof(internal_scalar_type), "");
-                return *reinterpret_cast<scalar_type*>(&m_data[i]);
-            }
-            const scalar_type& at(size_t i, std::false_type) const
-            {
-                static_assert(sizeof(scalar_type) == sizeof(internal_scalar_type), "");
-                return *reinterpret_cast<const scalar_type*>(&m_data[i]);
-            }
-
-            scalar_type& at(size_t i)
-            {
-                return at(i, are_scalar_types_same());
-            }
-
-            const scalar_type& at(size_t i) const
-            {
-                return at(i, are_scalar_types_same());
-            }
+            // Indexing
 
             scalar_type& operator[](size_t i)
             {
-                return at(i, are_scalar_types_same());
+                return at(i);
             }
 
             const scalar_type& operator[](size_t i) const
             {
-                return at(i, are_scalar_types_same());
+                return at(i);
             }
-
-            // what the...
-
-            template <size_t i>
-            inline internal_scalar_type& static_at(std::true_type)
-            {
-                return m_data[i];
-            }
-
-
 
             // Assignment-operation with vector argument
 
-            inline vector& operator+=(const vector& o)
+            inline vector& operator+=(vector_arg_type o)
             {
                 return detail::static_foreach<detail::functor_add>(*this, o);
             }
-            inline vector& operator-=(const vector& o)
+            inline vector& operator-=(vector_arg_type o)
             {
                 return detail::static_foreach<detail::functor_sub>(*this, o);
             }
-            inline vector& operator*=(const vector& o)
+            inline vector& operator*=(vector_arg_type o)
             {
                 return detail::static_foreach<detail::functor_mul>(*this, o);
             }
-            inline vector& operator/=(const vector& o)
+            inline vector& operator/=(vector_arg_type o)
             {
                 return detail::static_foreach<detail::functor_div>(*this, o);
             }
 
             // Assignment-operation with scalar argument
 
-            inline vector& operator+=(const scalar_type& o)
+            inline vector& operator+=(scalar_arg_type o)
             {
                 return detail::static_foreach<detail::functor_add>(*this, o);
             }
-            inline vector& operator-=(const scalar_type& o)
+            inline vector& operator-=(scalar_arg_type o)
             {
                 return detail::static_foreach<detail::functor_sub>(*this, o);
             }
-            inline vector& operator*=(const scalar_type& o)
+            inline vector& operator*=(scalar_arg_type o)
             {
                 return detail::static_foreach<detail::functor_mul>(*this, o);
             }
-            inline vector& operator/=(const scalar_type& o)
+            inline vector& operator/=(scalar_arg_type o)
             {
                 return detail::static_foreach<detail::functor_div>(*this, o);
             }
@@ -217,20 +179,20 @@ namespace swizzle
 
             // Others
 
-            inline vector& operator=(const vector& o)
+            inline vector& operator=(vector_arg_type o)
             {
                 detail::static_foreach<detail::functor_assign>(*this, o);
                 return *this;
             }
 
-            inline bool operator==(const vector& o) const
+            inline bool_type operator==(vector_arg_type o) const
             {
                 bool are_equal = true;
                 detail::static_foreach<detail::functor_equals>(*this, o, are_equal);
                 return are_equal;
             }
 
-            inline bool operator!=(const vector& o) const
+            inline bool_type operator!=(vector_arg_type o) const
             {
                 return !(*this == o);
             }
@@ -252,6 +214,39 @@ namespace swizzle
 
         // AUXILIARY
         public:
+
+            //! These are chosen when internal_scalar_type and outside visible scalar type are same.
+            internal_scalar_type& at(size_t i, std::true_type)
+            {
+                return m_data[i];
+            }
+            const internal_scalar_type& at(size_t i, std::true_type) const
+            {
+                return m_data[i];
+            }
+
+            //! These are chosen when internal_scalar_type and outside visible scalar type are not same.
+            scalar_type& at(size_t i, std::false_type)
+            {
+                static_assert(sizeof(scalar_type) == sizeof(internal_scalar_type), "scalar_type and internal_scalar_type can't be safely converted");
+                return *reinterpret_cast<scalar_type*>(&m_data[i]);
+            }
+            const scalar_type& at(size_t i, std::false_type) const
+            {
+                static_assert(sizeof(scalar_type) == sizeof(internal_scalar_type), "scalar_type and internal_scalar_type can't be safely converted");
+                return *reinterpret_cast<const scalar_type*>(&m_data[i]);
+            }
+
+            //! Access; will choose appropriate at variant automatically.
+            scalar_type& at(size_t i)
+            {
+                return at(i, are_scalar_types_same());
+            }
+            const scalar_type& at(size_t i) const
+            {
+                return at(i, are_scalar_types_same());
+            }
+
             //! Decays the vector. For Size==1 this is going to return a scalar, for all other sizes - same vector
             inline decay_type decay() const
             {
@@ -273,7 +268,7 @@ namespace swizzle
 
             //! Puts scalar at given position. Used only during construction.
             template <size_t N>
-            void compose(const scalar_type& v)
+            void compose(scalar_arg_type v)
             {
                 at(N) = v;
             }
@@ -324,7 +319,7 @@ namespace swizzle
             }
 
             //! As an inline friend function, because thanks to that all convertibles will use same function.
-            friend std::ostream& operator<<(std::ostream& os, const vector& vec)
+            friend std::ostream& operator<<(std::ostream& os, vector_arg_type vec)
             {
                 vec.iterate( [&](size_t i) -> void { os << vec[i] << (i == Size - 1 ? "" : ","); } );
                 return os;
