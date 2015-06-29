@@ -2,6 +2,9 @@
 // Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 #pragma once
 
+// uncomment this if you want proxies to be passable as inout and out parameters
+// #define CXXSWIZZLE_VECTOR_INOUT_WRAPPER_ENABLED
+
 #include <type_traits>
 #include <swizzle/glsl/scalar_support.h>
 

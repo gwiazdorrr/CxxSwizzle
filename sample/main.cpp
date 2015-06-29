@@ -57,9 +57,15 @@ namespace glsl_sandbox
     // a nested namespace used when redefining 'inout' and 'out' keywords
     namespace ref
     {
-        typedef ::vec2& vec2;
-        typedef ::vec3& vec3;
-        typedef ::vec4& vec4;
+#ifdef CXXSWIZZLE_VECTOR_INOUT_WRAPPER_ENABLED
+        typedef swizzle::detail::vector_inout_wrapper<vec2> vec2;
+        typedef swizzle::detail::vector_inout_wrapper<vec3> vec3;
+        typedef swizzle::detail::vector_inout_wrapper<vec4> vec4;
+#else
+        typedef vec2& vec2;
+        typedef vec3& vec3;
+        typedef vec4& vec4;
+#endif
         typedef ::float_type& float_type;
     }
 
