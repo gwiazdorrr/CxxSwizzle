@@ -337,14 +337,17 @@ static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface*
                 if (x > bmp->w - columns_per_batch || y > bmp->h - rows_per_batch)
                 {
                     // slow case: parially out of the surface
-                    for (int row = 0; row < bmp->h - y; ++row)
+                    int max_rows = std::min<int>(bmp->h - y, rows_per_batch);
+                    int max_cols = std::min<int>(bmp->w - x, columns_per_batch);
+
+                    for (int row = 0; row < max_rows; ++row)
                     {
                         auto p = ptr + row * bmp->pitch;
-                        for (int col = 0; col < bmp->w - x; ++col)
+                        for (int col = 0; col < max_cols; ++col)
                         {
-                            //*p++ = static_cast<uint8_t>(pr[col]);
-                            //*p++ = static_cast<uint8_t>(pg[col]);
-                            //*p++ = static_cast<uint8_t>(pb[col]);
+                            *p++ = static_cast<uint8_t>(pr[col]);
+                            *p++ = static_cast<uint8_t>(pg[col]);
+                            *p++ = static_cast<uint8_t>(pb[col]);
                         }
                     }
                 }

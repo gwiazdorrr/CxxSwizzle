@@ -7,7 +7,7 @@
 #include <swizzle/glsl/simd_support_vc.h>
 // need to include scalars as well because we don't need literals
 // to use simd (like sin(1))
-#include <swizzle/glsl/scalar_support.h>
+// #include <swizzle/glsl/scalar_support.h>
 
 #ifdef SAMPLE_USE_SIMD_MASKING
 
@@ -38,6 +38,15 @@ static_assert(static_cast<size_t>(raw_batch_float_t::Size) == static_cast<size_t
 const size_t batch_scalar_count = raw_batch_float_t::Size;
 const size_t batch_float_align = Vc::VectorAlignment;
 const size_t batch_uint32_align = Vc::VectorAlignment;
+ 
+namespace swizzle
+{
+    namespace detail
+    {
+        template <> struct get_vector_type_impl<float> : get_vector_type_impl<batch_float_t> {};
+        template <> struct get_vector_type_impl<double> : get_vector_type_impl<batch_float_t> {};
+    }
+}
 
 template <typename T>
 inline void batch_store_aligned(const Vc::Vector<T>& value, T* target)
