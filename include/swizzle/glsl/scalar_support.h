@@ -3,17 +3,12 @@
 #pragma once
 
 #include <swizzle/detail/vector_traits.h>
+#include <swizzle/detail/fwd.h>
 #include <cmath>
 #include <algorithm>
 
 namespace swizzle
 {
-	namespace glsl
-	{
-        template <typename ScalarType, size_t... Indices>
-        struct vector_;
-	}
-
 	namespace detail
 	{
 		template <class T>
@@ -59,8 +54,7 @@ namespace swizzle
 
 namespace swizzle
 {
-    namespace glsl
-    {
+    
         using std::sin;
         using std::cos;
         using std::tan;
@@ -195,5 +189,5 @@ namespace swizzle
         {
             return 0.0f;
         }
-    }
+    
 }

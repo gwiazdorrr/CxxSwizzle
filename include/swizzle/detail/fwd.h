@@ -4,12 +4,13 @@
 
 namespace swizzle
 {
-    template <typename BoolType, size_t... Index>
+    template <typename ScalarType, size_t... Index>
     struct vector_;
 
     namespace detail
     {
-        template <typename BoolType, size_t... Index> vector_<BoolType, Index...> make_vector_type_helper(std::index_sequence<Index...>);
+        template <typename ScalarType, size_t... Index> 
+        vector_<ScalarType, Index...> make_vector_type_helper(std::index_sequence<Index...>);
     }
 
     template <typename ScalarType, size_t Size>

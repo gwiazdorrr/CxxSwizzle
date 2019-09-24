@@ -7,23 +7,25 @@
 #include "use_scalar.h"
 #endif
 
-#include <swizzle/glsl/vector_base.h>
-#include <swizzle/glsl/matrix.h>
-#include <swizzle/glsl/texture_functions.h>
+#include <swizzle/vector.hpp>
+#include <swizzle/matrix.hpp>
+//#include <swizzle/glsl/texture_functions.h>
 #include <swizzle/detail/simd_mask.h>
 
-typedef swizzle::glsl::vector< batch_float_t, 2 > vec2;
-typedef swizzle::glsl::vector< batch_float_t, 3 > vec3;
-typedef swizzle::glsl::vector< batch_float_t, 4 > vec4;
+typedef swizzle::vector< batch_float_t, 2 > vec2;
+typedef swizzle::vector< batch_float_t, 3 > vec3;
+typedef swizzle::vector< batch_float_t, 4 > vec4;
+
+typedef swizzle::matrix< swizzle::vector, batch_float_t, 3, 3 > mat3;
+typedef swizzle::matrix< swizzle::vector, batch_float_t, 4, 4 > mat4;
 
 static_assert(sizeof(vec2) == sizeof(batch_float_t[2]), "Too big");
 static_assert(sizeof(vec3) == sizeof(batch_float_t[3]), "Too big");
 static_assert(sizeof(vec4) == sizeof(batch_float_t[4]), "Too big");
 
-typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 2, 2> mat2;
-typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 3, 3> mat3;
-typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 4, 4> mat4;
-
+//typedef swizzle::glsl::matrix< swizzle::vector, vec4::scalar_type, 2, 2> mat2;
+//typedef swizzle::glsl::matrix< swizzle::vector, vec4::scalar_type, 3, 3> mat3;
+//typedef swizzle::glsl::matrix< swizzle::vector, vec4::scalar_type, 4, 4> mat4;
 
 
 
@@ -54,70 +56,47 @@ typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 4, 4> m
 //static_assert(tc::size() == 5, "aaa");
 
 //! A really, really simplistic sampler using SDLImage
-struct SDL_Surface;
-class sampler2D : public swizzle::glsl::texture_functions::tag
-{
-public:
-    enum WrapMode
-    {
-        Clamp,
-        Repeat,
-        MirrorRepeat
-    };
-
-    typedef const vec2& tex_coord_type;
-
-    sampler2D(const char* path, WrapMode wrapMode);
-    ~sampler2D();
-    vec4 sample(const vec2& coord);
-
-private:
-    SDL_Surface *m_image;
-    WrapMode m_wrapMode;
-
-    // do not allow copies to be made
-    sampler2D(const sampler2D&);
-    sampler2D& operator=(const sampler2D&);
-};
+//struct SDL_Surface;
+//class sampler2D : public swizzle::glsl::texture_functions::tag
+//{
+//public:
+//    enum WrapMode
+//    {
+//        Clamp,
+//        Repeat,
+//        MirrorRepeat
+//    };
+//
+//    typedef const vec2& tex_coord_type;
+//
+//    sampler2D(const char* path, WrapMode wrapMode);
+//    ~sampler2D();
+//    vec4 sample(const vec2& coord);
+//
+//private:
+//    SDL_Surface *m_image;
+//    WrapMode m_wrapMode;
+//
+//    // do not allow copies to be made
+//    sampler2D(const sampler2D&);
+//    sampler2D& operator=(const sampler2D&);
+//};
 
 // this where the magic happens...
 namespace glsl_sandbox
 {
-    // a nested namespace used when redefining 'inout' and 'out' keywords
-    namespace ref
-    {
-#ifdef CXXSWIZZLE_VECTOR_INOUT_WRAPPER_ENABLED
-        typedef swizzle::detail::vector_inout_wrapper<vec2> vec2;
-        typedef swizzle::detail::vector_inout_wrapper<vec3> vec3;
-        typedef swizzle::detail::vector_inout_wrapper<vec4> vec4;
-#else
-        typedef vec2& vec2;
-        typedef vec3& vec3;
-        typedef vec4& vec4;
-#endif
-        typedef ::batch_float_t& batch_float_t;
-    }
-
-    namespace in
-    {
-        typedef const ::vec2& vec2;
-        typedef const ::vec3& vec3;
-        typedef const ::vec4& vec4;
-        typedef const ::batch_float_t& batch_float_t;
-    }
-
     #include <swizzle/glsl/vector_functions.h>
 
 
 
-    sampler2D diffuse("diffuse.png", sampler2D::Repeat);
-    sampler2D specular("specular.png", sampler2D::Repeat);
+    //sampler2D diffuse("diffuse.png", sampler2D::Repeat);
+    //sampler2D specular("specular.png", sampler2D::Repeat);
 
     // change meaning of glsl keywords to match sandbox
     #define uniform extern
-    #define in in::
-    #define out ref::
-    #define inout ref::
+    #define in
+    #define out ref_proxy::
+    #define inout ref_proxy::
     #define main operator()
     #define mainImage operator()
     #define float batch_float_t   
@@ -151,6 +130,47 @@ namespace glsl_sandbox
 
     struct fragment_shader : fragment_shader_uniforms
     {
+        struct Ray;
+        struct ray;
+
+        template <template <typename> class mod>
+        struct modifier
+        {
+            using vec2 = typename mod<vec2>::type;
+            typedef vec3& vec3;
+            typedef vec4& vec4;
+        };
+
+        // a nested namespace used when redefining 'inout' and 'out' keywords
+        struct ref_proxy
+        {
+#ifdef CXXSWIZZLE_VECTOR_INOUT_WRAPPER_ENABLED
+            typedef swizzle::detail::vector_inout_wrapper<vec2> vec2;
+            typedef swizzle::detail::vector_inout_wrapper<vec3> vec3;
+            typedef swizzle::detail::vector_inout_wrapper<vec4> vec4;
+#else
+            typedef vec2& vec2;
+            typedef vec3& vec3;
+            typedef vec4& vec4;
+#endif
+            typedef ::batch_float_t& batch_float_t;
+            typedef int& int;
+
+            typedef Ray& Ray;
+            typedef ray& ray;
+        };
+
+        struct in_proxy
+        {
+            typedef const ::vec2& vec2;
+            typedef const ::vec3& vec3;
+            typedef const ::vec4& vec4;
+            typedef const ::batch_float_t& batch_float_t;
+            typedef int& int;
+            typedef const Ray& Ray;
+            typedef const ray& ray;
+        };
+
         vec2 gl_FragCoord;
         vec4 gl_FragColor;
 
@@ -404,7 +424,7 @@ int main(int argc, char* argv[])
 #endif
 
     // get initial resolution
-    swizzle::glsl::vector<int, 2> initial_resolution;
+    swizzle::vector<int, 2> initial_resolution;
     initial_resolution.x = 512;
     initial_resolution.y = 512;
     if (argc == 2)
@@ -622,117 +642,117 @@ int main(int argc, char* argv[])
     return 0; 
 }
 
-
-sampler2D::sampler2D( const char* path, WrapMode wrapMode ) 
-    : m_wrapMode(wrapMode)
-    , m_image(nullptr)
-{
-#ifdef SDLIMAGE_FOUND
-    m_image = IMG_Load(path);
-    if (!m_image)
-    {
-        std::cerr << "WARNING: Failed to load target_texture " << path << "\n";
-        std::cerr << "  SDL_Image message: " << IMG_GetError() << "\n";
-    }
-#else
-    std::cerr << "WARNING: target_texture " << path << " won't be loaded, SDL_image was not found.\n";
-#endif
-
-}
-
-sampler2D::~sampler2D()
-{
-    if ( m_image )
-    {
-        SDL_FreeSurface(m_image);
-        m_image = nullptr;
-    }
-}
-
-vec4 sampler2D::sample( const vec2& coord )
-{
-    using namespace glsl_sandbox;
-    vec2 uv;
-    switch (m_wrapMode)
-    {
-    case Repeat:
-        uv = mod(coord, 1.0f);
-        break;
-    case MirrorRepeat:
-        uv = abs(mod(coord - 1.0f, 2.0f) - 1.0f);
-        break;
-    case Clamp:
-    default:
-        uv = clamp(coord, 0.0f, 1.0f);
-        break;
-    }
-
-    // OGL uses left-bottom corner as origin...
-    uv.y = 1.0 - uv.y;
-    
-    if ( !m_image )
-    {
-        // checkers
-        auto s = step(0.5f, uv);
-        auto m2 = abs(s.x - s.y);
-        return mix(vec4(1.0f, 0.0f, 0.0f, 1.0f), vec4(0.0f, 1.0f, 0.0f, 1.0f), m2);
-        /*if (uv_x < 0.5 && uv_y < 0.5 || uv_x > 0.5 && uv_y > 0.5)
-        {
-            return vec4(1, 0, 0, 1);
-        }
-        else
-        {
-            return vec4(0, 1, 0, 1);
-        }*/
-    }
-    else
-    {
-        raw_batch_uint32_t x = batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(uv.x * (m_image->w - 1.0) + 0.5));
-        raw_batch_uint32_t y = batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(uv.y * (m_image->h - 1.0) + 0.5));
-
-        auto& format = *m_image->format;
-        raw_batch_uint32_t index = (y * m_image->pitch + x * format.BytesPerPixel);
-
-        // stack-alloc blob for storing indices and color components
-        uint8_t unaligned_blob[5 * (batch_scalar_count * sizeof(unsigned) + batch_uint32_align)];
-        unsigned* pindex = align_ptr<batch_uint32_align>(reinterpret_cast<unsigned*>(unaligned_blob));
-        unsigned* pr = align_ptr<batch_uint32_align>(pindex + batch_scalar_count);
-        unsigned* pg = align_ptr<batch_uint32_align>(pr + batch_scalar_count);
-        unsigned* pb = align_ptr<batch_uint32_align>(pg + batch_scalar_count);
-        unsigned* pa = align_ptr<batch_uint32_align>(pb + batch_scalar_count);
-
-        batch_store_aligned(index, pindex);
-        
-        // fill the buffers
-        swizzle::detail::static_for<0, batch_scalar_count>([&](size_t i)
-        {
-            auto pixelPtr = static_cast<uint8_t*>(m_image->pixels) + pindex[i];
-            
-            uint32_t pixel = 0;
-            for (size_t i = 0; i < format.BytesPerPixel; ++i)
-            {
-                pixel |= (pixelPtr[i] << (i * 8));
-            }
-
-            pr[i] = (pixel & format.Rmask) >> format.Rshift;
-            pg[i] = (pixel & format.Gmask) >> format.Gshift;
-            pb[i] = (pixel & format.Bmask) >> format.Bshift;
-            pa[i] = format.Amask ? ((pixel & format.Amask) >> format.Ashift) : 255;
-        });
-
-        // load data
-        raw_batch_uint32_t r, g, b, a;
-        batch_load_aligned(r, pr);
-        batch_load_aligned(g, pg);
-        batch_load_aligned(b, pb);
-        batch_load_aligned(a, pa);
-
-        vec4 result;
-        result.r = batch_cast<raw_batch_float_t>(r);
-        result.g = batch_cast<raw_batch_float_t>(g);
-        result.b = batch_cast<raw_batch_float_t>(b);
-        result.a = batch_cast<raw_batch_float_t>(a);
-
-        return clamp(result / 255.0f, c_zero, c_one);
-    }
-}
+//
+//sampler2D::sampler2D( const char* path, WrapMode wrapMode ) 
+//    : m_wrapMode(wrapMode)
+//    , m_image(nullptr)
+//{
+//#ifdef SDLIMAGE_FOUND
+//    m_image = IMG_Load(path);
+//    if (!m_image)
+//    {
+//        std::cerr << "WARNING: Failed to load target_texture " << path << "\n";
+//        std::cerr << "  SDL_Image message: " << IMG_GetError() << "\n";
+//    }
+//#else
+//    std::cerr << "WARNING: target_texture " << path << " won't be loaded, SDL_image was not found.\n";
+//#endif
+//
+//}
+//
+//sampler2D::~sampler2D()
+//{
+//    if ( m_image )
+//    {
+//        SDL_FreeSurface(m_image);
+//        m_image = nullptr;
+//    }
+//}
+//
+//vec4 sampler2D::sample( const vec2& coord )
+//{
+//    using namespace glsl_sandbox;
+//    vec2 uv;
+//    switch (m_wrapMode)
+//    {
+//    case Repeat:
+//        uv = mod(coord, 1.0f);
+//        break;
+//    case MirrorRepeat:
+//        uv = abs(mod(coord - 1.0f, 2.0f) - 1.0f);
+//        break;
+//    case Clamp:
+//    default:
+//        uv = clamp(coord, 0.0f, 1.0f);
+//        break;
+//    }
+//
+//    // OGL uses left-bottom corner as origin...
+//    uv.y = 1.0 - uv.y;
+//    
+//    if ( !m_image )
+//    {
+//        // checkers
+//        auto s = step(0.5f, uv);
+//        auto m2 = abs(s.x - s.y);
+//        return mix(vec4(1.0f, 0.0f, 0.0f, 1.0f), vec4(0.0f, 1.0f, 0.0f, 1.0f), m2);
+//        /*if (uv_x < 0.5 && uv_y < 0.5 || uv_x > 0.5 && uv_y > 0.5)
+//        {
+//            return vec4(1, 0, 0, 1);
+//        }
+//        else
+//        {
+//            return vec4(0, 1, 0, 1);
+//        }*/
+//    }
+//    else
+//    {
+//        raw_batch_uint32_t x = batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(uv.x * (m_image->w - 1.0) + 0.5));
+//        raw_batch_uint32_t y = batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(uv.y * (m_image->h - 1.0) + 0.5));
+//
+//        auto& format = *m_image->format;
+//        raw_batch_uint32_t index = (y * m_image->pitch + x * format.BytesPerPixel);
+//
+//        // stack-alloc blob for storing indices and color components
+//        uint8_t unaligned_blob[5 * (batch_scalar_count * sizeof(unsigned) + batch_uint32_align)];
+//        unsigned* pindex = align_ptr<batch_uint32_align>(reinterpret_cast<unsigned*>(unaligned_blob));
+//        unsigned* pr = align_ptr<batch_uint32_align>(pindex + batch_scalar_count);
+//        unsigned* pg = align_ptr<batch_uint32_align>(pr + batch_scalar_count);
+//        unsigned* pb = align_ptr<batch_uint32_align>(pg + batch_scalar_count);
+//        unsigned* pa = align_ptr<batch_uint32_align>(pb + batch_scalar_count);
+//
+//        batch_store_aligned(index, pindex);
+//        
+//        // fill the buffers
+//        swizzle::detail::static_for<0, batch_scalar_count>([&](size_t i)
+//        {
+//            auto pixelPtr = static_cast<uint8_t*>(m_image->pixels) + pindex[i];
+//            
+//            uint32_t pixel = 0;
+//            for (size_t i = 0; i < format.BytesPerPixel; ++i)
+//            {
+//                pixel |= (pixelPtr[i] << (i * 8));
+//            }
+//
+//            pr[i] = (pixel & format.Rmask) >> format.Rshift;
+//            pg[i] = (pixel & format.Gmask) >> format.Gshift;
+//            pb[i] = (pixel & format.Bmask) >> format.Bshift;
+//            pa[i] = format.Amask ? ((pixel & format.Amask) >> format.Ashift) : 255;
+//        });
+//
+//        // load data
+//        raw_batch_uint32_t r, g, b, a;
+//        batch_load_aligned(r, pr);
+//        batch_load_aligned(g, pg);
+//        batch_load_aligned(b, pb);
+//        batch_load_aligned(a, pa);
+//
+//        vec4 result;
+//        result.r = batch_cast<raw_batch_float_t>(r);
+//        result.g = batch_cast<raw_batch_float_t>(g);
+//        result.b = batch_cast<raw_batch_float_t>(b);
+//        result.a = batch_cast<raw_batch_float_t>(a);
+//
+//        return clamp(result / 255.0f, c_zero, c_one);
+//    }
+//}
