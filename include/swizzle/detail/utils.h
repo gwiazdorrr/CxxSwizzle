@@ -207,5 +207,8 @@ namespace swizzle
 
         template <size_t Count, size_t... Values>
         using take_n = decltype(take_n_resolver<Count>(std::index_sequence<>{}, std::index_sequence<Values...>{}));
+
+        template <bool Condition, typename T>
+        using only_if = std::conditional_t<Condition, T, detail::operation_not_available_t<T> >;
     }
 }

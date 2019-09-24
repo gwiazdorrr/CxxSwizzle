@@ -19,14 +19,14 @@ namespace swizzle
 		template <class T>
 		struct get_vector_type_impl_for_scalar
 		{
-			typedef ::swizzle::glsl::vector_<T, 0> type;
+			typedef ::swizzle::vector_<T, 0> type;
 		};
 
 
 		template <>
 		struct get_vector_type_impl<bool>
 		{
-            typedef ::swizzle::glsl::vector_<bool, 0> type;
+            typedef ::swizzle::vector_<bool, 0> type;
         };
 
 		template <>

@@ -85,7 +85,6 @@ namespace swizzle
         template <class T>
         struct get_batch_size : std::integral_constant<size_t, 1> {};
 
-
         //! A shortcut for getting the number of vector's components.
         template <class T, class = std::true_type >
         struct get_vector_size;
@@ -96,27 +95,30 @@ namespace swizzle
             :  std::integral_constant< size_t, get_vector_type<T>::type::num_of_components >
         {};
 
-
+        struct one_of_the_types_does_not_have_get_vector_type_impl
+        {};
 
         //! To get SFINAE-usable total vector size, we need to introduce helper type, or else g++ will fall on it's face.
         template <bool DoAllHaveVectorSizes, class... T>
-        struct get_total_size_helper {};
+        struct get_total_component_count_helper {
+            static const one_of_the_types_does_not_have_get_vector_type_impl value;
+        };
 
         template <class... T>
-        struct get_total_size_helper<true, T...> 
+        struct get_total_component_count_helper<true, T...> 
             : std::integral_constant<size_t, accumulate<get_vector_size<T>::value...>::value>{};
 
         //! Only expand get_vector_size if *all* types have vector type impl defined.
         template <class... T>
-        struct get_total_size 
-            : get_total_size_helper< 
+        struct get_total_component_count 
+            : get_total_component_count_helper< 
                 all<has_vector_type_impl, T...>::value, 
                 T...
             > 
         {};
 
         template <class... T>
-        constexpr size_t get_total_size_v = get_total_size<T...>::value;
+        constexpr size_t get_total_component_count_v = get_total_component_count<T...>::value;
 
         template <typename T>
         constexpr bool is_scalar_bool_v = std::is_same_v<T, bool>;

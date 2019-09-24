@@ -6,7 +6,7 @@
 #include <Vc/vector.h>
 #include <Vc/global.h>
 #include <type_traits>
-#include <swizzle/detail/primitive_wrapper.h>
+#include <swizzle/detail/primitive_adapters.h>
 #include <swizzle/glsl/vector_helper.h>
 #include <swizzle/detail/fwd.h>
 #include <swizzle/detail/simd_mask.h>
@@ -71,25 +71,25 @@ namespace swizzle
         template <typename AssignPolicy>
         struct get_vector_type_impl< vc_float<AssignPolicy> >
         {
-            typedef ::swizzle::glsl::vector<vc_float<AssignPolicy>, 1> type;
+            typedef ::swizzle::vector<vc_float<AssignPolicy>, 1> type;
         };
 
         template <typename AssignPolicy>
         struct get_vector_type_impl< vc_int<AssignPolicy> >
         {
-            typedef ::swizzle::glsl::vector<vc_int<AssignPolicy>, 1> type;
+            typedef ::swizzle::vector<vc_int<AssignPolicy>, 1> type;
         };
 
         template <typename AssignPolicy>
         struct get_vector_type_impl< vc_uint<AssignPolicy> >
         {
-            typedef ::swizzle::glsl::vector<vc_uint<AssignPolicy>, 1> type;
+            typedef ::swizzle::vector<vc_uint<AssignPolicy>, 1> type;
         };
 
         template <typename AssignPolicy>
         struct get_vector_type_impl< vc_bool<AssignPolicy> >
         {
-            typedef ::swizzle::glsl::vector<vc_bool<AssignPolicy>, 1> type;
+            typedef ::swizzle::vector<vc_bool<AssignPolicy>, 1> type;
         };
 
         template <size_t Size, typename AssignPolicy>
