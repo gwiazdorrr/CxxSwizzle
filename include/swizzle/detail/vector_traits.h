@@ -4,6 +4,7 @@
 
 #include <type_traits>
 #include <swizzle/detail/utils.h>
+#include <swizzle/detail/fwd.h>
 
 namespace swizzle
 {
@@ -14,6 +15,12 @@ namespace swizzle
         template <class T>
         struct get_vector_type_impl
         {};
+
+        template <class T>
+        struct default_vector_type_impl
+        {
+            typedef swizzle::vector<T, 1> type;
+        };
 
         //! Used for graceful SFINAE - becomes true_type if get_vector_type_impl defines nested type.
         template <class T>
@@ -120,13 +127,29 @@ namespace swizzle
         template <class... T>
         constexpr size_t get_total_component_count_v = get_total_component_count<T...>::value;
 
-        template <typename T>
-        constexpr bool is_scalar_bool_v = std::is_same_v<T, bool>;
+        template <typename StorageType, size_t Align, size_t Size, typename BoolType, bool IsBool, bool IsIntegral, bool IsFloatingPoint>
+        struct batch_traits_builder
+        {
+            using bool_type = BoolType;
+            using storage_type = StorageType;
+            static const bool is_bool = IsBool;
+            static const bool is_integral = IsIntegral;
+            static const bool is_floating_point = IsFloatingPoint;
+            static const size_t size = Size;
+            static const size_t align = Align;
+        };
 
         template <typename T>
-        constexpr bool is_scalar_integral_v = std::is_integral_v<T> && !std::is_same_v<T, bool>;
-
-        template <typename T>
-        constexpr bool is_scalar_floating_point_v = std::is_floating_point_v<T>;
+        struct batch_traits : batch_traits_builder<
+            T,
+            alignof(T), 
+            sizeof(T), 
+            bool,
+            std::is_same_v<T, bool>,
+            std::is_integral_v<T> && !std::is_same_v<T, bool>,
+            std::is_floating_point_v<T>
+        >
+        {};
+        
     }
 }

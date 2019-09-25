@@ -15,110 +15,101 @@ namespace swizzle
 {
     namespace detail
     {
-        template <typename AssignPolicy = default_assign_policy>
-        using vc_bool = bool_adapter<::Vc::float_m, AssignPolicy>;
+        // batch types definitions
 
         template <typename AssignPolicy = default_assign_policy>
-        using vc_int = int_adapter<::Vc::int32_v, vc_bool<AssignPolicy>, AssignPolicy>;
+        using vc_bool = bool_batch<::Vc::float_m, AssignPolicy>;
 
         template <typename AssignPolicy = default_assign_policy>
-        using vc_uint = uint_adapter<::Vc::uint32_v, vc_bool<AssignPolicy>, AssignPolicy>;
+        using vc_int = int_batch<::Vc::int32_v, vc_bool<AssignPolicy>, AssignPolicy>;
 
         template <typename AssignPolicy = default_assign_policy>
-        using vc_float = float_adapter<::Vc::float_v, vc_bool<AssignPolicy>, AssignPolicy>;
-        
-        // conversions for adapters to work
+        using vc_uint = uint_batch<::Vc::uint32_v, vc_bool<AssignPolicy>, AssignPolicy>;
 
-        inline ::Vc::float_v simd_bool_to_simd_float(::Vc::float_m value)
+        template <typename AssignPolicy = default_assign_policy>
+        using vc_float = float_batch<::Vc::float_v, vc_bool<AssignPolicy>, AssignPolicy>;
+
+
+        // batch types traits definitions
+
+        template <typename AssignPolicy>
+        struct batch_traits<vc_float<AssignPolicy>> : batch_traits_builder<
+            ::Vc::float_v,
+            ::Vc::VectorAlignment, ::Vc::float_v::Size,
+            vc_bool<AssignPolicy>,
+            false, false, true>
+        {};
+
+        template <typename AssignPolicy>
+        struct batch_traits<vc_int<AssignPolicy>> : batch_traits_builder<
+            ::Vc::int32_v,
+            ::Vc::VectorAlignment, ::Vc::int32_v::Size,
+            vc_bool<AssignPolicy>,
+            false, true, false>
+        {};
+
+        template <typename AssignPolicy>
+        struct batch_traits<vc_uint<AssignPolicy>> : batch_traits_builder<
+            ::Vc::uint32_v,
+            ::Vc::VectorAlignment, ::Vc::uint32_v::Size,
+            vc_bool<AssignPolicy>,
+            false, true, false>
+        {};
+
+        template <typename AssignPolicy>
+        struct batch_traits<vc_bool<AssignPolicy>> : batch_traits_builder<
+            ::Vc::float_m,
+            ::Vc::VectorAlignment, ::Vc::float_m::Size,
+            vc_bool<AssignPolicy>,
+            true, false, false>
+        {};
+
+        // make sure single batch will get converted to "vec1" to have access to math functions
+
+        template <typename AssignPolicy>
+        struct get_vector_type_impl<vc_float<AssignPolicy>> : default_vector_type_impl<vc_float<AssignPolicy>>
+        {};
+        template <typename AssignPolicy>
+        struct get_vector_type_impl<vc_int<AssignPolicy>> : default_vector_type_impl< vc_int<AssignPolicy>>
+        {};
+        template <typename AssignPolicy>
+        struct get_vector_type_impl<vc_uint<AssignPolicy>> : default_vector_type_impl<vc_uint<AssignPolicy>>
+        {};
+        template <typename AssignPolicy>
+        struct get_vector_type_impl<vc_bool<AssignPolicy>> : default_vector_type_impl<vc_bool<AssignPolicy>>
+        {};
+
+        // free functions needed for wrappers to work
+
+        template <typename T>
+        ::Vc::Vector<T> batch_cast(const ::Vc::float_m& value)
         {
-            Vc::float_v result(Vc::Zero);
+            ::Vc::Vector<T> result(::Vc::Zero);
             result(value) = 1.0f;
             return result;
         }
 
-        inline ::Vc::int32_m bool_to_simd(bool value)
+        template <typename T>
+        inline ::Vc::Vector<T> batch_scalar_cast(T value)
         {
-            return ::Vc::int32_m(value);
+            return ::Vc::Vector<T>(value);
         }
 
-        inline ::Vc::int32_v int_to_simd(int value)
+        inline ::Vc::float_m batch_scalar_cast(bool value)
         {
-            return value;
+            return ::Vc::float_m(value);
         }
 
-        inline ::Vc::uint32_v uint_to_simd(unsigned value)
-        {
-            return value;
-        }
-
-        inline ::Vc::float_v float_to_simd(float value)
-        {
-            return value;
-        }
-
-        inline bool simd_to_bool(::Vc::int32_m value)
+        inline bool batch_collapse(const ::Vc::float_m& value)
         {
             return value.isNotEmpty();
         }
 
-        inline bool simd_to_bool(::Vc::float_m value)
+        template <typename T>
+        inline void batch_load_aligned(::Vc::Vector<T>& value, const T* data)
         {
-            return value.isNotEmpty();
+            value.load(data, Vc::Aligned);
         }
-
-        // meta for cxx swizzle magic
-
-        template <typename AssignPolicy>
-        struct get_vector_type_impl< vc_float<AssignPolicy> >
-        {
-            typedef ::swizzle::vector<vc_float<AssignPolicy>, 1> type;
-        };
-
-        template <typename AssignPolicy>
-        struct get_vector_type_impl< vc_int<AssignPolicy> >
-        {
-            typedef ::swizzle::vector<vc_int<AssignPolicy>, 1> type;
-        };
-
-        template <typename AssignPolicy>
-        struct get_vector_type_impl< vc_uint<AssignPolicy> >
-        {
-            typedef ::swizzle::vector<vc_uint<AssignPolicy>, 1> type;
-        };
-
-        template <typename AssignPolicy>
-        struct get_vector_type_impl< vc_bool<AssignPolicy> >
-        {
-            typedef ::swizzle::vector<vc_bool<AssignPolicy>, 1> type;
-        };
-
-        template <size_t Size, typename AssignPolicy>
-        struct vector_build_info<vc_float<AssignPolicy>, Size> : vector_build_info_base<vc_float<AssignPolicy>, Size, std::array<::Vc::float_v, Size>, vc_bool<AssignPolicy>>
-        {};
-
-        template <size_t Size, typename AssignPolicy>
-        struct vector_build_info<vc_int<AssignPolicy>, Size> : vector_build_info_base<vc_int<AssignPolicy>, Size, std::array<::Vc::int32_v, Size>, vc_bool<AssignPolicy>>
-        {};
-
-        template <size_t Size, typename AssignPolicy>
-        struct vector_build_info<vc_uint<AssignPolicy>, Size> : vector_build_info_base<vc_uint<AssignPolicy>, Size, std::array<::Vc::uint32_v, Size>, vc_bool<AssignPolicy>>
-        {};
-
-        template <size_t Size, typename AssignPolicy>
-        struct vector_build_info<vc_bool<AssignPolicy>, Size> : vector_build_info_base<vc_bool<AssignPolicy>, Size, std::array<::Vc::float_m, Size>, vc_bool<AssignPolicy>>
-        {};
-
-        template <typename AssignPolicy>
-        constexpr bool is_scalar_floating_point_v<vc_float<AssignPolicy>> = true;
-
-        template <typename AssignPolicy>
-        constexpr bool is_scalar_integral_v<vc_int<AssignPolicy>> = true;
-
-        template <typename AssignPolicy>
-        constexpr bool is_scalar_integral_v<vc_uint<AssignPolicy>> = true;
-
-        template <typename AssignPolicy>
-        constexpr bool is_scalar_bool_v<vc_bool<AssignPolicy>> = true;
     }
 }
 
@@ -133,6 +124,13 @@ namespace Vc_VERSIONED_NAMESPACE
         result.setZero(x <= edge);
         return result;
     }
+
+    /*inline Vector<T> mix(const Vector<T>& x, const Vector<T>& y, const Vector<T>& a)
+    {
+        auto result = Vector<T>::One();
+        result.setZero(x <= edge);
+        return result;
+    }*/
 
     template <typename T>
     inline Vector<T> pow(const Vector<T>& x, const Vector<T>& n)
@@ -185,7 +183,7 @@ namespace Vc_VERSIONED_NAMESPACE
     {
         // this assumes vectors are row major and there are 2 rows
         auto data = x.data();
-        float_v low =  Mem::shuffle<X0, X0, X2, X2, Y4, Y4, Y6, Y6>(data, data);
+        float_v low = Mem::shuffle<X0, X0, X2, X2, Y4, Y4, Y6, Y6>(data, data);
         float_v high = Mem::shuffle<X1, X1, X3, X3, Y5, Y5, Y7, Y7>(data, data);
         return high - low;
     }
@@ -195,7 +193,7 @@ namespace Vc_VERSIONED_NAMESPACE
     {
         // this assumes vectors are row major and there are 2 rows
         auto data = x.data();
-        float_v low =  Mem::shuffle<X0, X1, X2, X3, Y0, Y1, Y2, Y3>(data, data);
+        float_v low = Mem::shuffle<X0, X1, X2, X3, Y0, Y1, Y2, Y3>(data, data);
         float_v high = Mem::shuffle<X4, X5, X6, X7, Y4, Y5, Y6, Y7>(data, data);
         return high - low;
     }
@@ -205,7 +203,7 @@ namespace Vc_VERSIONED_NAMESPACE
     {
         // this assumes vectors are row major and there are 2 rows
         auto data = x.data();
-        float_v low =  Mem::shuffle<X0, X0, Y2, Y2>(data, data);
+        float_v low = Mem::shuffle<X0, X0, Y2, Y2>(data, data);
         float_v high = Mem::shuffle<X1, X1, Y3, Y3>(data, data);
         return high - low;
     }
@@ -215,7 +213,7 @@ namespace Vc_VERSIONED_NAMESPACE
     {
         // this assumes vectors are row major and there are 2 rows
         auto data = x.data();
-        float_v low =  Mem::shuffle<X0, X1, Y0, Y1>(data, data);
+        float_v low = Mem::shuffle<X0, X1, Y0, Y1>(data, data);
         float_v high = Mem::shuffle<X2, X3, Y2, Y3>(data, data);
         return high - low;
     }

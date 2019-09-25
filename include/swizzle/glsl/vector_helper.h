@@ -13,10 +13,10 @@ namespace swizzle
 {
     namespace detail
     {
-        template<typename ScalarType, size_t Size, typename DataType, typename BoolType = bool >
+        template <typename ScalarType, size_t Size>
         struct vector_build_info_base
         {
-            using data_type = DataType;
+            using data_type = std::array<typename batch_traits<ScalarType>::storage_type, Size>;
 
             template <size_t... Index>
             struct proxy_generator
@@ -32,16 +32,16 @@ namespace swizzle
 
             typedef ::swizzle::detail::vector_storage< Size, proxy_generator, data_type > base_type;
 
-            typedef BoolType bool_type;
+            using bool_type = typename batch_traits<ScalarType>::bool_type;
 
-            static const bool is_bool = is_scalar_bool_v<ScalarType>;
-            static const bool is_integral = is_scalar_integral_v<ScalarType>;
-            static const bool is_floating_point = is_scalar_floating_point_v<ScalarType>;
+            static const bool is_bool = batch_traits<ScalarType>::is_bool;
+            static const bool is_integral = batch_traits<ScalarType>::is_integral;
+            static const bool is_floating_point = batch_traits<ScalarType>::is_floating_point;
             static const bool is_number = is_integral || is_floating_point;
         };
 
         template <typename ScalarType, size_t Size>
-        struct vector_build_info : vector_build_info_base<ScalarType, Size, std::array<ScalarType, Size>, bool>
+        struct vector_build_info : vector_build_info_base<ScalarType, Size>
         {};
     }
 }

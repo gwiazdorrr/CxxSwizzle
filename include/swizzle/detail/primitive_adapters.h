@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cmath>
+#include <cstdint>
 #include <swizzle/detail/utils.h>
 
 #define CXXSWIZZLE_FORCE_INLINE __forceinline
@@ -21,7 +22,7 @@ namespace swizzle
         };
 
         template <typename WrapperType, typename BoolType>
-        struct adapter_binary_operators
+        struct batch_binary_operators
         {
             using this_type = WrapperType;
             using bool_type = BoolType;
@@ -42,28 +43,18 @@ namespace swizzle
             CXXSWIZZLE_FORCE_INLINE friend bool_type operator!=(this_arg a, this_arg b)  { return static_cast<bool_type::data_type>(a.data != b.data); }
         };
 
-
-        template <typename AssignPolicy, typename InternalFloatType, typename InternalIntType, typename InternalUintType, typename InternalBoolType>
-        struct adapter_traits
-        {
-            using internal_float_type = InternalFloatType;
-            using internal_int_type = InternalIntType;
-            using internal_uint_type = InternalUintType;
-            using internal_bool_type = InternalBoolType;
-            using assign_policy = AssignPolicy;
-        };
-
         template <typename DataType, typename AssignPolicy>
-        struct adapter_base
+        struct batch_base
         {
             using data_type = DataType;
+            using assign_policy = AssignPolicy;
 
             data_type data;
 
-            adapter_base()
+            batch_base()
             {}
 
-            adapter_base(typename data_type& data)
+            batch_base(typename data_type& data)
                 : data(data)
             {}
 
@@ -73,7 +64,7 @@ namespace swizzle
                 return data;
             }
 
-            CXXSWIZZLE_FORCE_INLINE void assign(const adapter_base& other)
+            CXXSWIZZLE_FORCE_INLINE void assign(const batch_base& other)
             {
                 AssignPolicy::assign(data, other.data);
             }
@@ -81,13 +72,13 @@ namespace swizzle
 
 
         template <typename DataType, typename AssignPolicy = default_assign_policy>
-        struct bool_adapter : adapter_base<DataType, AssignPolicy>
+        struct bool_batch : batch_base<DataType, AssignPolicy>
         {
-            using adapter_base::adapter_base;
-            using this_type = bool_adapter;
+            using batch_base::batch_base;
+            using this_type = bool_batch;
             using this_arg = const this_type&;
 
-            bool_adapter(bool b) : bool_adapter(bool_to_simd(b)) {}
+            bool_batch(bool b) : bool_batch(batch_scalar_cast(b)) {}
 
             CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)
             {
@@ -103,20 +94,20 @@ namespace swizzle
             }
 
             // implement if you really need to.
-            CXXSWIZZLE_FORCE_INLINE operator bool() const { return simd_to_bool(data); }
+            CXXSWIZZLE_FORCE_INLINE operator bool() const { return batch_collapse(data); }
 
             CXXSWIZZLE_FORCE_INLINE friend this_type operator||(this_arg a, this_arg b)   { return static_cast<this_type>(a.data || b.data); }
             CXXSWIZZLE_FORCE_INLINE friend this_type operator&&(this_arg a, this_arg b)   { return static_cast<this_type>(a.data && b.data); }
         };
 
         template <typename DataType, typename BoolType, typename AssignPolicy = default_assign_policy>
-        struct int_adapter : adapter_base<DataType, AssignPolicy>, adapter_binary_operators<int_adapter<DataType, BoolType, AssignPolicy>, BoolType>
+        struct int_batch : batch_base<DataType, AssignPolicy>, batch_binary_operators<int_batch<DataType, BoolType, AssignPolicy>, BoolType>
         {
-            using adapter_base::adapter_base;
-            using this_type = int_adapter;
+            using batch_base::batch_base;
+            using this_type = int_batch;
             using this_arg = const this_type&;
 
-            int_adapter(int value): int_adapter(int_to_simd(value)) {}
+            int_batch(int value): int_batch(batch_scalar_cast(value)) {}
 
             CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)
             {
@@ -126,27 +117,27 @@ namespace swizzle
 
             CXXSWIZZLE_FORCE_INLINE this_type& operator++()
             {
-                assign(data + int_to_simd(1));
+                assign(data + batch_scalar_cast(1));
                 return *this;
             }
 
             CXXSWIZZLE_FORCE_INLINE this_type operator++(int)
             {
                 this_type result = *this;
-                assign(data + int_to_simd(1));
+                assign(data + batch_scalar_cast(1));
                 return result;
             }
 
             CXXSWIZZLE_FORCE_INLINE this_type& operator--()
             {
-                assign(data - int_to_simd(1));
+                assign(data - batch_scalar_cast(1));
                 return *this;
             }
 
             CXXSWIZZLE_FORCE_INLINE this_type operator--(int)
             {
                 this_type result = *this;
-                assign(data - int_to_simd(1));
+                assign(data - batch_scalar_cast(1));
                 return result;
             }
 
@@ -157,6 +148,11 @@ namespace swizzle
                 return *this;
             }
 
+            friend CXXSWIZZLE_FORCE_INLINE void load_aligned(this_type& target, const int32_t* ptr)
+            {
+                batch_load_aligned(target.data, ptr);
+            }
+
             this_type operator-() const             { return -data; }
             this_type& operator+=(this_arg other)   { return *this = *this + other; }
             this_type& operator-=(this_arg other)   { return *this = *this - other; }
@@ -165,17 +161,17 @@ namespace swizzle
 
             CXXSWIZZLE_FORCE_INLINE friend this_type min(this_arg x, this_arg y) { return min(x.data, y.data); }
             CXXSWIZZLE_FORCE_INLINE friend this_type max(this_arg x, this_arg y) { return max(x.data, y.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type clamp(this_arg x, this_arg minVal, this_arg maxVal) { return clamp(x.data, minVal.data, maxVal.data); }
+            //CXXSWIZZLE_FORCE_INLINE friend this_type clamp(this_arg x, this_arg minVal, this_arg maxVal) { return clamp(x.data, minVal.data, maxVal.data); }
         };
 
         template <typename DataType, typename BoolType, typename AssignPolicy = default_assign_policy>
-        struct uint_adapter : adapter_base<DataType, AssignPolicy>, adapter_binary_operators<uint_adapter<DataType, BoolType, AssignPolicy>, BoolType>
+        struct uint_batch : batch_base<DataType, AssignPolicy>, batch_binary_operators<uint_batch<DataType, BoolType, AssignPolicy>, BoolType>
         {
-            using adapter_base::adapter_base;
-            using this_type = uint_adapter;
+            using batch_base::batch_base;
+            using this_type = uint_batch;
             using this_arg = const this_type&;
 
-            uint_adapter(unsigned value) : uint_adapter(uint_to_simd(value)) {}
+            uint_batch(unsigned value) : uint_batch(batch_scalar_cast(value)) {}
 
             CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)
             {
@@ -190,6 +186,11 @@ namespace swizzle
                 return *this;
             }
 
+            friend CXXSWIZZLE_FORCE_INLINE void load_aligned(this_type& target, const uint32_t* ptr)
+            {
+                batch_load_aligned(target.data, ptr);
+            }
+
             this_type operator-() const             { return -data; }
             this_type& operator+=(this_arg other)   { return *this = *this + other; }
             this_type& operator-=(this_arg other)   { return *this = *this - other; }
@@ -198,21 +199,28 @@ namespace swizzle
 
             CXXSWIZZLE_FORCE_INLINE friend this_type min(this_arg x, this_arg y) { return min(x.data, y.data); }
             CXXSWIZZLE_FORCE_INLINE friend this_type max(this_arg x, this_arg y) { return max(x.data, y.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type clamp(this_arg x, this_arg minVal, this_arg maxVal) { return clamp(x.data, minVal.data, maxVal.data); }
+            //CXXSWIZZLE_FORCE_INLINE friend this_type clamp(this_arg x, this_arg minVal, this_arg maxVal) { return clamp(x.data, minVal.data, maxVal.data); }
         };
 
 
         template <typename DataType, typename BoolType, typename AssignPolicy = default_assign_policy>
-        struct float_adapter : adapter_base<DataType, AssignPolicy>, adapter_binary_operators<float_adapter<DataType, BoolType, AssignPolicy>, BoolType>
+        struct float_batch : batch_base<DataType, AssignPolicy>, batch_binary_operators<float_batch<DataType, BoolType, AssignPolicy>, BoolType>
         {
-            using adapter_base::adapter_base;
-            using this_type = float_adapter;
+            using batch_base::batch_base;
+            using this_type = float_batch;
             using this_arg = const this_type&;
             using bool_type = BoolType;
 
-            float_adapter(float value) : float_adapter(float_to_simd(value)) {}
-            float_adapter(double value): float_adapter(float_to_simd(static_cast<float>(value))) {}
-            float_adapter(const bool_type& value) : float_adapter(simd_bool_to_simd_float(value.data)) {}
+            float_batch(float value) : float_batch(batch_scalar_cast(value)) {}
+            float_batch(double value): float_batch(batch_scalar_cast(static_cast<float>(value))) {}
+            float_batch(const bool_type& value) : float_batch(batch_cast<float>(value.data)) {}
+            explicit float_batch(int32_t value) : float_batch(static_cast<float>(value)) {}
+            explicit float_batch(uint32_t value): float_batch(static_cast<float>(value)) {}
+
+
+            template <typename IntDataType>
+            explicit float_batch(const int_batch<IntDataType, bool_type, AssignPolicy>& aa)
+            {}
 
             CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)
             {
@@ -225,6 +233,11 @@ namespace swizzle
             this_type decay() const
             {
                 return *this;
+            }
+
+            friend CXXSWIZZLE_FORCE_INLINE void load_aligned(this_type& target, const float* ptr)
+            {
+                batch_load_aligned(target.data, ptr);
             }
 
             this_type operator-() const             { return -data; }
@@ -277,11 +290,11 @@ namespace swizzle
 
             CXXSWIZZLE_FORCE_INLINE friend this_type min(this_arg x, this_arg y) { return min(x.data, y.data); }
             CXXSWIZZLE_FORCE_INLINE friend this_type max(this_arg x, this_arg y) { return max(x.data, y.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type clamp(this_arg x, this_arg minVal, this_arg maxVal) { return clamp(x.data, minVal.data, maxVal.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type mix(this_arg x, this_arg y, this_arg a) { return mix(x.data, y.data, a.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type mix(this_arg x, this_arg y, const bool_type& a) { return mix(x.data, y.data, a.data); }
+            //CXXSWIZZLE_FORCE_INLINE friend this_type clamp(this_arg x, this_arg minVal, this_arg maxVal) { return clamp(x.data, minVal.data, maxVal.data); }
+            //CXXSWIZZLE_FORCE_INLINE friend this_type mix(this_arg x, this_arg y, this_arg a) { return mix(x.data, y.data, a.data); }
+            //CXXSWIZZLE_FORCE_INLINE friend this_type mix(this_arg x, this_arg y, const bool_type& a) { return mix(x.data, y.data, a.data); }
             CXXSWIZZLE_FORCE_INLINE friend this_type step(this_arg edge, this_arg x) { return step(edge.data, x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type smoothstep(this_arg edge0, this_arg edge1, this_arg x) { return smoothstep(edge0.data, edge1.data, x.data); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type smoothstep(this_arg edge0, this_arg edge1, this_arg x) { return smoothstep_helper(edge0, edge1, x); }
 
             CXXSWIZZLE_FORCE_INLINE friend bool_type isnan(this_arg x) { return isnan(x.data); }
             CXXSWIZZLE_FORCE_INLINE friend bool_type isinf(this_arg x) { return isinf(x.data); }
@@ -309,6 +322,13 @@ namespace swizzle
             CXXSWIZZLE_FORCE_INLINE friend this_type fwidth(this_arg p)
             {
                 return abs(dFdx(p)) + abs(dFdy(p));
+            }
+
+            static this_type smoothstep_helper(this_arg edge0, this_arg edge1, this_arg x)
+            {
+                auto t = (x - edge0) / (edge1 - edge0);
+                t = min(max(t, this_type(0.0)), this_type(1.0));
+                return t * t * (this_type(3.0) - this_type(2.0) * t);
             }
 
         };

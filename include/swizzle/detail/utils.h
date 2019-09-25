@@ -36,7 +36,7 @@ namespace swizzle
 
 
         //! A type to indicate that operation is not available for some combination of input types.
-        template <typename T>
+        template <typename T, int line = 0>
         struct operation_not_available_t;
         struct operation_not_available;
         template <int> struct operation_not_available_n;
@@ -44,67 +44,18 @@ namespace swizzle
         //! An empty type carrying no information, used whenever applicable.
         struct nothing {};
 
-
-        //! Loop terminator.
-        template <size_t Begin, class Func>
-        inline void static_for_impl(Func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, Begin>)
+        template <size_t Offset, typename Func, size_t... Index>
+        inline void static_for_impl(Func func, std::index_sequence<Index...>)
         {
-            // do nothing
-        }
-
-        //! A chain of func calls with each value from [Begin, End) range.
-        template <size_t Begin, size_t End, class Func>
-        inline typename std::enable_if<Begin != End, void>::type static_for_impl(Func func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, End>)
-        {
-            func(Begin);
-            static_for_impl(func, std::integral_constant<size_t, Begin + 1>(), std::integral_constant<size_t, End>());
+            ((func(Offset + Index)), ...);
         }
 
         //! Trigger Func for each value from [Begin, End) range.
         template <size_t Begin, size_t End, class Func>
         inline void static_for(Func func)
         {
-            static_for_impl(func, std::integral_constant<size_t, Begin>(), std::integral_constant<size_t, End>());
+            static_for_impl<Begin>(func, std::make_index_sequence<End - Begin>());
         }
-
-
-        //! Loop terminator.
-        template <size_t Begin, class Func, typename... Args>
-        inline void static_for_with_static_call_impl(Func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, Begin>, Args&&... args)
-        {
-            // do nothing
-        }
-
-        //! A chain of func calls with each value from [Begin, End) range.
-        template <size_t Begin, size_t End, class Func, typename... Args>
-        inline typename std::enable_if<Begin != End, void>::type static_for_with_static_call_impl(Func func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, End>, Args&&... args)
-        {
-#ifdef _MSC_VER
-            // VC is happy with this syntax, but unhappy with the alternative...
-            func.operator() < Begin > (std::forward<Args>(args)...);
-#else
-            // ... that's the only option for g++. WTF?!
-            func.template operator() < Begin > (std::forward<Args>(args)...);
-#endif
-            static_for_with_static_call_impl(func, std::integral_constant<size_t, Begin + 1>(), std::integral_constant<size_t, End>(), std::forward<Args>(args)...);
-        }
-
-        //! Trigger Func for each value from [Begin, End) range.
-        template <size_t Begin, size_t End, class Func, typename... Args>
-        inline void static_for_with_static_call(Func func, Args&&... args)
-        {
-            static_for_with_static_call_impl(func, std::integral_constant<size_t, Begin>(), std::integral_constant<size_t, End>(), std::forward<Args>(args)...);
-        }
-
-        //! Trigger Func for each value from [Begin, End) range.
-        template <template<typename> class Func, typename Arg1, typename... Args>
-        inline Arg1& static_foreach(Arg1& result, Args&&... args)
-        {
-            Func<typename std::remove_reference<Arg1>::type> functor{};
-            static_for_with_static_call<0, Arg1::num_of_components>(functor, result, std::forward<Args>(args)...);
-            return result;
-        }
-
 
         //! Calls and returns a result of the decay memeber function (provided there's one).
         template <class T>
@@ -208,7 +159,11 @@ namespace swizzle
         template <size_t Count, size_t... Values>
         using take_n = decltype(take_n_resolver<Count>(std::index_sequence<>{}, std::index_sequence<Values...>{}));
 
+        template <bool Condition, typename T, int Line = 0>
+        using only_if = std::conditional_t<Condition, T, detail::operation_not_available_t<T, Line> >;
+
         template <bool Condition, typename T>
-        using only_if = std::conditional_t<Condition, T, detail::operation_not_available_t<T> >;
+        using only_if2 = std::conditional_t<Condition, T, detail::nothing >;
+
     }
 }

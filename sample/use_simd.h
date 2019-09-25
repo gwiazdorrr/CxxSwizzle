@@ -45,6 +45,7 @@ namespace swizzle
     {
         template <> struct get_vector_type_impl<float> : get_vector_type_impl<batch_float_t> {};
         template <> struct get_vector_type_impl<double> : get_vector_type_impl<batch_float_t> {};
+        template <> struct get_vector_type_impl<int> : get_vector_type_impl<batch_int_t> {};
     }
 }
 

@@ -53,6 +53,10 @@ namespace swizzle
         //! Type static functions return; for single-component they decay to a scalar
         using decay_type = std::conditional_t<num_of_components == 1, scalar_type, this_type>;
 
+        using number_scalar_arg_cond = detail::only_if <(num_of_components > 1), number_scalar_arg>;
+        using float_scalar_arg_cond = detail::only_if <(num_of_components > 1), float_scalar_arg>;
+
+
         //! Decays the vector. For Size==1 this is going to return a scalar, for all other sizes - same vector
         inline decay_type decay() const
         {
@@ -72,29 +76,39 @@ namespace swizzle
         }
 
         //! Implicit constructor from scalar-convertible only for one-component vector
-        inline vector_(detail::only_if<num_of_components == 1, scalar_arg> s)
+        inline vector_(detail::only_if<num_of_components == 1 && !std::is_same_v<scalar_type, int> && !std::is_same_v<scalar_type, double>, scalar_type> s)
         {
             at(0) = s;
         }
 
-        //! Needed to differentiate from explicit one arg constructor
-        inline vector_(detail::only_if<num_of_components == 1, scalar_type&&> s)
+        //! Implicit from int (yep, it's needed for stuff like cos(0) to work
+        inline vector_(detail::only_if<num_of_components == 1, int, __LINE__> s)
         {
-            at(0) = s;
+            ((at(Index) = scalar_type(s)), ...);
         }
 
-        //! For vectors bigger than 1 conversion from scalar should be explicit.
-        inline explicit vector_(detail::only_if<num_of_components != 1, scalar_arg> s)
+        //! Implicit from double (for stuff like cos(0.0) to work
+        inline vector_(detail::only_if<num_of_components == 1 && build_info::is_floating_point, double, __LINE__> s)
+        {
+            ((at(Index) = scalar_type(s)), ...);
+        }
+
+        //! When more than 1 component implicit construction is not possible
+        inline explicit vector_(detail::only_if<num_of_components != 1 && !std::is_same_v<scalar_type, int> && !std::is_same_v<scalar_type, double>, scalar_type, __LINE__> s)
         {
             ((at(Index) = s), ...);
         }
 
-        // Block of generic proxy-constructos calling construct member function. Compiler
-        // will likely optimise this.
-        template <class T0, class = std::enable_if_t<(num_of_components <= detail::get_total_component_count_v<T0>)> >
-        inline explicit vector_(T0&& t0)
+        //! For vec2(0)
+        inline explicit vector_(detail::only_if<num_of_components != 1, int, __LINE__> s)
         {
-            construct<0>(std::forward<T0>(t0), detail::nothing{});
+            ((at(Index) = scalar_type(s)), ...);
+        }
+
+        //! For vec2(0.0)
+        inline explicit vector_(detail::only_if<num_of_components != 1 && build_info::is_floating_point, double, __LINE__> s)
+        {
+            ((at(Index) = scalar_type(s)), ...);
         }
 
         // Block of generic proxy-constructors calling construct member function. Compiler
@@ -167,6 +181,20 @@ namespace swizzle
             data[Index] = static_cast<internal_scalar_type>(v);
         }
 
+        //! For construction from int literal to work
+        template <size_t Index>
+        void compose(int v)
+        {
+            compose<Index>(scalar_type(v));
+        }
+
+        //! For construction from double literal to work
+        template <size_t Index>
+        void compose(detail::only_if<build_info::is_floating_point, double> v)
+        {
+            compose<Index>(scalar_type(v));
+        }
+
         template <size_t Index, typename OtherScalarType, size_t... OtherIndex>
         void compose(const vector_<OtherScalarType, OtherIndex...>& v)
         {
@@ -179,8 +207,6 @@ namespace swizzle
         {
             ((at(DataIndex + Offset) = src.at(DataIndex)), ...);
         }
-
-
 
     public:
         // functions
@@ -341,7 +367,7 @@ namespace swizzle
         {
             return this_type(max(x.at(Index), y)...);
         }
-        static this_type call_clamp(number_vector_arg x, number_scalar_arg minVal, number_scalar_arg maxVal)
+        static this_type call_clamp(number_vector_arg x, number_scalar_arg_cond minVal, number_scalar_arg_cond maxVal)
         {
             return this_type(max(min(x.at(Index), maxVal), minVal)...);
         }
@@ -349,7 +375,7 @@ namespace swizzle
         {
             return this_type(max(min(x.at(Index), maxVal.at(Index)), minVal.at(Index))...);
         }
-        static this_type call_mix(float_vector_arg x, float_vector_arg y, float_scalar_arg a)
+        static this_type call_mix(float_vector_arg x, float_vector_arg y, float_scalar_arg_cond a)
         {
             return this_type(x.at(Index) + a * (y.at(Index) - x.at(Index))...);
         }
@@ -357,11 +383,11 @@ namespace swizzle
         {
             return this_type(x.at(Index) + a.at(Index) * (y.at(Index) - x.at(Index))...);
         }
-        static this_type call_mix(float_vector_arg x, float_vector_arg y, const bool_vector_type& a)
+        /*static this_type call_mix(float_vector_arg x, float_vector_arg y, const bool_vector_type& a)
         {
             this_type mask = call_step(this_type(scalar_type{ 0 }), this_type{ a });
             return call_mix(x, y, mask);
-        }
+        }*/
 
         static this_type call_step(float_vector_arg edge, float_vector_arg x)
         {
@@ -460,7 +486,7 @@ namespace swizzle
 
         static this_type call_reflect(float_vector_arg I, float_vector_arg N)
         {
-            return (I - 2 * call_dot(I, N) * N);
+            return (I - scalar_type(2) * call_dot(I, N) * N);
         }
 
         static this_type call_refract(float_vector_arg I, float_vector_arg N, float_scalar_arg eta)
