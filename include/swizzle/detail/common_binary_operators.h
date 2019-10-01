@@ -22,8 +22,7 @@ namespace swizzle
 
             friend VectorType operator+(VectorArgType v, ScalarArgType s)
             {
-                VectorType result(v);
-                return result += s;
+                return VectorType(v) += s;
             }
             friend VectorType operator+(ScalarArgType s, VectorArgType v)
             {
@@ -31,14 +30,12 @@ namespace swizzle
             }
             friend VectorType operator+(VectorArgType v1, VectorArgType v2)
             {
-                VectorType result(v1);
-                return result += v2;
+                return VectorType(v1) += v2;
             }
 
             friend VectorType operator*(VectorArgType v, ScalarArgType s)
             {
-                VectorType result(v);
-                return result *= s;
+                return VectorType(v) *= s;
             }
             friend VectorType operator*(ScalarArgType s, VectorArgType v)
             {
@@ -46,40 +43,33 @@ namespace swizzle
             }
             friend VectorType operator*(VectorArgType v1, VectorArgType v2)
             {
-                VectorType result(v1);
-                return result *= v2;
+                return VectorType(v1) *= v2;
             }
 
             friend VectorType operator-(VectorArgType v, ScalarArgType s)
             {
-                VectorType result(v);
-                return result -= s;
+                return VectorType(v) -= s;
             }
             friend VectorType operator-(ScalarArgType s, VectorArgType v)
             {
-                VectorType result(s);
-                return result -= v;
+                return VectorType(s) -= v;
             }
             friend VectorType operator-(VectorArgType v1, VectorArgType v2)
             {
-                VectorType result(v1);
-                return result -= v2;
+                return VectorType(v1) -= v2;
             }
 
             friend VectorType operator/(VectorArgType v, ScalarArgType s)
             {
-                VectorType result(v);
-                return result /= s;
+                return VectorType(v) /= s;
             }
             friend VectorType operator/(ScalarArgType s, VectorArgType v)
             {
-                VectorType result(s);
-                return result /= v;
+                return VectorType(s) /= v;
             }
             inline friend VectorType operator/(VectorArgType v1, VectorArgType v2)
             {
-                VectorType result(v1);
-                return result /= v2;
+                return VectorType(v1) /= v2;
             }
         };
     }

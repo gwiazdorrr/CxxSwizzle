@@ -22,7 +22,7 @@ CXXSWIZZLE_WRITE_MASK_SCOPE_STORAGE(pusher);
 typedef ::swizzle::detail::write_mask_assign_policy<pusher> assign_policy_type;
 
 #else
-typedef ::swizzle::detail::default_assign_policy assign_policy_type;
+typedef ::swizzle::default_assign_policy assign_policy_type;
 
 #endif
 

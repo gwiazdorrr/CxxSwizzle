@@ -476,7 +476,7 @@ static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface*
                 
 
                 // convert to [0;255]
-                auto color = shader.gl_FragColor;// , c_zero, c_one);
+                auto color = glsl_sandbox::clamp(shader.gl_FragColor, c_zero, c_one);
                 color *= 255.0f + 0.5f;
                 //debug_print(color.x);
                 //debug_print(color.y);
@@ -484,6 +484,7 @@ static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface*
                 //vec4 color(255.0f, 0.0f, 0.0f, 1.0f);
                 /*::Vc::float_v a;
                 a.data()*/
+
 
                 store_aligned(static_cast<batch_uint_t>(color.r), pr);
                 store_aligned(static_cast<batch_uint_t>(color.g), pg);

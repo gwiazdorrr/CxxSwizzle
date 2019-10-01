@@ -7,22 +7,22 @@
 #include <cmath>
 #include <algorithm>
 #include <cstdint>
-#include <swizzle/detail/primitive_adapters.h>
+#include <swizzle/batch_adapters.hpp>
 
 namespace swizzle
 {
     namespace detail
     {
-#if DUPA
+#if !DUPA
         typedef bool simd_bool;
         typedef float simd_float;
         typedef int32_t simd_int32;
         typedef uint32_t simd_uint32;
 #else
-        template <typename AssignPolicy = default_assign_policy> using simd_bool = bool_batch<bool, AssignPolicy, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>;
-        template <typename AssignPolicy = default_assign_policy> using simd_float = float_batch<float, simd_bool<AssignPolicy>, AssignPolicy, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>;
-        template <typename AssignPolicy = default_assign_policy> using simd_int32 = int_batch<int32_t, simd_bool<AssignPolicy>, AssignPolicy, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>;
-        template <typename AssignPolicy = default_assign_policy> using simd_uint32 = uint_batch<uint32_t, simd_bool<AssignPolicy>, AssignPolicy, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>;
+        template <typename AssignPolicy = default_assign_policy> using simd_bool = bool_batch<bool, AssignPolicy, 0>;
+        template <typename AssignPolicy = default_assign_policy> using simd_float = float_batch<float, bool, AssignPolicy, 0>;
+        template <typename AssignPolicy = default_assign_policy> using simd_int32 = int_batch<int32_t, bool, AssignPolicy, 0>;
+        template <typename AssignPolicy = default_assign_policy> using simd_uint32 = uint_batch<uint32_t, bool, AssignPolicy, 0>;
 
         template <typename AssignPolicy>
         struct get_vector_type_impl<simd_bool<AssignPolicy>> : default_vector_type_impl<simd_bool<AssignPolicy>>

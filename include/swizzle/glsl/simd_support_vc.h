@@ -6,7 +6,7 @@
 #include <Vc/vector.h>
 #include <Vc/global.h>
 #include <type_traits>
-#include <swizzle/detail/primitive_adapters.h>
+#include <swizzle/batch_adapters.hpp>
 #include <swizzle/glsl/vector_helper.h>
 #include <swizzle/detail/fwd.h>
 #include <swizzle/detail/simd_mask.h>
@@ -21,13 +21,13 @@ namespace swizzle
         using vc_bool = bool_batch<::Vc::float_m, AssignPolicy, 0, 1, 2, 3>;
 
         template <typename AssignPolicy = default_assign_policy>
-        using vc_int = int_batch<::Vc::int32_v, vc_bool<AssignPolicy>, AssignPolicy, 0, 1, 2, 3>;
+        using vc_int = int_batch<::Vc::int32_v, ::Vc::float_m, AssignPolicy, 0, 1, 2, 3>;
 
         template <typename AssignPolicy = default_assign_policy>
-        using vc_uint = uint_batch<::Vc::uint32_v, vc_bool<AssignPolicy>, AssignPolicy, 0, 1, 2, 3>;
+        using vc_uint = uint_batch<::Vc::uint32_v, ::Vc::float_m, AssignPolicy, 0, 1, 2, 3>;
 
         template <typename AssignPolicy = default_assign_policy>
-        using vc_float = float_batch<::Vc::float_v, vc_bool<AssignPolicy>, AssignPolicy, 0, 1, 2, 3>;
+        using vc_float = float_batch<::Vc::float_v, ::Vc::float_m, AssignPolicy, 0, 1, 2, 3>;
 
 
         // batch types traits definitions
@@ -82,51 +82,51 @@ namespace swizzle
         template <typename AssignPolicy>
         struct get_vector_type_impl<vc_bool<AssignPolicy>> : default_vector_type_impl<vc_bool<AssignPolicy>>
         {};
-
-        // free functions needed for wrappers to work
-
-        template <typename T>
-        inline ::Vc::Vector<T> batch_cast(const ::Vc::float_m& value)
-        {
-            ::Vc::Vector<T> result(::Vc::Zero);
-            result(value) = 1.0f;
-            return result;
-        }
-
-        template <typename To, typename From> 
-        inline ::Vc::Vector<To> batch_cast(const ::Vc::Vector<From>& value)
-        {
-            return ::Vc::Vector<To>(value);
-        }
-
-        template <typename T>
-        inline ::Vc::Vector<T> batch_scalar_cast(T value)
-        {
-            return ::Vc::Vector<T>(value);
-        }
-
-        inline ::Vc::float_m batch_scalar_cast(bool value)
-        {
-            return ::Vc::float_m(value);
-        }
-
-        inline bool batch_collapse(const ::Vc::float_m& value)
-        {
-            return value.isNotEmpty();
-        }
-
-        template <typename T>
-        inline void batch_load_aligned(::Vc::Vector<T>& value, const T* data)
-        {
-            value.load(data, Vc::Aligned);
-        }
-
-        template <typename T>
-        inline void batch_store_aligned(const ::Vc::Vector<T>& value, T* data)
-        {
-            value.store(data, Vc::Aligned);
-        }
     }
+    // free functions needed for wrappers to work
+
+    template <typename T>
+    inline ::Vc::Vector<T> batch_cast(const ::Vc::float_m& value)
+    {
+        ::Vc::Vector<T> result(::Vc::Zero);
+        result(value) = 1.0f;
+        return result;
+    }
+
+    template <typename To, typename From> 
+    inline ::Vc::Vector<To> batch_cast(const ::Vc::Vector<From>& value)
+    {
+        return ::Vc::Vector<To>(value);
+    }
+
+    template <typename T>
+    inline ::Vc::Vector<T> batch_scalar_cast(T value)
+    {
+        return ::Vc::Vector<T>(value);
+    }
+
+    inline ::Vc::float_m batch_scalar_cast(bool value)
+    {
+        return ::Vc::float_m(value);
+    }
+
+    inline bool batch_collapse(const ::Vc::float_m& value)
+    {
+        return value.isNotEmpty();
+    }
+
+    template <typename T>
+    inline void batch_load_aligned(::Vc::Vector<T>& value, const T* data)
+    {
+        value.load(data, Vc::Aligned);
+    }
+
+    template <typename T>
+    inline void batch_store_aligned(const ::Vc::Vector<T>& value, T* data)
+    {
+        value.store(data, Vc::Aligned);
+    }
+    /*}*/
 }
 
 

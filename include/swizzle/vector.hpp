@@ -19,7 +19,7 @@ namespace swizzle
     template <typename ScalarType, size_t... Index>
     struct vector_
         : detail::vector_build_info<ScalarType, sizeof...(Index)>::base_type
-        , std::conditional_t< detail::vector_build_info<ScalarType, sizeof...(Index)>::is_number && (sizeof...(Index) > 1), swizzle::detail::common_binary_operators< vector_<ScalarType, Index...>, ScalarType>, detail::nothing>
+        , std::conditional_t< detail::vector_build_info<ScalarType, sizeof...(Index)>::is_number && (sizeof...(Index) > 1), detail::nothing, detail::nothing>
     {
     public:
         using build_info = detail::vector_build_info<ScalarType, sizeof...(Index)>;
@@ -41,6 +41,9 @@ namespace swizzle
         using bool_vector_type = vector_<bool_type, Index...>;
         using bool_scalar_arg = detail::only_if< build_info::is_bool, this_type_arg >;
         using bool_vector_arg = detail::only_if< build_info::is_bool, this_type_arg >;
+
+        using int_arg = detail::only_if<!std::is_fundamental_v<scalar_type>, int, __LINE__>;
+        using double_arg = detail::only_if<!std::is_fundamental_v<scalar_type>, double, __LINE__>;
 
         //! Get the real, real internal scalar type. Useful when scalar visible
         //! externally is different than the internal one (well, hello SIMD)
@@ -78,37 +81,37 @@ namespace swizzle
         //! Implicit constructor from scalar-convertible only for one-component vector
         inline vector_(detail::only_if<num_of_components == 1 && !std::is_same_v<scalar_type, int> && !std::is_same_v<scalar_type, double>, scalar_type> s)
         {
-            at(0) = s;
+            /*sdt::move*/(at(0)) = s;
         }
 
         //! Implicit from int (yep, it's needed for stuff like cos(0) to work
         inline vector_(detail::only_if<num_of_components == 1, int, __LINE__> s)
         {
-            ((at(Index) = scalar_type(s)), ...);
+            ((/*sdt::move*/(at(Index)) = scalar_type(s)), ...);
         }
 
         //! Implicit from double (for stuff like cos(0.0) to work
         inline vector_(detail::only_if<num_of_components == 1 && build_info::is_floating_point, double, __LINE__> s)
         {
-            ((at(Index) = scalar_type(s)), ...);
+            ((/*sdt::move*/(at(Index)) = scalar_type(s)), ...);
         }
 
         //! When more than 1 component implicit construction is not possible
         inline explicit vector_(detail::only_if<num_of_components != 1 && !std::is_same_v<scalar_type, int> && !std::is_same_v<scalar_type, double>, scalar_type, __LINE__> s)
         {
-            ((at(Index) = s), ...);
+            ((/*sdt::move*/(at(Index)) = s), ...);
         }
 
         //! For vec2(0)
         inline explicit vector_(detail::only_if<num_of_components != 1, int, __LINE__> s)
         {
-            ((at(Index) = scalar_type(s)), ...);
+            ((/*sdt::move*/(at(Index)) = scalar_type(s)), ...);
         }
 
         //! For vec2(0.0)
         inline explicit vector_(detail::only_if<num_of_components != 1 && build_info::is_floating_point, double, __LINE__> s)
         {
-            ((at(Index) = scalar_type(s)), ...);
+            ((/*sdt::move*/(at(Index)) = scalar_type(s)), ...);
         }
 
         template <class LikelyOtherScalarType>
@@ -183,7 +186,7 @@ namespace swizzle
         template <size_t Index, typename SomeScalarType>
         void compose(SomeScalarType&& scalar, std::enable_if_t<std::is_constructible_v<scalar_type, SomeScalarType>>* = nullptr)
         {
-            at(Index) = scalar_type(std::forward<SomeScalarType>(scalar));
+            /*sdt::move*/(at(Index)) = scalar_type(std::forward<SomeScalarType>(scalar));
         }
 
         ////! Puts scalar at given position. Used only during construction.
@@ -217,7 +220,7 @@ namespace swizzle
         template <size_t Offset, typename DataTypeB, size_t... DataIndex>
         inline void compose_impl(const DataTypeB& src, std::index_sequence<DataIndex...>)
         {
-            ((at(DataIndex + Offset) = scalar_type(src.at(DataIndex))), ...);
+            (/*sdt::move*/(at(DataIndex + Offset) = scalar_type(src.at(DataIndex))), ...);
         }
 
     public:
@@ -578,46 +581,63 @@ namespace swizzle
             return !(*this == other);
         }
 
-        inline this_type& operator=(this_type_arg other)
-        {
-            return ((at(Index) = other.at(Index)), ..., *this);
-        }
-        inline this_type& operator+=(number_vector_arg other)
-        {
-            return ((at(Index) += other.at(Index)), ..., *this);
-        }
-        inline this_type& operator-=(number_vector_arg other)
-        {
-            return ((at(Index) -= other.at(Index)), ..., *this);
-        }
-        inline this_type& operator*=(number_vector_arg other)
-        {
-            return ((at(Index) *= other.at(Index)), ..., *this);
-        }
-        inline this_type& operator/=(number_vector_arg other)
-        {
-            return ((at(Index) /= other.at(Index)), ..., *this);
-        }
-        inline this_type& operator+=(number_scalar_arg other)
-        {
-            return ((at(Index) += other), ..., *this);
-        }
-        inline this_type& operator-=(number_scalar_arg other)
-        {
-            return ((at(Index) -= other), ..., *this);
-        }
-        inline this_type& operator*=(number_scalar_arg other)
-        {
-            return ((at(Index) *= other), ..., *this);
-        }
-        inline this_type& operator/=(number_scalar_arg other)
-        {
-            return ((at(Index) /= other), ..., *this);
-        }
+        inline this_type& operator=(this_type_arg other)      & { return ((at(Index) = other.at(Index)), ..., *this);  }
+        inline this_type& operator+=(number_vector_arg other) & { return ((at(Index) += other.at(Index)), ..., *this); }
+        inline this_type& operator-=(number_vector_arg other) & { return ((at(Index) -= other.at(Index)), ..., *this); }
+        inline this_type& operator*=(number_vector_arg other) & { return ((at(Index) *= other.at(Index)), ..., *this); }
+        inline this_type& operator/=(number_vector_arg other) & { return ((at(Index) /= other.at(Index)), ..., *this); }
+        inline this_type& operator+=(number_scalar_arg other) & { return ((at(Index) += other), ..., *this); }
+        inline this_type& operator-=(number_scalar_arg other) & { return ((at(Index) -= other), ..., *this); }
+        inline this_type& operator*=(number_scalar_arg other) & { return ((at(Index) *= other), ..., *this); }
+        inline this_type& operator/=(number_scalar_arg other) & { return ((at(Index) /= other), ..., *this); }
+
+        inline this_type& operator=(this_type_arg other)      && { return ((std::move(at(Index)) = other.at(Index)), ..., *this);  }
+        inline this_type& operator+=(number_vector_arg other) && { return ((std::move(at(Index)) += other.at(Index)), ..., *this); }
+        inline this_type& operator-=(number_vector_arg other) && { return ((std::move(at(Index)) -= other.at(Index)), ..., *this); }
+        inline this_type& operator*=(number_vector_arg other) && { return ((std::move(at(Index)) *= other.at(Index)), ..., *this); }
+        inline this_type& operator/=(number_vector_arg other) && { return ((std::move(at(Index)) /= other.at(Index)), ..., *this); }
+        inline this_type& operator+=(number_scalar_arg other) && { return ((std::move(at(Index)) += other), ..., *this); }
+        inline this_type& operator-=(number_scalar_arg other) && { return ((std::move(at(Index)) -= other), ..., *this); }
+        inline this_type& operator*=(number_scalar_arg other) && { return ((std::move(at(Index)) *= other), ..., *this); }
+        inline this_type& operator/=(number_scalar_arg other) && { return ((std::move(at(Index)) /= other), ..., *this); }
+
+        inline friend this_type operator+(number_vector_arg a, number_vector_arg b) { return this_type(a.at(Index)+b.at(Index)...); }
+        inline friend this_type operator-(number_vector_arg a, number_vector_arg b) { return this_type(a.at(Index)-b.at(Index)...); }
+        inline friend this_type operator*(number_vector_arg a, number_vector_arg b) { return this_type(a.at(Index)*b.at(Index)...); }
+        inline friend this_type operator/(number_vector_arg a, number_vector_arg b) { return this_type(a.at(Index)/b.at(Index)...); }
+
+        inline friend this_type operator+(number_vector_arg a, number_scalar_arg b) { return this_type(a.at(Index)+b...); }
+        inline friend this_type operator-(number_vector_arg a, number_scalar_arg b) { return this_type(a.at(Index)-b...); }
+        inline friend this_type operator*(number_vector_arg a, number_scalar_arg b) { return this_type(a.at(Index)*b...); }
+        inline friend this_type operator/(number_vector_arg a, number_scalar_arg b) { return this_type(a.at(Index)/b...); }
+        inline friend this_type operator+(number_scalar_arg a, number_vector_arg b) { return this_type(a+b.at(Index)...); }
+        inline friend this_type operator-(number_scalar_arg a, number_vector_arg b) { return this_type(a-b.at(Index)...); }
+        inline friend this_type operator*(number_scalar_arg a, number_vector_arg b) { return this_type(a*b.at(Index)...); }
+        inline friend this_type operator/(number_scalar_arg a, number_vector_arg b) { return this_type(a/b.at(Index)...); }
+
+        inline friend this_type operator+(number_vector_arg a, int_arg b) { return this_type(a.at(Index)+b...); }
+        inline friend this_type operator-(number_vector_arg a, int_arg b) { return this_type(a.at(Index)-b...); }
+        inline friend this_type operator*(number_vector_arg a, int_arg b) { return this_type(a.at(Index)*b...); }
+        inline friend this_type operator/(number_vector_arg a, int_arg b) { return this_type(a.at(Index)/b...); }
+        inline friend this_type operator+(int_arg a, number_vector_arg b) { return this_type(a+b.at(Index)...); }
+        inline friend this_type operator-(int_arg a, number_vector_arg b) { return this_type(a-b.at(Index)...); }
+        inline friend this_type operator*(int_arg a, number_vector_arg b) { return this_type(a*b.at(Index)...); }
+        inline friend this_type operator/(int_arg a, number_vector_arg b) { return this_type(a/b.at(Index)...); }
+
+        inline friend this_type operator+(float_vector_arg a, double_arg b) { return this_type(a.at(Index)+b...); }
+        inline friend this_type operator-(float_vector_arg a, double_arg b) { return this_type(a.at(Index)-b...); }
+        inline friend this_type operator*(float_vector_arg a, double_arg b) { return this_type(a.at(Index)*b...); }
+        inline friend this_type operator/(float_vector_arg a, double_arg b) { return this_type(a.at(Index)/b...); }
+        inline friend this_type operator+(double_arg a, float_vector_arg b) { return this_type(a+b.at(Index)...); }
+        inline friend this_type operator-(double_arg a, float_vector_arg b) { return this_type(a-b.at(Index)...); }
+        inline friend this_type operator*(double_arg a, float_vector_arg b) { return this_type(a*b.at(Index)...); }
+        inline friend this_type operator/(double_arg a, float_vector_arg b) { return this_type(a/b.at(Index)...); }
+
+
         inline detail::only_if<build_info::is_number, this_type> operator-() const
         {
             this_type result;
-            ((result.at(Index) = -at(Index)), ...);
+            ((/*sdt::move*/(result.at(Index)) = -at(Index)), ...);
             return result;
         }
 
