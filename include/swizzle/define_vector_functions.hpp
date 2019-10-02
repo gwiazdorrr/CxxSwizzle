@@ -1,4 +1,4 @@
-// CxxSwizzle
+﻿// CxxSwizzle
 // Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 //
 // This header contains functions that are proxies to vector static functions. Vector

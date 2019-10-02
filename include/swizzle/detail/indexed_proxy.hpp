@@ -5,7 +5,6 @@
 #include <type_traits>
 #include <swizzle/detail/utils.h>
 #include <swizzle/detail/vector_traits.h>
-#include <swizzle/detail/vector_inout_wrapper.h>
 
 namespace swizzle
 {
@@ -43,15 +42,6 @@ namespace swizzle
                 return decay_impl(result, std::make_index_sequence<num_of_components>{});
  
             }
-
-#ifdef CXXSWIZZLE_VECTOR_INOUT_WRAPPER_ENABLED
-            //! If enabled, it will decay to a reference wrapper, if needed (inout and out parameters); on destruction
-            //! the wrapper will copy its value back into the proxy
-            operator const typename std::conditional<is_writable, vector_inout_wrapper<vector_type>, operation_not_available>::type()
-            {
-                return vector_inout_wrapper<vector_type>(decay(), [this](const vector_type& v) -> void { *this = v; });
-            }
-#endif
 
             //! Auto-decaying where possible.
             operator vector_type()

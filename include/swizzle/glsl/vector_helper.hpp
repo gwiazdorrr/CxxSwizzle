@@ -3,10 +3,10 @@
 #pragma once
 
 #include <array>
-#include <swizzle/detail/indexed_proxy.h>
-#include <swizzle/detail/vector_storage.h>
+#include <swizzle/detail/indexed_proxy.hpp>
+#include <swizzle/detail/vector_storage.hpp>
 #include <swizzle/detail/vector_traits.h>
-#include <swizzle/detail/fwd.h>
+#include <swizzle/detail/fwd.hpp>
 
 
 namespace swizzle

@@ -10,23 +10,13 @@
 
 namespace swizzle
 {
-    struct default_assign_policy
-    {
-        template <typename T>
-        CXXSWIZZLE_FORCE_INLINE static void assign(T& a, const T& b)
-        {
-            a = b;
-        }
-    };
-
     struct construct_tag {};
 
-    template <typename DataType, typename PrimitiveType, typename AssignPolicy, size_t... Index>
+    template <typename DataType, typename PrimitiveType, size_t... Index>
     struct batch_base
     {
         static const size_t size = sizeof...(Index);
         using data_type = DataType;
-        using assign_policy = AssignPolicy;
         using primitive_type = PrimitiveType;
 
         using storage_type = std::conditional_t< size == 1, data_type, std::array<DataType, size> >;
@@ -54,7 +44,7 @@ namespace swizzle
         {}
 
         template <typename OtherBatchType, typename OtherPrimitiveType>
-        CXXSWIZZLE_FORCE_INLINE explicit batch_base(const batch_base<OtherBatchType, OtherPrimitiveType, AssignPolicy, Index...>& other)
+        CXXSWIZZLE_FORCE_INLINE explicit batch_base(const batch_base<OtherBatchType, OtherPrimitiveType, Index...>& other)
         {
             ((at<Index>() = batch_cast<primitive_type>(other.at<Index>())), ...);
         }
@@ -75,7 +65,6 @@ namespace swizzle
         {
             target.store_aligned_internal(ptr);
         }
-
 
         template <size_t Index, size_t Size = size>
         CXXSWIZZLE_FORCE_INLINE std::enable_if_t< (Size > 1), data_type>& at()
@@ -103,7 +92,7 @@ namespace swizzle
 
         CXXSWIZZLE_FORCE_INLINE void assign(const batch_base& other)
         {
-            ((AssignPolicy::assign(at<Index>(), other.at<Index>())), ...);
+            (batch_assign(at<Index>(), other.at<Index>()),...);
         }
 
         CXXSWIZZLE_FORCE_INLINE void assign_fast(const batch_base& other)
@@ -114,7 +103,7 @@ namespace swizzle
         template <size_t Index>
         CXXSWIZZLE_FORCE_INLINE void assign_at(const data_type& other)
         {
-            AssignPolicy::assign(at<Index>(), other);
+            batch_assign(at<Index>(), other);
         }
 
         template <size_t Index>
@@ -147,12 +136,13 @@ namespace swizzle
     };
 
 
-    template <typename DataType, typename AssignPolicy, size_t... Index>
-    struct bool_batch : batch_base<DataType, bool, AssignPolicy, Index...>
+    template <typename DataType, size_t... Index>
+    struct bool_batch : batch_base<DataType, bool, Index...>
     {
         using batch_base::batch_base;
         using this_type = bool_batch;
         using this_arg = const this_type&;
+        using primitive_type = typename batch_base::primitive_type;
 
         bool_batch(bool b) : bool_batch(batch_scalar_cast(b)) {}
 
@@ -184,13 +174,14 @@ namespace swizzle
     };
 
 
-    template <typename DataType, typename BoolType, typename AssignPolicy, size_t... Index>
-    struct int_batch : batch_base<DataType, int, AssignPolicy, Index...>
+    template <typename DataType, typename BoolType, size_t... Index>
+    struct int_batch : batch_base<DataType, int, Index...>
     {
         using batch_base::batch_base;
         using this_type = int_batch;
         using this_arg = const this_type&;
-        using bool_type = bool_batch<BoolType, AssignPolicy, Index...>;
+        using primitive_type = typename batch_base::primitive_type;
+        using bool_type = bool_batch<BoolType, Index...>;
 
         explicit int_batch(double value) : int_batch(static_cast<int>(value)) {}
 
@@ -207,15 +198,23 @@ namespace swizzle
         // functions: 8.3
         CXXSWIZZLE_FORCE_INLINE friend this_type min(this_arg x, this_arg y) { return this_type(construct_tag{}, min(x.at<Index>(), y.at<Index>())...); }
         CXXSWIZZLE_FORCE_INLINE friend this_type max(this_arg x, this_arg y) { return this_type(construct_tag{}, max(x.at<Index>(), y.at<Index>())...); }
+
+
+        template <typename OtherBatchType, typename OtherPrimitiveType, typename... OtherTypes>
+        CXXSWIZZLE_FORCE_INLINE friend void masked_read(const this_type& mask, batch_base<OtherBatchType, OtherPrimitiveType, Index...>& result, OtherTypes&&... others)
+        {
+            batch_masked_read(mask.storage, result.storage, others.storage...);
+        }
     };
 
-    template <typename DataType, typename BoolType, typename AssignPolicy, size_t... Index>
-    struct uint_batch : batch_base<DataType, uint32_t, AssignPolicy, Index...>
+    template <typename DataType, typename BoolType, size_t... Index>
+    struct uint_batch : batch_base<DataType, uint32_t, Index...>
     {
         using batch_base::batch_base;
         using this_type = uint_batch;
         using this_arg = const this_type&;
-        using bool_type = bool_batch<BoolType, AssignPolicy, Index...>;
+        using primitive_type = typename batch_base::primitive_type;
+        using bool_type = bool_batch<BoolType, Index...>;
 
         // for CxxSwizzle ADL-magic
 
@@ -232,16 +231,23 @@ namespace swizzle
         // functions: 8.3
         CXXSWIZZLE_FORCE_INLINE friend this_type min(this_arg x, this_arg y) { return this_type(construct_tag{}, min(x.at<Index>(), y.at<Index>())...); }
         CXXSWIZZLE_FORCE_INLINE friend this_type max(this_arg x, this_arg y) { return this_type(construct_tag{}, max(x.at<Index>(), y.at<Index>())...); }
+
+        template <typename OtherBatchType, typename OtherPrimitiveType, typename... OtherTypes>
+        CXXSWIZZLE_FORCE_INLINE friend void masked_read(const this_type& mask, batch_base<OtherBatchType, OtherPrimitiveType, Index...>& result, OtherTypes&&... others)
+        {
+            batch_masked_read(mask.storage, result.storage, others.storage...);
+        }
     };
 
 
-    template <typename DataType, typename BoolType, typename AssignPolicy, size_t... Index>
-    struct float_batch : batch_base<DataType, float, AssignPolicy, Index...>
+    template <typename DataType, typename BoolType, size_t... Index>
+    struct float_batch : batch_base<DataType, float, Index...>
     {
         using batch_base::batch_base;
         using this_type = float_batch;
         using this_arg = const this_type&;
-        using bool_type = bool_batch<BoolType, AssignPolicy, Index...>;
+        using primitive_type = typename batch_base::primitive_type;
+        using bool_type = bool_batch<BoolType, Index...>;
 
 
         CXXSWIZZLE_FORCE_INLINE float_batch(double value) : float_batch(batch_scalar_cast(static_cast<float>(value))) {}
@@ -326,8 +332,8 @@ namespace swizzle
         }
 
         // 8.8
-        CXXSWIZZLE_FORCE_INLINE friend this_type dFdx(this_arg p) { return dFdx(p.at<Index>()); }
-        CXXSWIZZLE_FORCE_INLINE friend this_type dFdy(this_arg p) { return dFdy(p.at<Index>()); }
+        CXXSWIZZLE_FORCE_INLINE friend this_type dFdx(this_arg p) { return this_type(construct_tag{}, dFdx(p.at<Index>())...); }
+        CXXSWIZZLE_FORCE_INLINE friend this_type dFdy(this_arg p) { return this_type(construct_tag{}, dFdy(p.at<Index>())...); }
         CXXSWIZZLE_FORCE_INLINE friend this_type fwidth(this_arg p)
         {
             return abs(dFdx(p)) + abs(dFdy(p));

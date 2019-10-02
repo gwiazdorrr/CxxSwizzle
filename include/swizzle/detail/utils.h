@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <cstddef>
 #include <utility>
+#include <functional>
 
 namespace swizzle
 {
@@ -162,8 +163,17 @@ namespace swizzle
         template <bool Condition, typename T, int Line = 0>
         using only_if = std::conditional_t<Condition, T, detail::operation_not_available_t<T, Line> >;
 
-        template <bool Condition, typename T>
-        using only_if2 = std::conditional_t<Condition, T, detail::nothing >;
+        //! A handly little type to make sure a func invoked before other destructors; just
+        //! make sure it is the first one to be inherited.
+        template <typename TypeToCleanUp>
+        struct clean_up_before_other_destructors
+        {
+            std::function<void(TypeToCleanUp&)> cleanup;
+            ~clean_up_before_other_destructors()
+            {
+                cleanup(*reinterpret_cast<TypeToCleanUp*>(this));
+            }
+        };
 
     }
 }

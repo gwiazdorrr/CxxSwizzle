@@ -22,6 +22,16 @@ else()
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DOMP_ENABLED=0")
 endif()
 
+
+set(SIMD_ARCHITECTURE_VALUES Default SSE2 AVX2)
+set(SIMD_ARCHITECTURE Default CACHE STRING "SIMD architecture (VC++ only)")
+set_property(CACHE SIMD_ARCHITECTURE PROPERTY STRINGS ${SIMD_ARCHITECTURE_VALUES})
+
+set(COMMON_DEFINES "")
+if(NOT ${SIMD_ARCHITECTURE} STREQUAL "Default")
+	set(COMMON_DEFINES "${COMMON_DEFINES} /arch:${SIMD_ARCHITECTURE}")
+endif()
+
 # get all the shaders
 file(GLOB shaders RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag")
 
@@ -52,7 +62,7 @@ macro(create_sample_internal prefix defines header useVcLib)
 
 		set_target_properties(${name} PROPERTIES CXX_STANDARD 17)
 		set_target_properties(${name} PROPERTIES CXX_STANDARD_REQUIRED ON)
-		set_target_properties(${name} PROPERTIES COMPILE_FLAGS "${defines}")
+		set_target_properties(${name} PROPERTIES COMPILE_FLAGS "${COMMON_DEFINES} ${defines}")
 
 		if (${useVcLib})
 			target_link_libraries("${name}" PRIVATE ${Vc_LIBRARIES})
@@ -102,6 +112,7 @@ if (BUILD_SIMD_SAMPLE)
 
     set (Vc_LIBRARIES ${VC_INSTALL}/lib/Vc.lib)
     set (Vc_INCLUDE_DIR ${VC_INSTALL}/include)
+
 
 	create_simd_sample(sample_simd "-DSAMPLE_USE_SIMD_VC")
     # create_simd_sample(sample_masked_simd  "-DSAMPLE_USE_SIMD_VC -DSAMPLE_USE_SIMD_MASKING")

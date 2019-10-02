@@ -4,7 +4,7 @@
 
 #include <type_traits>
 #include <swizzle/detail/utils.h>
-#include <swizzle/detail/fwd.h>
+#include <swizzle/detail/fwd.hpp>
 
 namespace swizzle
 {

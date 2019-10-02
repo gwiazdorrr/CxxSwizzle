@@ -1,6 +1,6 @@
 // CxxSwizzle
 // Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
-
+#define CXXSWIZZLE_inout_wrapper_ENABLED
 #if defined(SAMPLE_USE_SIMD_VC)
 #include "use_simd.h"
 #else 
@@ -9,8 +9,10 @@
 
 #include <swizzle/vector.hpp>
 #include <swizzle/matrix.hpp>
-#include <swizzle/glsl/texture_functions.h>
+#include <swizzle/glsl/texture_functions.hpp>
 #include <swizzle/detail/simd_mask.h>
+#include <swizzle/inout_wrapper.hpp>
+#include <conio.h>
 
 typedef swizzle::vector< batch_float_t, 2 > vec2;
 typedef swizzle::vector< batch_float_t, 3 > vec3;
@@ -124,9 +126,9 @@ public:
 
 
 
-    void setData(std::vector<uint8_t>, int width, int pitch)
-    {
-    }
+    //void setData(std::vector<uint8_t>, int width, int pitch)
+    //{
+    //}
 
 private:
     SDL_Surface *m_image;
@@ -142,7 +144,7 @@ private:
 // this where the magic happens...
 namespace glsl_sandbox
 {
-    #include <swizzle/glsl/vector_functions.h>
+    #include <swizzle/define_vector_functions.hpp>
 
 
 
@@ -243,10 +245,10 @@ namespace glsl_sandbox
         // a nested namespace used when redefining 'inout' and 'out' keywords
         struct ref_proxy
         {
-#ifdef CXXSWIZZLE_VECTOR_INOUT_WRAPPER_ENABLED
-            typedef swizzle::detail::vector_inout_wrapper<vec2> vec2;
-            typedef swizzle::detail::vector_inout_wrapper<vec3> vec3;
-            typedef swizzle::detail::vector_inout_wrapper<vec4> vec4;
+#ifdef CXXSWIZZLE_inout_wrapper_ENABLED
+            typedef swizzle::inout_wrapper<vec2> vec2;
+            typedef swizzle::inout_wrapper<vec3> vec3;
+            typedef swizzle::inout_wrapper<vec4> vec4;
 #else
             typedef vec2& vec2;
             typedef vec3& vec3;
@@ -285,6 +287,8 @@ namespace glsl_sandbox
         #include "shader.frag"
 
 #undef time
+#undef height
+#undef width
     };
 
     // be a dear a clean up
@@ -624,6 +628,7 @@ int main(int argc, char* argv[])
         double time_scale = 1.0;
         int frame = 0;
         float time = 0.0f;
+        float current_frame_time = 0.0f;
         vec2 mouse_position(0.0f, 0.0f);
         bool pending_resize = false;
         bool mouse_pressed = false;
@@ -631,7 +636,7 @@ int main(int argc, char* argv[])
         std::atomic_bool abort_render_token = false;
         glsl_sandbox::fragment_shader_uniforms uniforms;
 
-        auto renderAsync = [&]() -> std::future<std::chrono::microseconds>
+        auto renderAsync = [&](float time) -> std::future<std::chrono::microseconds>
         {
             uniforms = {};
 
@@ -652,9 +657,10 @@ int main(int argc, char* argv[])
             return std::async(render_timed, std::ref(uniforms), s, std::ref(abort_render_token));
         };
 
-        std::future<std::chrono::microseconds> render_task = renderAsync();
+        std::future<std::chrono::microseconds> render_task = renderAsync(0.0f);
         std::chrono::microseconds last_render_duration;
         auto begin = std::chrono::steady_clock::now();
+        auto frame_begin = std::chrono::steady_clock::now();
         auto micro_to_seconds = 1 / 1000000.0;
 
         for (;;)
@@ -741,7 +747,8 @@ int main(int argc, char* argv[])
                     resize_or_create_surface(w, h);
                     pending_resize = false;
 
-                    render_task = renderAsync();
+                    render_task = renderAsync(current_frame_time = time);
+                    frame_begin = std::chrono::steady_clock::now();
                 }
             }
             else
@@ -758,19 +765,30 @@ int main(int argc, char* argv[])
                 {
                     ++frame;
                     last_render_duration = render_task.get();
-                    render_task = renderAsync();
+                    render_task = renderAsync(current_frame_time = time);
+                    frame_begin = std::chrono::steady_clock::now();
                 }
             }
             
 
             // clear line
-            cout << "\r" << (char)27 << "[2K";
-            cout << "frame: " << frame << "\t time: " << time << "\t time_scale: " << time_scale << "\t time: " << last_render_duration.count() * micro_to_seconds;
-            cout.flush();
 
-            auto delta = chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - begin);
+            auto now = chrono::steady_clock::now();
+            
+            auto delta = chrono::duration_cast<chrono::microseconds>(now - begin);
             time += static_cast<float>(delta.count() * micro_to_seconds * time_scale);
             begin = chrono::steady_clock::now();
+
+            printf("\33[4A\r");
+
+            printf("\33[2Kframe:       %d\n", frame);
+            printf("\33[2Ktime:        %f s\n", current_frame_time);
+            printf("\33[2Kfps:         %lf\n", 1.0 / (last_render_duration.count() * micro_to_seconds));
+            printf("\33[2Kresolution:  %dx%d\n", target_surface->w, target_surface->h);
+
+            
+            //printf("\33[2Kcurrent frame render time:  %lf s\n", chrono::duration_cast<chrono::microseconds>(now - frame_begin).count() * micro_to_seconds);
+            cout.flush();
         }
 
         // wait for the render thread to stop
@@ -843,9 +861,9 @@ vec4 naive_sampler2D::fetch(const ivec2& coord) const
 //        return atan2(y, x);
 //    }
 //}
-
 vec4 naive_sampler2D::sample( const vec2& coord ) const
 {
+    
     using namespace glsl_sandbox;
     vec2 uv;
     switch (m_wrapMode)
@@ -864,7 +882,6 @@ vec4 naive_sampler2D::sample( const vec2& coord ) const
 
     // OGL uses left-bottom corner as origin...
     uv.y = 1.0 - uv.y;
-    
     //if ( !m_image )
     //{
         // checkers

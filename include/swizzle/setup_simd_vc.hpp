@@ -1,4 +1,4 @@
-// CxxSwizzle
+﻿// CxxSwizzle
 // Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 #pragma once
 
@@ -7,82 +7,57 @@
 #include <Vc/global.h>
 #include <type_traits>
 #include <swizzle/batch_adapters.hpp>
-#include <swizzle/glsl/vector_helper.h>
-#include <swizzle/detail/fwd.h>
+#include <swizzle/detail/fwd.hpp>
 #include <swizzle/detail/simd_mask.h>
+#include <swizzle/detail/vector_traits.h>
 
 namespace swizzle
 {
+    using float_type = float_batch<::Vc::float_v, ::Vc::float_m, 0>;
+    using int_type   = int_batch<::Vc::int32_v, ::Vc::float_m, 0>;
+    using uint_type  = uint_batch<::Vc::uint32_v, ::Vc::float_m, 0>;
+    using bool_type  = bool_batch<::Vc::float_m, 0>;
+
+    // batch types traits definitions
     namespace detail
     {
-        // batch types definitions
-
-        template <typename AssignPolicy = default_assign_policy>
-        using vc_bool = bool_batch<::Vc::float_m, AssignPolicy, 0, 1, 2, 3>;
-
-        template <typename AssignPolicy = default_assign_policy>
-        using vc_int = int_batch<::Vc::int32_v, ::Vc::float_m, AssignPolicy, 0, 1, 2, 3>;
-
-        template <typename AssignPolicy = default_assign_policy>
-        using vc_uint = uint_batch<::Vc::uint32_v, ::Vc::float_m, AssignPolicy, 0, 1, 2, 3>;
-
-        template <typename AssignPolicy = default_assign_policy>
-        using vc_float = float_batch<::Vc::float_v, ::Vc::float_m, AssignPolicy, 0, 1, 2, 3>;
-
-
-        // batch types traits definitions
-
-        template <typename AssignPolicy>
-        struct batch_traits<vc_float<AssignPolicy>> : batch_traits_builder<
+        template <>
+        struct batch_traits<float_type> : batch_traits_builder<
             ::Vc::float_v,
             float,
-            ::Vc::VectorAlignment, ::Vc::float_v::Size, vc_float<AssignPolicy>::size,
-            vc_bool<AssignPolicy>,
+            ::Vc::VectorAlignment, ::Vc::float_v::Size, float_type::size,
+            bool_type,
             false, false, true>
         {};
 
-        template <typename AssignPolicy>
-        struct batch_traits<vc_int<AssignPolicy>> : batch_traits_builder<
+        template <>
+        struct batch_traits<int_type> : batch_traits_builder<
             ::Vc::int32_v,
             int32_t,
-            ::Vc::VectorAlignment, ::Vc::int32_v::Size, vc_int<AssignPolicy>::size,
-            vc_bool<AssignPolicy>,
+            ::Vc::VectorAlignment, ::Vc::int32_v::Size, int_type::size,
+            bool_type,
             false, true, false>
         {};
 
-        template <typename AssignPolicy>
-        struct batch_traits<vc_uint<AssignPolicy>> : batch_traits_builder<
+        template <>
+        struct batch_traits<uint_type> : batch_traits_builder<
             ::Vc::uint32_v,
             uint32_t,
-            ::Vc::VectorAlignment, ::Vc::uint32_v::Size, vc_uint<AssignPolicy>::size,
-            vc_bool<AssignPolicy>,
+            ::Vc::VectorAlignment, ::Vc::uint32_v::Size, uint_type::size,
+            bool_type,
             false, true, false>
         {};
 
-        template <typename AssignPolicy>
-        struct batch_traits<vc_bool<AssignPolicy>> : batch_traits_builder<
+        template <>
+        struct batch_traits<bool_type> : batch_traits_builder<
             ::Vc::float_m,
             bool,
-            ::Vc::VectorAlignment, ::Vc::float_m::Size, vc_bool<AssignPolicy>::size,
-            vc_bool<AssignPolicy>,
+            ::Vc::VectorAlignment, ::Vc::float_m::Size, bool_type::size,
+            bool_type,
             true, false, false>
         {};
-
-        // make sure single batch will get converted to "vec1" to have access to math functions
-
-        template <typename AssignPolicy>
-        struct get_vector_type_impl<vc_float<AssignPolicy>> : default_vector_type_impl<vc_float<AssignPolicy>>
-        {};
-        template <typename AssignPolicy>
-        struct get_vector_type_impl<vc_int<AssignPolicy>> : default_vector_type_impl< vc_int<AssignPolicy>>
-        {};
-        template <typename AssignPolicy>
-        struct get_vector_type_impl<vc_uint<AssignPolicy>> : default_vector_type_impl<vc_uint<AssignPolicy>>
-        {};
-        template <typename AssignPolicy>
-        struct get_vector_type_impl<vc_bool<AssignPolicy>> : default_vector_type_impl<vc_bool<AssignPolicy>>
-        {};
     }
+
     // free functions needed for wrappers to work
 
     template <typename T>
@@ -93,7 +68,7 @@ namespace swizzle
         return result;
     }
 
-    template <typename To, typename From> 
+    template <typename To, typename From>
     inline ::Vc::Vector<To> batch_cast(const ::Vc::Vector<From>& value)
     {
         return ::Vc::Vector<To>(value);
@@ -126,9 +101,36 @@ namespace swizzle
     {
         value.store(data, Vc::Aligned);
     }
-    /*}*/
-}
 
+    template <size_t Index, typename ResultType>
+    inline void batch_masked_read_internal(const ::Vc::Vector<ResultType>& mask, ::Vc::Vector<ResultType>& result)
+    {}
+
+    template <size_t Index, typename ResultType, typename... Types>
+    inline void batch_masked_read_internal(const ::Vc::Vector<ResultType>& mask, ::Vc::Vector<ResultType>& result, const ::Vc::Vector<ResultType>& vec, Types&&... types)
+    {
+        result.assign(vec, (mask == Index));
+        batch_masked_read_internal<Index + 1>(mask, result, std::forward<Types>(types)...);
+    }
+
+    template <typename MaskType, typename ResultType, typename... Types>
+    inline void batch_masked_read(const ::Vc::Vector<MaskType>& mask, ::Vc::Vector<ResultType>& result, Types&&... types)
+    {
+        batch_masked_read_internal<0, ResultType>(simd_cast<::Vc::Vector<ResultType>>(mask), result, std::forward<Types>(types)...);
+    }
+
+    template <typename T>
+    inline void batch_assign(::Vc::Vector<T>& target, const ::Vc::Vector<T>& src)
+    {
+        target = src;
+    }
+
+    template <typename T>
+    inline void batch_assign(::Vc::Mask<T>& target, const ::Vc::Mask<T>& src)
+    {
+        target = src;
+    }
+}
 
 // Vc generally supports it all, but it lacks some crucial functions.
 namespace Vc_VERSIONED_NAMESPACE
@@ -231,28 +233,6 @@ namespace Vc_VERSIONED_NAMESPACE
         return x * (3.14159265358979323846f / 180.0f);
     }
 
-
-#if Vc_IMPL_AVX 
-    template <typename T>
-    inline Vector<T> dFdx(const Vector<T>& x)
-    {
-        // this assumes vectors are row major and there are 2 rows
-        auto data = x.data();
-        float_v low = Mem::shuffle<X0, X0, X2, X2, Y4, Y4, Y6, Y6>(data, data);
-        float_v high = Mem::shuffle<X1, X1, X3, X3, Y5, Y5, Y7, Y7>(data, data);
-        return high - low;
-    }
-
-    template <typename T>
-    inline Vector<T> dFdy(const Vector<T>& x)
-    {
-        // this assumes vectors are row major and there are 2 rows
-        auto data = x.data();
-        float_v low = Mem::shuffle<X0, X1, X2, X3, Y0, Y1, Y2, Y3>(data, data);
-        float_v high = Mem::shuffle<X4, X5, X6, X7, Y4, Y5, Y6, Y7>(data, data);
-        return high - low;
-    }
-#elif Vc_IMPL_SSE
     template <typename T>
     inline Vector<T> dFdx(const Vector<T>& x)
     {
@@ -268,9 +248,15 @@ namespace Vc_VERSIONED_NAMESPACE
     {
         // this assumes vectors are row major and there are 2 rows
         auto data = x.data();
+#if Vc_IMPL_AVX 
+        float_v low = ::Vc::Mem::permute128<X0, X0>(data);
+        float_v high = ::Vc::Mem::permute128<X1, X1>(data);
+#else
         float_v low = Mem::shuffle<X0, X1, Y0, Y1>(data, data);
         float_v high = Mem::shuffle<X2, X3, Y2, Y3>(data, data);
+#endif
         return high - low;
     }
-#endif
 }
+
+#include <swizzle/detail/setup_common.hpp>

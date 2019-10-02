@@ -3,27 +3,27 @@
 #pragma once
 
 // uncomment this if you want proxies to be passable as inout and out parameters
-// #define CXXSWIZZLE_VECTOR_INOUT_WRAPPER_ENABLED
+// #define CXXSWIZZLE_inout_wrapper_ENABLED
 
-#include <type_traits>
-#include <swizzle/glsl/scalar_support.h>
-#include <cstdint>
+#include <swizzle/setup_scalar.hpp>
 
-using batch_float_t = swizzle::detail::simd_float;
-using batch_int_t = swizzle::detail::simd_int32;
-using batch_uint_t = swizzle::detail::simd_uint32;
-using batch_bool_t = swizzle::detail::simd_bool;
+using batch_float_t = swizzle::float_type;
+using batch_int_t = swizzle::int_type;
+using batch_uint_t = swizzle::uint_type;
+using batch_bool_t = swizzle::bool_type;
 
-namespace swizzle
-{
-    namespace detail
-    {
-        template <> struct get_vector_type_impl<float> : default_vector_type_impl<batch_float_t> {};
-        template <> struct get_vector_type_impl<double> : default_vector_type_impl<batch_float_t> {};
-        template <> struct get_vector_type_impl<int> : default_vector_type_impl<batch_int_t> {};
-        template <> struct get_vector_type_impl<uint32_t> : default_vector_type_impl<batch_uint_t> {};
-    }
-}
+//namespace swizzle
+//{
+//    namespace detail
+//    {
+//        template <> struct get_vector_type_impl<float> : default_vector_type_impl<batch_float_t> {};
+//        template <> struct get_vector_type_impl<double> : default_vector_type_impl<batch_float_t> {};
+//        template <> struct get_vector_type_impl<int> : default_vector_type_impl<batch_int_t> {};
+//        template <> struct get_vector_type_impl<uint32_t> : default_vector_type_impl<batch_uint_t> {};
+//        template <> struct get_vector_type_impl<batch_bool_t> : default_vector_type_impl<batch_bool_t>
+//        {};
+//    }
+//}
 
 
 //

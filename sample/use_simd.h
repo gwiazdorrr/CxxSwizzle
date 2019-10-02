@@ -4,7 +4,7 @@
 
 // VC need to come first or else VC is going to complain.
 #include <Vc/vector.h>
-#include <swizzle/glsl/simd_support_vc.h>
+#include <swizzle/setup_simd_vc.hpp>
 // need to include scalars as well because we don't need literals
 // to use simd (like sin(1))
 // #include <swizzle/glsl/scalar_support.h>
@@ -22,24 +22,14 @@ CXXSWIZZLE_WRITE_MASK_SCOPE_STORAGE(pusher);
 typedef ::swizzle::detail::write_mask_assign_policy<pusher> assign_policy_type;
 
 #else
-typedef ::swizzle::default_assign_policy assign_policy_type;
+//typedef ::swizzle::default_assign_policy assign_policy_type;
 
 #endif
 
-using batch_float_t = swizzle::detail::vc_float<assign_policy_type>;
-using batch_int_t = swizzle::detail::vc_int<assign_policy_type>;
-using batch_uint_t = swizzle::detail::vc_uint<assign_policy_type>;
-using batch_bool_t = swizzle::detail::vc_bool<assign_policy_type>; 
-
-namespace swizzle
-{
-    namespace detail
-    {
-        template <> struct get_vector_type_impl<float> : get_vector_type_impl<batch_float_t> {};
-        template <> struct get_vector_type_impl<double> : get_vector_type_impl<batch_float_t> {};
-        template <> struct get_vector_type_impl<int> : get_vector_type_impl<batch_int_t> {};
-    }
-}
+using batch_float_t = swizzle::float_type;
+using batch_int_t = swizzle::int_type;
+using batch_uint_t = swizzle::uint_type;
+using batch_bool_t = swizzle::bool_type;
 
 //template <typename T>
 //inline void batch_store_aligned(const Vc::Vector<T>& value, T* target)
