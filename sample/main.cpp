@@ -192,10 +192,10 @@ namespace glsl_sandbox
     
     struct fragment_shader_uniforms
     {
-        vec2 iResolution;
-        batch_float_t iTime;
-        vec3 iMouse;
+        float iTime;
         int iFrame;
+        vec2 iResolution;
+        vec4 iMouse;
     };
 
     struct fragment_shader : fragment_shader_uniforms
@@ -393,19 +393,31 @@ T* align_ptr(T* ptr)
 //}
 
 
-static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface* bmp, const std::atomic_bool& cancelled)
+struct render_stats
 {
-    //debug_print(uniforms.iTime);
+    std::chrono::microseconds duration;
+    size_t num_pixels;
+    int num_threads;
+};
 
+static render_stats render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface* bmp, const std::atomic_bool& cancelled)
+{
     float f = float(0x1000);
     using ::swizzle::detail::static_for;
 
+    constexpr auto pixels_per_batch = float_traits::size;
+    static_assert(pixels_per_batch == 1 || pixels_per_batch % 2 == 0, "1 or even scalar count");
+    constexpr auto columns_per_batch = pixels_per_batch > 1 ? pixels_per_batch / 2 : 1;
+    constexpr auto rows_per_batch = pixels_per_batch > 1 ? 2 : 1;
 
-    //debug_print(uniforms.iTime);
+    auto render_begin = std::chrono::steady_clock::now();
 
 	// if there are more than 1 scalars in a vector, work on two rows with half width at the same time
     batch_float_t x_offsets(0);
 	batch_float_t y_offsets(0);
+
+    std::atomic<size_t> num_pixels = 0;
+    std::atomic<int> num_threads = 0;
 
     {
         float_traits::aligned_storage_type aligned_storage;
@@ -417,7 +429,7 @@ static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface*
 		static_for<0, float_traits::size>([&](size_t i) { aligned[i] = static_cast<float>(1 - i / columns_per_batch); });
         load_aligned(y_offsets, aligned);
     }
-
+  
 #if !defined(_DEBUG) && OMP_ENABLED
 #pragma omp parallel 
     {
@@ -425,6 +437,11 @@ static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface*
         // if rows_per_batch > 1
         int threads_count = omp_get_num_threads();
         int thread_num = omp_get_thread_num();
+
+        if (thread_num == 0)
+        {
+            num_threads = threads_count;
+        }
 
         // ceil
         int height_per_thread = (bmp->h + threads_count - 1) / threads_count;
@@ -440,6 +457,7 @@ static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface*
     {
         int height_start = 0;
         int height_end = bmp->h;
+        num_threads = 1;
 #endif
 
         //debug_print(uniforms.iTime);
@@ -462,8 +480,9 @@ static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface*
             batch_float_t fy = static_cast<float>(bmp->h - 1 - y) + y_offsets;
 
             uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch;
-            
-            for (int x = 0; x < bmp->w; x += columns_per_batch)
+
+            int x;
+            for (x = 0; x < bmp->w; x += columns_per_batch)
             {
                 glsl_sandbox::fragment_shader shader;
                 static_cast<glsl_sandbox::fragment_shader_uniforms&>(shader) = uniforms;
@@ -482,13 +501,6 @@ static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface*
                 // convert to [0;255]
                 auto color = glsl_sandbox::clamp(shader.gl_FragColor, c_zero, c_one);
                 color *= 255.0f + 0.5f;
-                //debug_print(color.x);
-                //debug_print(color.y);
-
-                //vec4 color(255.0f, 0.0f, 0.0f, 1.0f);
-                /*::Vc::float_v a;
-                a.data()*/
-
 
                 store_aligned(static_cast<batch_uint_t>(color.r), pr);
                 store_aligned(static_cast<batch_uint_t>(color.g), pg);
@@ -536,21 +548,26 @@ static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface*
 
                 ptr += 3 * columns_per_batch;
             }
+
+            num_pixels += x * rows_per_batch;
         }
     }
-  }
 
-static std::chrono::microseconds render_timed(glsl_sandbox::fragment_shader_uniforms& uniforms, SDL_Surface* bmp, const std::atomic_bool& cancelled)
-{
-    //debug_print(uniforms.iTime);
-    //printf("\n\n%hd\n\n", uniforms.wtfffff);
-    auto begin = std::chrono::steady_clock::now();
-    render(uniforms, bmp, cancelled);
-    auto end = std::chrono::steady_clock::now();
-    return std::chrono::duration_cast<std::chrono::microseconds>(end - begin);
+    return render_stats { std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - render_begin), num_pixels, num_threads };
 }
 
 
+
+
+#define STR1(x) #x
+#define STR2(x) STR1(x)
+#define VT100_CLEARLINE "\33[2K"
+#define VT100_UP(x)     "\33[" STR2(x) "A"
+#define VT100_DOWN(x)   "\33[" STR2(x) "B"
+#define STATS_LINES 11
+
+const double seconds_to_micro = 1000000.0;
+const double micro_to_seconds = 1 / seconds_to_micro;
 
 int main(int argc, char* argv[])
 {
@@ -562,7 +579,7 @@ int main(int argc, char* argv[])
     int initted = IMG_Init(flags);
     if ((initted & flags) != flags) 
     {
-        cerr << "WARNING: failed to initialize required jpg and png support: " << IMG_GetError() << endl;
+        fprintf(stderr, "WARNING: failed to initialize required jpg and png support: %s\n", IMG_GetError());
     }
 #endif
 
@@ -576,33 +593,37 @@ int main(int argc, char* argv[])
         s << argv[1];
         if ( !(s >> initial_resolution) )
         {
-            cerr << "ERROR: unable to parse resolution argument" << endl;
+            fprintf(stderr, "ERROR: unable to parse resolution argument\n");
             return 1;
         }
     }
 
     if ( initial_resolution.x <= 0 || initial_resolution.y < 0 )
     {
-        cerr << "ERROR: invalid resolution: " << initial_resolution  << endl;
+        fprintf(stderr, "ERROR: invalid resolution: %dx%d\n", initial_resolution.x, initial_resolution.y);
         return 1;
     }
 
-    cout << "\n";
-    cout << "+/-   - increase/decrease time scale\n";
-    cout << "lmb   - update glsl_sandbox::mouse\n";
-    cout << "space - blit now! (show incomplete render)\n";
-    cout << "esc   - quit\n\n";
+    printf("p           - pause/unpause\n");
+    printf("left arrow  - decrease time by 1 s\n");
+    printf("right arrow - increase time by 1 s\n");
+    printf("lmb         - update mouse\n");
+    printf("space       - blit now! (show incomplete render)\n");
+    printf("esc         - quit\n");
+    printf("\n");
 
     // initial setup
 	SDL_SetMainReady();
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
-        cerr << "Unable to init SDL" << endl;
+        fprintf(stderr, "ERROR: Unable to init SDL\n");
         return 1;
     }
 
     try 
-    {
+    { 
+        printf(VT100_DOWN(STATS_LINES));
+
         auto window = make_unique_with_deleter<SDL_Window>(SDL_CreateWindow("CxxSwizzle sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
             initial_resolution.x, initial_resolution.y, SDL_WINDOW_RESIZABLE), SDL_DestroyWindow);
         auto renderer = make_unique_with_deleter<SDL_Renderer>(SDL_CreateRenderer(window.get(), -1, 0), SDL_DestroyRenderer);
@@ -625,47 +646,45 @@ int main(int argc, char* argv[])
 
         resize_or_create_surface(initial_resolution.x, initial_resolution.y);
         
-        double time_scale = 1.0;
-        int frame = 0;
+        int num_frames = 0;
+        float time_scale = 1.0;
         float time = 0.0f;
-        float current_frame_time = 0.0f;
-        vec2 mouse_position(0.0f, 0.0f);
+        float current_frame_timestamp = 0.0f;
+        int mouse_x = 0, mouse_y = 0;
         bool pending_resize = false;
         bool mouse_pressed = false;
 
+        render_stats last_render_stats = { };
+        float last_frame_timestamp = 0.0f;
+
+        std::chrono::microseconds fps_frames_duration = {};
+        int fps_frames_num = 0;
+        double current_fps = 0;
+
         std::atomic_bool abort_render_token = false;
-        glsl_sandbox::fragment_shader_uniforms uniforms;
 
-        auto renderAsync = [&](float time) -> std::future<std::chrono::microseconds>
+        auto renderAsync = [&]() -> std::future<render_stats>
         {
-            uniforms = {};
-
             abort_render_token = false;
             auto s = target_surface.get();
+
+            glsl_sandbox::fragment_shader_uniforms uniforms = {};
             uniforms.iTime = time;
-            
-            uniforms.iFrame = frame;
-            uniforms.iResolution = vec2(static_cast<batch_float_t>(s->w), static_cast<batch_float_t>(s->h));
-            uniforms.iMouse.xy = mouse_position / uniforms.iResolution;
-            uniforms.wtfffff = 7777;
-            glsl_sandbox::fragment_shader_uniforms copppy = uniforms;
+            uniforms.iFrame = num_frames;
+            uniforms.iResolution = vec2(static_cast<float>(s->w), static_cast<float>(s->h));
+            uniforms.iMouse.x = mouse_x / static_cast<float>(s->w);
+            uniforms.iMouse.y = mouse_y / static_cast<float>(s->h);
+            uniforms.iMouse.z = mouse_pressed ? 1.0f : 0.0f;
+            uniforms.iMouse.w = 0.0f;
 
-            //debug_print(uniforms.iTime);
-            //debug_print(copppy.iTime);
-
-
-            return std::async(render_timed, std::ref(uniforms), s, std::ref(abort_render_token));
+            return std::async(render, uniforms, s, std::ref(abort_render_token));
         };
 
-        std::future<std::chrono::microseconds> render_task = renderAsync(0.0f);
-        std::chrono::microseconds last_render_duration;
-        auto begin = std::chrono::steady_clock::now();
-        auto frame_begin = std::chrono::steady_clock::now();
-        auto micro_to_seconds = 1 / 1000000.0;
-
-        for (;;)
+        std::future<render_stats> render_task = renderAsync();
+        
+        for (auto update_begin = chrono::steady_clock::now();;)
         {
-            bool blitNow = false;
+            bool blit_now = false;
             bool quit = false;
 
             // process events
@@ -693,19 +712,23 @@ int main(int argc, char* argv[])
                     switch ( event.key.keysym.sym ) 
                     {
                     case SDLK_SPACE:
-                        blitNow = true;
+                        blit_now = true;
                         break;
                     case SDLK_ESCAPE:
                         {
                             abort_render_token = quit = true;
                         }
                         break;
-                    case SDLK_PLUS:
-                    case SDLK_EQUALS:
-                        time_scale *= 2.0;
+                    case SDLK_f:
                         break;
-                    case SDLK_MINUS:
-                        time_scale /= 2.0;
+                    case SDLK_p:
+                        time_scale = (time_scale > 0 ? 0.0f : 1.0f);
+                        break;
+                    case SDLK_LEFT:
+                        time = std::max(0.0f, time - 1.0f);
+                        break;
+                    case SDLK_RIGHT:
+                        time += 1.0f;
                         break;
                     default:
                         break;
@@ -714,14 +737,14 @@ int main(int argc, char* argv[])
                 case SDL_MOUSEMOTION:
                     if (mouse_pressed)
                     {
-                        mouse_position.x = static_cast<float>(event.button.x);
-                        mouse_position.y = static_cast<float>(target_surface->h - 1 - event.button.y);
+                        mouse_x = event.button.x;
+                        mouse_y = target_surface->h - 1 - event.button.y;
                     }
                     break;
                 case SDL_MOUSEBUTTONDOWN:
                     mouse_pressed = true;
-                    mouse_position.x = static_cast<float>(event.button.x);
-                    mouse_position.y = static_cast<float>(target_surface->h - 1 - event.button.y);
+                    mouse_x = event.button.x;
+                    mouse_y = target_surface->h - 1 - event.button.y;
                     break;
                 case SDL_MOUSEBUTTONUP:
                     mouse_pressed = false;
@@ -747,13 +770,13 @@ int main(int argc, char* argv[])
                     resize_or_create_surface(w, h);
                     pending_resize = false;
 
-                    render_task = renderAsync(current_frame_time = time);
-                    frame_begin = std::chrono::steady_clock::now();
+                    current_frame_timestamp = time;
+                    render_task = renderAsync();
                 }
             }
             else
             {
-                if (blitNow || frameReady)
+                if (blit_now || frameReady)
                 {
                     SDL_UpdateTexture(target_texture.get(), NULL, target_surface->pixels, target_surface->pitch);
                     SDL_RenderClear(renderer.get());
@@ -763,45 +786,58 @@ int main(int argc, char* argv[])
 
                 if (frameReady)
                 {
-                    ++frame;
-                    last_render_duration = render_task.get();
-                    render_task = renderAsync(current_frame_time = time);
-                    frame_begin = std::chrono::steady_clock::now();
+                    ++num_frames;
+                    last_render_stats = render_task.get();
+                    last_frame_timestamp = current_frame_timestamp;
+
+                    // update fps
+                    ++fps_frames_num;
+                    fps_frames_duration += last_render_stats.duration;
+                    if (fps_frames_duration >= std::chrono::seconds(1))
+                    {
+                        current_fps = fps_frames_num / (fps_frames_duration.count() * micro_to_seconds);
+                        fps_frames_num = 0;
+                        fps_frames_duration = {};
+                    }
+
+                    current_frame_timestamp = time;
+                    render_task = renderAsync();
                 }
             }
             
-
-            // clear line
-
+            // update timers
             auto now = chrono::steady_clock::now();
-            
-            auto delta = chrono::duration_cast<chrono::microseconds>(now - begin);
+            auto delta = chrono::duration_cast<chrono::microseconds>(now - update_begin);
             time += static_cast<float>(delta.count() * micro_to_seconds * time_scale);
-            begin = chrono::steady_clock::now();
-
-            printf("\33[4A\r");
-
-            printf("\33[2Kframe:       %d\n", frame);
-            printf("\33[2Ktime:        %f s\n", current_frame_time);
-            printf("\33[2Kfps:         %lf\n", 1.0 / (last_render_duration.count() * micro_to_seconds));
-            printf("\33[2Kresolution:  %dx%d\n", target_surface->w, target_surface->h);
-
+            update_begin = now;
             
-            //printf("\33[2Kcurrent frame render time:  %lf s\n", chrono::duration_cast<chrono::microseconds>(now - frame_begin).count() * micro_to_seconds);
-            cout.flush();
+            printf(VT100_UP(STATS_LINES) "\r");
+            printf(VT100_CLEARLINE "--- Last frame stats ---\n");
+            printf(VT100_CLEARLINE "timestamp:       %.2f s\n", last_frame_timestamp);
+            printf(VT100_CLEARLINE "duration:        %lg s\n", micro_to_seconds * last_render_stats.duration.count());
+            printf(VT100_CLEARLINE " - per pixel:    %lg ms\n", static_cast<double>(last_render_stats.duration.count()) / (last_render_stats.num_pixels));
+            printf(VT100_CLEARLINE "threads:         %d\n", last_render_stats.num_threads);
+            printf(VT100_CLEARLINE "\n");
+            printf(VT100_CLEARLINE "--- Player stats ---\n");
+            printf(VT100_CLEARLINE "time:            %.2f s%s\n", time, time_scale > 0 ? "" : " (paused)");
+            printf(VT100_CLEARLINE "frames:          %d\n", num_frames);
+            printf(VT100_CLEARLINE "resolution:      %dx%d\n", target_surface->w, target_surface->h);
+            printf(VT100_CLEARLINE "fps:             %lg\n", current_fps);
         }
 
         // wait for the render thread to stop
-        cout << "\nwaiting for the worker thread to finish...";
+
+
+        printf("\nwaiting for the worker thread to finish...");
         render_task.wait();
     } 
     catch ( exception& error ) 
     {
-        cerr << "ERROR: " << error.what() << endl;
+        fprintf(stderr, "ERROR: %s\n", error.what());
     } 
     catch (...) 
     {
-        cerr << "ERROR: Unknown error" << endl;
+        fprintf(stderr, "ERROR: Unknown error\n");
     }
 
     SDL_Quit();
