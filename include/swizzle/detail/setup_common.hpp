@@ -28,4 +28,5 @@ namespace swizzle
         template <> struct get_vector_type_impl<only_if<!std::is_same_v<uint_type, uint32_t>, uint32_t, __LINE__>> : get_vector_type_impl<uint_type> {};
         template <> struct get_vector_type_impl<only_if<!std::is_same_v<uint_type, uint64_t>, uint64_t, __LINE__>> : get_vector_type_impl<uint_type> {};
     }
+
 }

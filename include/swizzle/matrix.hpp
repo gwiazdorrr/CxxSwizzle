@@ -6,25 +6,26 @@
 #include <swizzle/detail/utils.h>
 #include <swizzle/detail/common_binary_operators.h> 
 #include <utility>
+#include <swizzle/vector.hpp>
 
 namespace swizzle
 {
-    template <template <class, size_t> class VectorType, class ScalarType, size_t NumRows, size_t... Columns >
+    template <class ScalarType, size_t NumRows, size_t... Columns >
     struct matrix_;
 
     namespace detail
     {
-        template <template <class, size_t> class VectorType, class ScalarType, size_t NumRows, size_t... Columns> 
-        matrix_<VectorType, ScalarType, NumRows, Columns...> make_matrix_type_helper(std::index_sequence<Columns...>);
+        template <class ScalarType, size_t NumRows, size_t... Columns> 
+        matrix_<ScalarType, NumRows, Columns...> make_matrix_type_helper(std::index_sequence<Columns...>);
     }
 
-    template <template <class, size_t> class VectorType, class ScalarType, size_t NumRows, size_t NumColumns>
-    using matrix = decltype(detail::make_matrix_type_helper<VectorType, ScalarType, NumRows>(std::make_index_sequence<NumColumns>{}));
+    template <class ScalarType, size_t NumRows, size_t NumColumns>
+    using matrix = decltype(detail::make_matrix_type_helper<ScalarType, NumRows>(std::make_index_sequence<NumColumns>{}));
 
     //! A naive matrix implementation.
     //! Stores data as an array of vertices.
-    template <template <class, size_t> class VectorType, class ScalarType, size_t NumRows, size_t... Columns >
-    struct matrix_ : detail::common_binary_operators<matrix_<VectorType, ScalarType, NumRows, Columns...>, ScalarType>
+    template <class ScalarType, size_t NumRows, size_t... Columns >
+    struct matrix_ : detail::common_binary_operators<matrix_<ScalarType, NumRows, Columns...>, ScalarType>
     {
     public:
         static const size_t num_rows = NumRows;
@@ -33,8 +34,8 @@ namespace swizzle
         static_assert(num_rows > 1 && num_columns > 1, "1");
 
         typedef matrix_ matrix_type;
-        typedef VectorType<ScalarType, num_columns> row_type;
-        typedef VectorType<ScalarType, num_rows> column_type;
+        typedef vector<ScalarType, num_columns> row_type;
+        typedef vector<ScalarType, num_rows> column_type;
         typedef ScalarType scalar_type;
 
     // CONSTRUCTION
@@ -218,9 +219,9 @@ namespace swizzle
             return data[col][row];
         }
 
-        inline friend matrix<VectorType, ScalarType, num_columns, num_rows> transpose(const matrix_type& m)
+        inline friend matrix<ScalarType, num_columns, num_rows> transpose(const matrix_type& m)
         {
-            return matrix<VectorType, ScalarType, num_columns, num_rows>::make_transposed(m);
+            return matrix<ScalarType, num_columns, num_rows>::make_transposed(m);
         }
 
         //! Matrix-vector multiplication.
@@ -231,11 +232,11 @@ namespace swizzle
 
         //! Matrix-matrix multiplication.
         template <size_t OtherNumRows>
-        static matrix<VectorType, ScalarType, OtherNumRows, num_columns> mul(const matrix<VectorType, ScalarType, OtherNumRows, num_rows>& m1, const matrix_type& m2)
+        static matrix<ScalarType, OtherNumRows, num_columns> mul(const matrix<ScalarType, OtherNumRows, num_rows>& m1, const matrix_type& m2)
         {
             // TODO: questionable
             auto tr = transpose(m1);
-            return matrix<VectorType, ScalarType, OtherNumRows, num_columns>((m2.column(Columns) * tr)...);
+            return matrix<ScalarType, OtherNumRows, num_columns>((m2.column(Columns) * tr)...);
         }
 
         //! Matrix-vector multiplication.
@@ -267,7 +268,7 @@ namespace swizzle
 
         //! Vector fallback setter, when CellIdx is not aligned
         template <size_t CellIdx, class VectorScalarType, size_t VectorSize>
-        typename std::enable_if<CellIdx % num_rows != 0 || VectorSize != num_rows, void>::type compose(const VectorType<VectorScalarType, VectorSize>& v)
+        typename std::enable_if<CellIdx % num_rows != 0 || VectorSize != num_rows, void>::type compose(const vector<VectorScalarType, VectorSize>& v)
         {
             // do not go over the matrix size!
             const size_t c_limit = (CellIdx + VectorSize > num_rows * num_columns) ? (num_rows * num_columns) : (CellIdx + VectorSize);
@@ -284,7 +285,7 @@ namespace swizzle
         std::array< column_type, num_columns > data; 
     };
 
-    //template <template <class, size_t> class VectorType, class ScalarType, size_t M, size_t NumRows, size_t OtherNumColumns>
+    //template <class ScalarType, size_t M, size_t NumRows, size_t OtherNumColumns>
     //matrix<VectorType, ScalarType, NumRows, OtherNumColumns> operator*(const matrix<VectorType, ScalarType, N, M>& m1, const matrix<VectorType, ScalarType, M, OtherNumColumns>& m2 )
     //{
     //    return m1.mul(m1, m2);

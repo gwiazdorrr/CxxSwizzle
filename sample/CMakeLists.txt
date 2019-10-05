@@ -9,7 +9,7 @@ if (USE_VCPKG)
 else()
 	set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 	find_package(SDL2 REQUIRED)
-	# find_package(SDL2_image REQUIRED)
+	find_package(SDL2_image)
 endif()
 
 if (USE_OPENMP)
@@ -35,7 +35,7 @@ endif()
 # get all the shaders
 file(GLOB shaders RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag")
 
-source_group("" FILES main.cpp use_scalar.h use_simd.h use_simd_masked.h )
+source_group("" FILES main.cpp glsl_sandbox.hpp use_scalar.h use_simd.h use_simd_masked.h shader_include.hpp config.hpp )
 # source_group("shaders" FILES ${shaders})
 
 macro(create_sample_internal prefix defines header useVcLib)
@@ -45,13 +45,16 @@ macro(create_sample_internal prefix defines header useVcLib)
 		set(name ${prefix}_${shader_sanitized})
 
 		set(generated_include_dir "${CMAKE_CURRENT_BINARY_DIR}/${name}_gen")
-		set(generated_path "${generated_include_dir}/shader.frag")
+		set(generated_shader_path "${generated_include_dir}/shader_include.hpp")
+		set(generated_config_path "${generated_include_dir}/config.hpp")
 
+
+		configure_file("config.hpp.in" "${generated_config_path}")
 		set(CMAKE_CONFIGURABLE_FILE_CONTENT "#include \"${shader}\"")
-		configure_file("${CMAKE_ROOT}/Modules/CMakeConfigurableFile.in" "${generated_path}" @ONLY)
+		configure_file("${CMAKE_ROOT}/Modules/CMakeConfigurableFile.in" "${generated_shader_path}" @ONLY)
 		unset(CMAKE_CONFIGURABLE_FILE_CONTENT)
 
-	  	add_executable (${name} main.cpp ${header} ${shader} ${generated_path})
+	  	add_executable (${name} main.cpp glsl_sandbox.hpp ${header} ${shader} ${generated_shader_path} ${generated_config_path})
 		target_include_directories(${name} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include ${generated_include_dir})
 
 		if (USE_VCPKG)
@@ -62,13 +65,24 @@ macro(create_sample_internal prefix defines header useVcLib)
 
 		set_target_properties(${name} PROPERTIES CXX_STANDARD 17)
 		set_target_properties(${name} PROPERTIES CXX_STANDARD_REQUIRED ON)
-		set_target_properties(${name} PROPERTIES COMPILE_FLAGS "${COMMON_DEFINES} ${defines}")
+		
 
 		if (${useVcLib})
 			target_link_libraries("${name}" PRIVATE ${Vc_LIBRARIES})
 			target_include_directories("${name}" PRIVATE ${Vc_INCLUDE_DIR})
 			add_dependencies("${name}" Vc)
 		endif()
+
+		set (SDL_DEFINES "")
+		if(SDLIMAGE_FOUND)
+			include_directories("${name}" PRIVATE ${SDL2_IMAGE_INCLUDE_DIRS})
+			target_link_libraries("${name}" PRIVATE ${SDL2_IMAGE_LIBRARIES})
+			set(SDL_DEFINES "-DSDLIMAGE_FOUND")
+		else()
+			message(WARNING "SDL_image not found, loading textures not going to be available.")
+		endif()
+
+		set_target_properties(${name} PROPERTIES COMPILE_FLAGS "${COMMON_DEFINES} ${defines} ${SDL_DEFINES}")
 
 	endforeach()
 endmacro()

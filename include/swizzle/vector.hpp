@@ -10,17 +10,16 @@
 #include <swizzle/detail/utils.h>
 #include <swizzle/detail/vector_storage.hpp>
 #include <swizzle/detail/indexed_vector_iterator.h>
-#include <swizzle/glsl/vector_helper.hpp>
+#include <swizzle/detail/vector_base_type.hpp>
 
 
 namespace swizzle
 {
     template <typename ScalarType, size_t... Index>
-    struct vector_  : detail::vector_build_info<ScalarType, sizeof...(Index)>::base_type
+    struct vector_  : detail::vector_base_type<ScalarType, sizeof...(Index)>
     {
     public:
-        using build_info = detail::vector_build_info<ScalarType, sizeof...(Index)>;
-        using storage_type = typename build_info::base_type;
+        using base_type = detail::vector_base_type<ScalarType, sizeof...(Index)>;
 
         using this_type = vector_;
         using this_type_arg = const this_type&;
@@ -28,26 +27,31 @@ namespace swizzle
         using scalar_type = ScalarType;
         using scalar_arg = const scalar_type&;
 
-        using number_scalar_arg = detail::only_if< build_info::is_number, scalar_arg >;
-        using number_vector_arg = detail::only_if< build_info::is_number, this_type_arg >;
-        
-        using float_scalar_arg = detail::only_if< build_info::is_floating_point, scalar_arg >;
-        using float_vector_arg = detail::only_if< build_info::is_floating_point, this_type_arg >;
+        static const bool scalar_is_bool = detail::batch_traits<ScalarType>::is_bool;
+        static const bool scalar_is_integral = detail::batch_traits<ScalarType>::is_integral;
+        static const bool scalar_is_floating_point = detail::batch_traits<ScalarType>::is_floating_point;
+        static const bool scalar_is_number = scalar_is_integral || scalar_is_floating_point;
 
-        using bool_type = typename build_info::bool_type;
+        using number_scalar_arg = detail::only_if< scalar_is_number, scalar_arg >;
+        using number_vector_arg = detail::only_if< scalar_is_number, this_type_arg >;
+        
+        using float_scalar_arg = detail::only_if< scalar_is_floating_point, scalar_arg >;
+        using float_vector_arg = detail::only_if< scalar_is_floating_point, this_type_arg >;
+
+        using bool_type = typename detail::batch_traits<ScalarType>::bool_type;
         using bool_vector_type = vector_<bool_type, Index...>;
-        using bool_scalar_arg = detail::only_if< build_info::is_bool, this_type_arg >;
-        using bool_vector_arg = detail::only_if< build_info::is_bool, this_type_arg >;
+        using bool_scalar_arg = detail::only_if< scalar_is_bool, this_type_arg >;
+        using bool_vector_arg = detail::only_if< scalar_is_bool, this_type_arg >;
 
         using literal_arg = std::conditional_t<
-            std::is_fundamental_v<scalar_type> || !build_info::is_number,
+            std::is_fundamental_v<scalar_type> || !scalar_is_number,
             detail::operation_not_available,
-            std::conditional_t< build_info::is_floating_point, float, int >
+            std::conditional_t< scalar_is_floating_point, float, int >
         >;
 
         //! Get the real, real internal scalar type. Useful when scalar visible
         //! externally is different than the internal one (well, hello SIMD)
-        using internal_scalar_type = std::remove_reference_t<decltype(std::declval<storage_type>().data[0])>;
+        using internal_scalar_type = std::remove_reference_t<decltype(std::declval<base_type>().data[0])>;
 
         static const size_t num_of_components = sizeof...(Index);
         static const bool are_scalar_types_same = std::is_same_v< internal_scalar_type, scalar_type>;
@@ -93,7 +97,7 @@ namespace swizzle
         }
 
         //! Implicit from double (for stuff like cos(0.0) to work
-        inline vector_(detail::only_if<num_of_components == 1 && build_info::is_floating_point, double, __LINE__> s)
+        inline vector_(detail::only_if<num_of_components == 1 && scalar_is_floating_point, double, __LINE__> s)
         {
             ((at_rvalue(Index) = scalar_type(s)), ...);
         }
@@ -111,7 +115,7 @@ namespace swizzle
         }
 
         //! For vec2(0.0)
-        inline explicit vector_(detail::only_if<num_of_components != 1 && build_info::is_floating_point, double, __LINE__> s)
+        inline explicit vector_(detail::only_if<num_of_components != 1 && scalar_is_floating_point, double, __LINE__> s)
         {
             ((at_rvalue(Index) = scalar_type(s)), ...);
         }
@@ -237,7 +241,7 @@ namespace swizzle
 
         ////! For construction from double literal to work
         //template <size_t Index>
-        //void compose(detail::only_if<build_info::is_floating_point, double> v)
+        //void compose(detail::only_if<build_info::scalar_is_floating_point, double> v)
         //{
         //    compose<Index>(scalar_type(v));
         //}
@@ -484,14 +488,14 @@ namespace swizzle
         //    return result;
         //}
 
-        //static this_type call_intBitsToFloat(detail::only_if<build_info::is_floating_point, int_vector_type> value)
+        //static this_type call_intBitsToFloat(detail::only_if<build_info::scalar_is_floating_point, int_vector_type> value)
         //{
         //    this_type result;
         //    ((bitcast(value.data[Index], &result.data[Index])), ...);
         //    return result;
         //}
 
-        //static uint_vector_type call_uintBitsToFloat(detail::only_if<build_info::is_floating_point, uint_vector_type> value)
+        //static uint_vector_type call_uintBitsToFloat(detail::only_if<build_info::scalar_is_floating_point, uint_vector_type> value)
         //{
         //    this_type result;
         //    ((bitcast(value.data[Index], &result.data[Index])), ...);
@@ -657,14 +661,14 @@ namespace swizzle
         friend this_type operator/(literal_arg a, number_vector_arg_cond b) { return this_type(a/b.at(Index)...); }
 
 
-        inline detail::only_if<build_info::is_number, this_type> operator-() const
+        inline detail::only_if<scalar_is_number, this_type> operator-() const
         {
             this_type result;
             ((result.at_rvalue(Index) = -at(Index)), ...);
             return result;
         }
 
-        inline this_type& operator*=(const matrix<vector, scalar_type, num_of_components, num_of_components>& mat)
+        inline this_type& operator*=(const matrix<scalar_type, num_of_components, num_of_components>& mat)
         {
             return *this = mat.mul(*this, mat);
         }

@@ -249,11 +249,11 @@ namespace Vc_VERSIONED_NAMESPACE
         // this assumes vectors are row major and there are 2 rows
         auto data = x.data();
 #if Vc_IMPL_AVX 
-        float_v low = ::Vc::Mem::permute128<X0, X0>(data);
-        float_v high = ::Vc::Mem::permute128<X1, X1>(data);
+        float_v high = ::Vc::Mem::permute128<X0, X0>(data);
+        float_v low = ::Vc::Mem::permute128<X1, X1>(data);
 #else
-        float_v low = Mem::shuffle<X0, X1, Y0, Y1>(data, data);
-        float_v high = Mem::shuffle<X2, X3, Y2, Y3>(data, data);
+        float_v high = Mem::shuffle<X0, X1, Y0, Y1>(data, data);
+        float_v low = Mem::shuffle<X2, X3, Y2, Y3>(data, data);
 #endif
         return high - low;
     }
