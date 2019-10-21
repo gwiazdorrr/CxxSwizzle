@@ -198,8 +198,13 @@ struct render_stats
 
 vec4 shade(const fragment_shader_uniforms& uniforms, vec2 fragCoord);
 
-static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, const std::atomic_bool& cancelled)
+static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, swizzle::vector<int, 4> viewport, const std::atomic_bool& cancelled)
 {
+
+    swizzle::vector<int, 2> p_min(std::max(0, viewport.x), std::max(0, viewport.y));
+    swizzle::vector<int, 2> p_max(std::min(bmp->w, viewport.z), std::min(bmp->h, viewport.w));
+    p_max += p_min;
+
     float f = float(0x1000);
     using ::swizzle::detail::static_for;
 
@@ -242,19 +247,19 @@ static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, 
         }
 
         // ceil
-        int height_per_thread = (bmp->h + threads_count - 1) / threads_count;
+        int height_per_thread = ( (p_max.y - p_min.y) + threads_count - 1) / threads_count;
         height_per_thread = std::max(rows_per_batch, height_per_thread);
         int height_per_threadRem = height_per_thread % rows_per_batch;
 
         int height_start = thread_num * height_per_thread;
         int height_end = height_start + height_per_thread;
 
-        height_end = std::min(bmp->h, height_end);
+        height_end = std::min(p_max.y, height_end);
 
 #else
     {
-        int height_start = 0;
-        int height_end = bmp->h;
+        int height_start = p_min.y;
+        int height_end = p_max.y;
         num_threads = 1;
 #endif
 
@@ -275,25 +280,25 @@ static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, 
 
         for (int y = height_start; !cancelled && y < height_end; y += rows_per_batch)
         {
-            batch_float_t fy = static_cast<float>(bmp->h - 1 - y) + y_offsets;
+            batch_float_t frag_coord_y = static_cast<float>(bmp->h - 1 - y) + y_offsets;
 
-            uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch;
+            uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch + p_min.x * 3;
 
             int x;
-            for (x = 0; x < bmp->w; x += columns_per_batch)
+            for (x = p_min.x; x < p_max.x; x += columns_per_batch)
             {
-                auto color =  shade(uniforms, vec2(static_cast<float>(x) + x_offsets, fy));
+                auto color =  shade(uniforms, vec2(static_cast<float>(x) + x_offsets, frag_coord_y));
                 color *= 255.0f + 0.5f;
 
                 store_aligned(static_cast<batch_uint_t>(color.r), pr);
                 store_aligned(static_cast<batch_uint_t>(color.g), pg);
                 store_aligned(static_cast<batch_uint_t>(color.b), pb);
 
-                if (x > bmp->w - columns_per_batch || y > bmp->h - rows_per_batch)
+                if (x > p_max.x - columns_per_batch || y > p_max.y - rows_per_batch)
                 {
                     // slow case: parially out of the surface
-                    int max_rows = std::min<int>(bmp->h - y, rows_per_batch);
-                    int max_cols = std::min<int>(bmp->w - x, columns_per_batch);
+                    int max_rows = std::min<int>(p_max.y - y, rows_per_batch);
+                    int max_cols = std::min<int>(p_max.x - x, columns_per_batch);
 
                     for (int row = 0; row < max_rows; ++row)
                     {
@@ -398,6 +403,30 @@ bool load_texture(sampler2D& sampler, const char* name)
 #endif
 }
 
+template <typename T>
+bool from_string(const char* str, T& value)
+{
+    std::stringstream s;
+    s << str;
+    return !!(s >> value);
+}
+
+
+void print_help()
+{
+    printf("-r <width> <height>         set initial resolution\n");
+    printf("-w <x> <y> <width> <height> set initial viewport\n");
+    printf("-t <time>                   set initial time & pause\n");
+    printf("-h                          show this message\n");
+}
+
+int print_args_error()
+{
+    print_help();
+    return 1;
+}
+
+
 int main(int argc, char* argv[])
 {
     using namespace std;
@@ -412,26 +441,65 @@ int main(int argc, char* argv[])
     }
 #endif
 
-    // get initial resolution
-    swizzle::vector<int, 2> initial_resolution;
-    initial_resolution.x = 512;
-    initial_resolution.y = 512;
-    if (argc == 2)
+    swizzle::vector<int, 2> resolution(512, 512);
+    swizzle::vector<int, 4> viewport(0, 0, 0, 0);
+    float time = 0.0f;
+    float time_scale = 1.0f;
+    
+
+    for (int i = 1; i < argc; ++i)
     {
-        std::stringstream s;
-        s << argv[1];
-        if ( !(s >> initial_resolution) )
+        char* arg = argv[i];
+        if (!strcmp(arg, "-r"))
         {
-            fprintf(stderr, "ERROR: unable to parse resolution argument\n");
-            return 1;
+            if (i + 2 < argc && from_string(argv[++i], resolution.x) && from_string(argv[++i], resolution.y))
+            {
+            }
+            else
+            {
+                return print_args_error();
+            }
+        }
+        else if (!strcmp(arg, "-w"))
+        {
+            if (i + 4 < argc && from_string(argv[++i], viewport.x) && from_string(argv[++i], viewport.y) && from_string(argv[++i], viewport.z) && from_string(argv[++i], viewport.w))
+            {
+
+            }
+            else
+            {
+                return print_args_error();
+            }
+        }
+        else if (!strcmp(arg, "-t"))
+        {
+            if (i + 1 < argc && from_string(argv[++i], time))
+            {
+                time_scale = 0.0f;
+            }
+            else
+            {
+                return print_args_error();
+            }
+
+        }
+        else if (!strcmp(arg, "-h"))
+        {
+            print_help();
+            return 0;
         }
     }
 
-    if ( initial_resolution.x <= 0 || initial_resolution.y < 0 )
+    if (viewport.z == 0 || viewport.w == 0)
+        viewport = { 0, 0, resolution };
+
+    if (resolution.x <= 0 || resolution.y < 0 )
     {
-        fprintf(stderr, "ERROR: invalid resolution: %dx%d\n", initial_resolution.x, initial_resolution.y);
+        fprintf(stderr, "ERROR: invalid resolution: %dx%d\n", resolution.x, resolution.y);
         return 1;
     }
+
+
 
     printf("p           - pause/unpause\n");
     printf("left arrow  - decrease time by 1 s\n");
@@ -454,7 +522,7 @@ int main(int argc, char* argv[])
         printf(VT100_DOWN(STATS_LINES));
 
         auto window = make_unique_with_deleter<SDL_Window>(SDL_CreateWindow("CxxSwizzle sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-            initial_resolution.x, initial_resolution.y, SDL_WINDOW_RESIZABLE), SDL_DestroyWindow);
+            resolution.x, resolution.y, SDL_WINDOW_RESIZABLE), SDL_DestroyWindow);
         auto renderer = make_unique_with_deleter<SDL_Renderer>(SDL_CreateRenderer(window.get(), -1, 0), SDL_DestroyRenderer);
         auto target_surface = make_unique_with_deleter<SDL_Surface>(SDL_FreeSurface);
         auto target_texture = make_unique_with_deleter<SDL_Texture>(SDL_DestroyTexture);
@@ -471,13 +539,14 @@ int main(int argc, char* argv[])
             target_texture.reset(SDL_CreateTexture(renderer.get(), SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, w, h));
             if ( !target_texture )
                 throw std::runtime_error("Unable to create target_texture");
+
+            resolution.x = w;
+            resolution.y = h;
         };
 
-        resize_or_create_surface(initial_resolution.x, initial_resolution.y);
+        resize_or_create_surface(resolution.x, resolution.y);
         
         int num_frames = 0;
-        float time_scale = 1.0;
-        float time = 0.0f;
         float current_frame_timestamp = 0.0f;
         int mouse_x = 0, mouse_y = 0;
         bool pending_resize = false;
@@ -506,7 +575,7 @@ int main(int argc, char* argv[])
             uniforms.iMouse.z = mouse_pressed ? 1.0f : 0.0f;
             uniforms.iMouse.w = 0.0f;
 
-            return std::async(render, uniforms, s, std::ref(abort_render_token));
+            return std::async(render, uniforms, s, viewport, std::ref(abort_render_token));
         };
 
         std::future<render_stats> render_task = renderAsync();

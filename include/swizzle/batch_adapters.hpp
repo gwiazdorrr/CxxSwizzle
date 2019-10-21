@@ -166,7 +166,7 @@ namespace swizzle
         }
 
         // implement if you really need to.
-        CXXSWIZZLE_FORCE_INLINE operator bool() const { return (batch_collapse(at<Index>()) || ...); }
+        CXXSWIZZLE_FORCE_INLINE explicit operator bool() const { return (batch_collapse(at<Index>()) || ...); }
 
         CXXSWIZZLE_FORCE_INLINE friend this_type operator||(this_arg a, this_arg b) { return this_type(construct_tag{}, a.at<Index>() || b.at<Index>()...); }
         CXXSWIZZLE_FORCE_INLINE friend this_type operator&&(this_arg a, this_arg b) { return this_type(construct_tag{}, a.at<Index>() && b.at<Index>()...); }
@@ -308,6 +308,7 @@ namespace swizzle
 
         CXXSWIZZLE_FORCE_INLINE friend this_type min(this_arg x, this_arg y) { return this_type(construct_tag{}, min(x.at<Index>(), y.at<Index>())...); }
         CXXSWIZZLE_FORCE_INLINE friend this_type max(this_arg x, this_arg y) { return this_type(construct_tag{}, max(x.at<Index>(), y.at<Index>())...); }
+        CXXSWIZZLE_FORCE_INLINE friend this_type mix(this_arg x, this_arg y, const bool_type& a) { return this_type(construct_tag{}, mix(x.at<Index>(), y.at<Index>(), a.at<Index>())...); }
         CXXSWIZZLE_FORCE_INLINE friend this_type step(this_arg edge, this_arg x) { return this_type(construct_tag{}, step(edge.at<Index>(), x.at<Index>())...); }
         CXXSWIZZLE_FORCE_INLINE friend this_type smoothstep(this_arg edge0, this_arg edge1, this_arg x) { return smoothstep_helper(edge0, edge1, x); }
 

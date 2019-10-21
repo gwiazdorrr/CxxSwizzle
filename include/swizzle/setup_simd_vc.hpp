@@ -143,12 +143,13 @@ namespace Vc_VERSIONED_NAMESPACE
         return result;
     }
 
-    /*inline Vector<T> mix(const Vector<T>& x, const Vector<T>& y, const Vector<T>& a)
+    inline float_v mix(const float_v& x, const float_v& y, const float_m& a)
     {
-        auto result = Vector<T>::One();
-        result.setZero(x <= edge);
+        float_v result;
+        result(a) = y;
+        result(!a) = x;
         return result;
-    }*/
+    }
 
     template <typename T>
     inline Vector<T> pow(const Vector<T>& x, const Vector<T>& n)

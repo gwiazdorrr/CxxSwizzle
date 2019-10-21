@@ -134,6 +134,11 @@ namespace swizzle
         }
     }
 
+    inline float mix(float a, float b, bool val)
+    {
+        return val ? b : a;
+    }
+
     struct partial_derivatives_dont_work_for_scalars
     {};
 
