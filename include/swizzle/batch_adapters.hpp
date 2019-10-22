@@ -13,6 +13,15 @@ namespace swizzle
 {
     struct construct_tag {};
 
+    template <typename T>
+    struct batch_assign_policy
+    {
+        static void assign(T& target, const T& source)
+        {
+            target = source;
+        }
+    };
+
     template <typename DataType, typename PrimitiveType, size_t... Index>
     struct batch_base
     {
@@ -93,7 +102,7 @@ namespace swizzle
 
         CXXSWIZZLE_FORCE_INLINE void assign(const batch_base& other)
         {
-            (batch_assign(at<Index>(), other.at<Index>()),...);
+            (batch_assign_policy<DataType>::assign(at<Index>(), other.at<Index>()), ...);
         }
 
         CXXSWIZZLE_FORCE_INLINE void assign_fast(const batch_base& other)
@@ -104,7 +113,7 @@ namespace swizzle
         template <size_t Index>
         CXXSWIZZLE_FORCE_INLINE void assign_at(const data_type& other)
         {
-            batch_assign(at<Index>(), other);
+            batch_assign_policy<DataType>::assign(at<Index>(), other);
         }
 
         template <size_t Index>
@@ -168,6 +177,9 @@ namespace swizzle
 
         // implement if you really need to.
         CXXSWIZZLE_FORCE_INLINE explicit operator bool() const { return (batch_collapse(at<Index>()) || ...); }
+
+        CXXSWIZZLE_FORCE_INLINE explicit operator DataType() const { return at<0>(); }
+
 
         CXXSWIZZLE_FORCE_INLINE friend this_type operator||(this_arg a, this_arg b) { return this_type(construct_tag{}, a.at<Index>() || b.at<Index>()...); }
         CXXSWIZZLE_FORCE_INLINE friend this_type operator&&(this_arg a, this_arg b) { return this_type(construct_tag{}, a.at<Index>() && b.at<Index>()...); }

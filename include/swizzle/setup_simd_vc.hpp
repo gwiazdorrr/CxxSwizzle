@@ -10,6 +10,7 @@
 #include <swizzle/detail/fwd.hpp>
 #include <swizzle/detail/simd_mask.h>
 #include <swizzle/detail/vector_traits.h>
+#include <swizzle/detail/batch_write_mask.hpp>
 
 namespace swizzle
 {
@@ -124,12 +125,6 @@ namespace swizzle
     {
         target = src;
     }
-
-    template <typename T>
-    inline void batch_assign(::Vc::Mask<T>& target, const ::Vc::Mask<T>& src)
-    {
-        target = src;
-    }
 }
 
 // Vc generally supports it all, but it lacks some crucial functions.
@@ -145,9 +140,8 @@ namespace Vc_VERSIONED_NAMESPACE
 
     inline float_v mix(const float_v& x, const float_v& y, const float_m& a)
     {
-        float_v result;
+        float_v result = x;
         result(a) = y;
-        result(!a) = x;
         return result;
     }
 
@@ -156,7 +150,8 @@ namespace Vc_VERSIONED_NAMESPACE
     {
         //! Vc doesn't come with pow function, so we're gonna go
         //! with the poor man's version of it.
-        return exp(n * log(x));
+        Vector<T> result = exp(n * log(x));
+        return max(result, Vector<T>::Zero());
     }
 
     template <typename T>
@@ -176,7 +171,7 @@ namespace Vc_VERSIONED_NAMESPACE
     template <typename T>
     inline Vector<T> inversesqrt(const Vector<T>& x)
     {
-        return rsqrt(x);
+        return 1 / sqrt(x);
     }
 
     template <typename T>
@@ -208,19 +203,25 @@ namespace Vc_VERSIONED_NAMESPACE
         return sin(x) / cos(x);
     }
 
+    //! https://developer.download.nvidia.com/cg/acos.html
     template <typename T>
-    inline Vector<T> acos(const Vector<T>& x)
+    inline Vector<T> acos(const Vector<T>& _x)
     {
-        // silly acos that does store & load... I'm sorry
-        std::aligned_storage_t<x.Size * sizeof(T), x.MemoryAlignment> storage;
-        T* ptr = reinterpret_cast<T*>(&storage);
-        x.store(ptr, Aligned);
-        ::swizzle::detail::static_for<0, Vector<T>::Size>([&](size_t i) { ptr[i] = ::std::acos(ptr[i]); });
-
-        Vector<T> result;
-        result.load(ptr, Aligned);
-        return result;
+        Vector<T> negate = Vector<T>::Zero();
+        negate(_x < 0) = 1;
+        auto x = abs(_x);
+        Vector<T> ret = -0.0187293;
+        ret = ret * x;
+        ret = ret + 0.0742610f;
+        ret = ret * x;
+        ret = ret - 0.2121144f;
+        ret = ret * x;
+        ret = ret + 1.5707288f;
+        ret = ret * sqrt(1.0f - x);
+        ret = ret - 2 * negate * ret;
+        return negate * 3.14159265358979f + ret;
     }
+
 
     template <typename T>
     inline Vector<T> radians(const Vector<T>& x)

@@ -13,7 +13,7 @@
 #include <swizzle/detail/simd_mask.h>
 #include <swizzle/inout_wrapper.hpp>
 #include <conio.h>
-
+#include <swizzle/detail/batch_write_mask.hpp>
 
 using vec2  = swizzle::vector< swizzle::float_type, 2>;
 using vec3  = swizzle::vector< swizzle::float_type, 3>;
@@ -233,7 +233,10 @@ static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, 
         load_aligned(y_offsets, aligned);
     }
   
-    
+    auto p_min_aligned = p_min;
+    p_min_aligned.x = (p_min.x / columns_per_batch) * columns_per_batch;
+    p_min_aligned.y = (p_min.y / rows_per_batch) * rows_per_batch;
+
 #if !defined(_DEBUG) && OMP_ENABLED
 #pragma omp parallel 
     {
@@ -251,14 +254,16 @@ static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, 
         int height_per_thread = ( (p_max.y - p_min.y) + threads_count - 1) / threads_count;
         height_per_thread = std::max(rows_per_batch, height_per_thread);
 
-        int height_start = p_min.y + thread_num * height_per_thread;
+
+
+        int height_start = p_min_aligned.y + thread_num * height_per_thread;
         int height_end = height_start + height_per_thread;
 
         height_end = std::min(p_max.y, height_end);
 
 #else
     {
-        int height_start = p_min.y;
+        int height_start = p_min_aligned.y;
         int height_end = p_max.y;
         num_threads = 1;
 #endif
@@ -281,10 +286,10 @@ static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, 
         {
             batch_float_t frag_coord_y = static_cast<float>(bmp->h - 1 - y) + y_offsets;
 
-            uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch + p_min.x * 3;
+            uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch + p_min_aligned.x * 3;
 
             int x;
-            for (x = p_min.x; x < p_max.x; x += columns_per_batch)
+            for (x = p_min_aligned.x; x < p_max.x; x += columns_per_batch)
             {
                 auto color =  shade(uniforms, vec2(static_cast<float>(x) + x_offsets, frag_coord_y));
                 color *= 255.0f + 0.5f;
@@ -293,20 +298,22 @@ static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, 
                 store_aligned(static_cast<batch_uint_t>(color.g), pg);
                 store_aligned(static_cast<batch_uint_t>(color.b), pb);
 
-                if (x > p_max.x - columns_per_batch || y > p_max.y - rows_per_batch)
+                if ( x < p_min.x || x + columns_per_batch > p_max.x || y < p_min.y || y + rows_per_batch > p_max.y )
                 {
-                    // slow case: parially out of the surface
+                    // slow case: partially out of the surface
+                    int min_cols = std::max(0, p_min.x - x);
+                    int min_rows = std::max(0, p_min.y - y);
                     int max_rows = std::min<int>(p_max.y - y, rows_per_batch);
                     int max_cols = std::min<int>(p_max.x - x, columns_per_batch);
 
-                    for (int row = 0; row < max_rows; ++row)
+                    for (int row = min_rows; row < max_rows; ++row)
                     {
-                        auto p = ptr + row * bmp->pitch;
-                        for (int col = 0; col < max_cols; ++col)
+                        auto p = ptr + row * bmp->pitch + min_cols * 3;
+                        for (int col = min_cols; col < max_cols; ++col)
                         {
-                            *p++ = static_cast<uint8_t>(pr[col]);
-                            *p++ = static_cast<uint8_t>(pg[col]);
-                            *p++ = static_cast<uint8_t>(pb[col]);
+                            *p++ = static_cast<uint8_t>(pr[row * columns_per_batch + col]);
+                            *p++ = static_cast<uint8_t>(pg[row * columns_per_batch + col]);
+                            *p++ = static_cast<uint8_t>(pb[row * columns_per_batch + col]);
                         }
                     }
                 }

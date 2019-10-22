@@ -9,6 +9,36 @@
 // to use simd (like sin(1))
 // #include <swizzle/glsl/scalar_support.h>
 
+namespace swizzle
+{
+    using write_mask = detail::batch_write_mask<::Vc::float_m, 16, false>;
+
+    template <typename T>
+    struct batch_assign_policy<::Vc::Vector<T>>
+    {
+        static void assign(::Vc::Vector<T>& target, const ::Vc::Vector<T>& src)
+        {
+            //target = src;
+            target((typename ::Vc::Vector<T>::MaskType)write_mask::storage.masks[write_mask::storage.mask_index]) = src;
+        }
+    };
+
+    template <typename T>
+    struct batch_assign_policy<::Vc::Mask<T>>
+    {
+        static void assign(::Vc::Mask<T>& target, const ::Vc::Mask<T>& src)
+        {
+            target = src;
+        }
+    };
+
+#define SIMD_IF(x)    if (::swizzle::write_mask current_mask_holder = ::swizzle::write_mask::push(x))
+#define SIMD_ELSE     if (::swizzle::write_mask::invert_tag{})
+#define SIMD_WHILE(x) while(::swizzle::write_mask current_mask_holder = ::swizzle::write_mask::push(x)) 
+#define SIMD_CONDITION(x)    ::swizzle::write_mask current_mask_holder = ::swizzle::write_mask::push(x)
+
+}
+
 #ifdef SAMPLE_USE_SIMD_MASKING
 
 typedef ::swizzle::detail::write_mask_scope<Vc::float_m, 16> pusher;
