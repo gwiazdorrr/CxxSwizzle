@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdint>
 #include <swizzle/detail/utils.h>
+#include <array>
 
 #define CXXSWIZZLE_FORCE_INLINE
 
@@ -251,7 +252,7 @@ namespace swizzle
 
 
         CXXSWIZZLE_FORCE_INLINE float_batch(double value) : float_batch(batch_scalar_cast(static_cast<float>(value))) {}
-        CXXSWIZZLE_FORCE_INLINE float_batch(const bool_type& value) : float_batch(batch_cast<float>(value.storage)) {}
+        CXXSWIZZLE_FORCE_INLINE float_batch(const bool_type& value) : batch_base(value) {}
         CXXSWIZZLE_FORCE_INLINE explicit float_batch(int32_t value) : float_batch(static_cast<float>(value)) {}
         CXXSWIZZLE_FORCE_INLINE explicit float_batch(uint32_t value) : float_batch(static_cast<float>(value)) {}
 

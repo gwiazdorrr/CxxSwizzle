@@ -226,10 +226,10 @@ static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, 
         float_traits::aligned_storage_type aligned_storage;
         float* aligned = reinterpret_cast<float*>(&aligned_storage);
 
-		static_for<0, float_traits::size>([&](size_t i) { aligned[i] = static_cast<float>(i % columns_per_batch); });
+		static_for<0, float_traits::size>([&](size_t i) { aligned[i] = static_cast<float>(i % columns_per_batch) + 0.5f; });
         load_aligned(x_offsets, aligned);
 
-		static_for<0, float_traits::size>([&](size_t i) { aligned[i] = static_cast<float>(1 - i / columns_per_batch); });
+		static_for<0, float_traits::size>([&](size_t i) { aligned[i] = static_cast<float>(1 - i / columns_per_batch) + 0.5f; });
         load_aligned(y_offsets, aligned);
     }
   
