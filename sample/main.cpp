@@ -198,12 +198,12 @@ struct render_stats
 
 vec4 shade(const fragment_shader_uniforms& uniforms, vec2 fragCoord);
 
-static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, swizzle::vector<int, 4> viewport, const std::atomic_bool& cancelled)
+static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, SDL_Rect viewport, const std::atomic_bool& cancelled)
 {
-
-    swizzle::vector<int, 2> p_min(std::max(0, viewport.x), std::max(0, viewport.y));
-    swizzle::vector<int, 2> p_max(std::min(bmp->w, viewport.z), std::min(bmp->h, viewport.w));
-    p_max += p_min;
+    swizzle::vector<int, 2> p_min(std::max(0, std::min(bmp->w, viewport.x)), std::max(0, std::min(bmp->h, viewport.y)));
+    auto p_max = p_min;
+    p_max.x = std::min(bmp->w, p_max.x + viewport.w);
+    p_max.y = std::min(bmp->h, p_max.y + viewport.h);
 
     float f = float(0x1000);
     using ::swizzle::detail::static_for;
@@ -233,6 +233,7 @@ static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, 
         load_aligned(y_offsets, aligned);
     }
   
+    
 #if !defined(_DEBUG) && OMP_ENABLED
 #pragma omp parallel 
     {
@@ -249,9 +250,8 @@ static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, 
         // ceil
         int height_per_thread = ( (p_max.y - p_min.y) + threads_count - 1) / threads_count;
         height_per_thread = std::max(rows_per_batch, height_per_thread);
-        int height_per_threadRem = height_per_thread % rows_per_batch;
 
-        int height_start = thread_num * height_per_thread;
+        int height_start = p_min.y + thread_num * height_per_thread;
         int height_end = height_start + height_per_thread;
 
         height_end = std::min(p_max.y, height_end);
@@ -274,10 +274,9 @@ static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, 
         uint32_t* pg = reinterpret_cast<uint32_t*>(&aligned_blob_g);
         uint32_t* pb = reinterpret_cast<uint32_t*>(&aligned_blob_b);
 
-        assert(rows_per_batch <= height_end - height_start);
+        //assert(rows_per_batch <= height_end - height_start);
 
         //debug_print(uniforms.iTime);
-
         for (int y = height_start; !cancelled && y < height_end; y += rows_per_batch)
         {
             batch_float_t frag_coord_y = static_cast<float>(bmp->h - 1 - y) + y_offsets;
@@ -352,7 +351,7 @@ static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, 
 #define VT100_CLEARLINE "\33[2K"
 #define VT100_UP(x)     "\33[" STR2(x) "A"
 #define VT100_DOWN(x)   "\33[" STR2(x) "B"
-#define STATS_LINES 11
+#define STATS_LINES 12
 
 const double seconds_to_micro = 1000000.0;
 const double micro_to_seconds = 1 / seconds_to_micro;
@@ -427,6 +426,21 @@ int print_args_error()
 }
 
 
+SDL_Rect fix_rect(SDL_Rect rect)
+{
+    if (rect.w < 0)
+    {
+        rect.x += rect.w;
+        rect.w = -rect.w;
+    }
+    if (rect.h < 0)
+    {
+        rect.y += rect.h;
+        rect.h = -rect.h;
+    }
+    return rect;
+}
+
 int main(int argc, char* argv[])
 {
     using namespace std;
@@ -442,7 +456,7 @@ int main(int argc, char* argv[])
 #endif
 
     swizzle::vector<int, 2> resolution(512, 512);
-    swizzle::vector<int, 4> viewport(0, 0, 0, 0);
+    SDL_Rect viewport = { 0, 0, 0, 0 };
     float time = 0.0f;
     float time_scale = 1.0f;
     
@@ -462,7 +476,7 @@ int main(int argc, char* argv[])
         }
         else if (!strcmp(arg, "-w"))
         {
-            if (i + 4 < argc && from_string(argv[++i], viewport.x) && from_string(argv[++i], viewport.y) && from_string(argv[++i], viewport.z) && from_string(argv[++i], viewport.w))
+            if (i + 4 < argc && from_string(argv[++i], viewport.x) && from_string(argv[++i], viewport.y) && from_string(argv[++i], viewport.w) && from_string(argv[++i], viewport.h))
             {
 
             }
@@ -490,8 +504,8 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (viewport.z == 0 || viewport.w == 0)
-        viewport = { 0, 0, resolution };
+    if (viewport.w == 0 || viewport.h == 0)
+        viewport = { 0, 0, resolution.x, resolution.y };
 
     if (resolution.x <= 0 || resolution.y < 0 )
     {
@@ -504,7 +518,7 @@ int main(int argc, char* argv[])
     printf("p           - pause/unpause\n");
     printf("left arrow  - decrease time by 1 s\n");
     printf("right arrow - increase time by 1 s\n");
-    printf("lmb         - update mouse\n");
+    printf("shift+mouse - select viewport\n");
     printf("space       - blit now! (show incomplete render)\n");
     printf("esc         - quit\n");
     printf("\n");
@@ -549,6 +563,7 @@ int main(int argc, char* argv[])
         int num_frames = 0;
         float current_frame_timestamp = 0.0f;
         int mouse_x = 0, mouse_y = 0;
+        int mouse_press_x = 0, mouse_press_y = 0;
         bool pending_resize = false;
         bool mouse_pressed = false;
 
@@ -580,10 +595,16 @@ int main(int argc, char* argv[])
 
         std::future<render_stats> render_task = renderAsync();
         
+        SDL_Rect mouse_rect = {};
+
+        bool is_shift_pressed = false;
+        bool is_shift_selecting = false;
+
         for (auto update_begin = chrono::steady_clock::now();;)
         {
             bool blit_now = false;
             bool quit = false;
+            
 
             // process events
             SDL_Event event;
@@ -606,6 +627,14 @@ int main(int argc, char* argv[])
                         abort_render_token = quit = true;
                     }
                     break; 
+                case SDL_KEYUP:
+                    switch (event.key.keysym.sym)
+                    {
+                    case SDLK_LSHIFT:
+                        is_shift_pressed = false;
+                        break;
+                    }
+                    break;
                 case SDL_KEYDOWN:
                     switch ( event.key.keysym.sym ) 
                     {
@@ -628,6 +657,9 @@ int main(int argc, char* argv[])
                     case SDLK_RIGHT:
                         time += 1.0f;
                         break;
+                    case SDLK_LSHIFT:
+                        is_shift_pressed = true;
+                        break;
                     default:
                         break;
                     }
@@ -636,16 +668,50 @@ int main(int argc, char* argv[])
                     if (mouse_pressed)
                     {
                         mouse_x = event.button.x;
-                        mouse_y = target_surface->h - 1 - event.button.y;
+                        mouse_y = event.button.y;
+                    }
+                    else if (is_shift_selecting)
+                    {
+                        mouse_rect.w = event.button.x - mouse_rect.x;
+                        mouse_rect.h = event.button.y - mouse_rect.y;
                     }
                     break;
                 case SDL_MOUSEBUTTONDOWN:
-                    mouse_pressed = true;
-                    mouse_x = event.button.x;
-                    mouse_y = target_surface->h - 1 - event.button.y;
+                    if (is_shift_pressed)
+                    {
+                        is_shift_selecting = true;
+                        mouse_rect.x = event.button.x;
+                        mouse_rect.y = event.button.y;
+                        mouse_rect.w = mouse_rect.h = 0;
+                    }
+                    else
+                    {
+                        mouse_pressed = true;
+                        mouse_x = event.button.x;
+                        mouse_y = event.button.y;
+                    }
                     break;
                 case SDL_MOUSEBUTTONUP:
+                    if (is_shift_selecting)
+                    {
+                        is_shift_selecting = false;
+                        if (mouse_rect.h == 0 || mouse_rect.w == 0)
+                        {
+                            viewport = { 0, 0, resolution.x, resolution.y };
+                        }
+                        else
+                        {
+                            viewport = fix_rect(mouse_rect);
+                        }
+                        
+                        abort_render_token = true;
+                        mouse_rect = {};
+                    }
+
                     mouse_pressed = false;
+                    is_shift_selecting = false;
+                    break;
+
                 default:
                     break;
                 }
@@ -674,11 +740,30 @@ int main(int argc, char* argv[])
             }
             else
             {
-                if (blit_now || frameReady)
+                if (blit_now || frameReady || is_shift_selecting)
                 {
                     SDL_UpdateTexture(target_texture.get(), NULL, target_surface->pixels, target_surface->pitch);
                     SDL_RenderClear(renderer.get());
                     SDL_RenderCopy(renderer.get(), target_texture.get(), NULL, NULL);
+
+                    SDL_SetRenderDrawColor(renderer.get(), 0, 0, 255, 128);
+                    {
+                        auto r = viewport;
+                        r.x -= 1;
+                        r.y -= 1;
+                        r.w += 2;
+                        r.h += 2;
+                        SDL_RenderDrawRect(renderer.get(), &r);
+                    }
+
+                    if (mouse_rect.w != 0 && mouse_rect.h != 0)
+                    {
+                        auto fixed = fix_rect(mouse_rect);
+                        SDL_SetRenderDrawColor(renderer.get(), 0, 255, 255, 128);
+                        SDL_RenderDrawRect(renderer.get(), &fixed);
+                        SDL_RenderPresent(renderer.get());
+                    }
+
                     SDL_RenderPresent(renderer.get());
                 }
 
@@ -720,6 +805,7 @@ int main(int argc, char* argv[])
             printf(VT100_CLEARLINE "time:            %.2f s%s\n", time, time_scale > 0 ? "" : " (paused)");
             printf(VT100_CLEARLINE "frames:          %d\n", num_frames);
             printf(VT100_CLEARLINE "resolution:      %dx%d\n", target_surface->w, target_surface->h);
+            printf(VT100_CLEARLINE "viewport:        %d %d %d %d\n", viewport.x, viewport.y, viewport.w, viewport.h);
             printf(VT100_CLEARLINE "fps:             %lg\n", current_fps);
         }
 
