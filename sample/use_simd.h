@@ -56,11 +56,6 @@ typedef ::swizzle::detail::write_mask_assign_policy<pusher> assign_policy_type;
 
 #endif
 
-using batch_float_t = swizzle::float_type;
-using batch_int_t = swizzle::int_type;
-using batch_uint_t = swizzle::uint_type;
-using batch_bool_t = swizzle::bool_type;
-
 //template <typename T>
 //inline void batch_store_aligned(const Vc::Vector<T>& value, T* target)
 //{

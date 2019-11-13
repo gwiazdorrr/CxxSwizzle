@@ -1,9 +1,9 @@
 // https://www.shadertoy.com/view/4lBGRh
-#ifdef CXXSWIZZLE_LOAD_TEXTURE
-CXXSWIZZLE_LOAD_TEXTURE(0, "C:\\Users\\gwiazdorrr\\Desktop\\shadertoy_images\\10eb4fe0ac8a7dc348a2cc282ca5df1759ab8bf680117e4047728100969e7b43.jpg")
-CXXSWIZZLE_LOAD_TEXTURE(1, "C:\\Users\\gwiazdorrr\\Desktop\\shadertoy_images\\10eb4fe0ac8a7dc348a2cc282ca5df1759ab8bf680117e4047728100969e7b43.jpg")
-CXXSWIZZLE_LOAD_TEXTURE(2, "C:\\Users\\gwiazdorrr\\Desktop\\shadertoy_images\\10eb4fe0ac8a7dc348a2cc282ca5df1759ab8bf680117e4047728100969e7b43.jpg")
-CXXSWIZZLE_LOAD_TEXTURE(3, "C:\\Users\\gwiazdorrr\\Desktop\\shadertoy_images\\10eb4fe0ac8a7dc348a2cc282ca5df1759ab8bf680117e4047728100969e7b43.jpg")
+#ifdef CXXSWIZZLE_TEXTURE_PATH_HINT
+CXXSWIZZLE_TEXTURE_PATH_HINT(0, "C:\\Users\\gwiazdorrr\\Desktop\\shadertoy_images\\10eb4fe0ac8a7dc348a2cc282ca5df1759ab8bf680117e4047728100969e7b43.jpg")
+CXXSWIZZLE_TEXTURE_PATH_HINT(1, "C:\\Users\\gwiazdorrr\\Desktop\\shadertoy_images\\10eb4fe0ac8a7dc348a2cc282ca5df1759ab8bf680117e4047728100969e7b43.jpg")
+CXXSWIZZLE_TEXTURE_PATH_HINT(2, "C:\\Users\\gwiazdorrr\\Desktop\\shadertoy_images\\10eb4fe0ac8a7dc348a2cc282ca5df1759ab8bf680117e4047728100969e7b43.jpg")
+CXXSWIZZLE_TEXTURE_PATH_HINT(3, "C:\\Users\\gwiazdorrr\\Desktop\\shadertoy_images\\10eb4fe0ac8a7dc348a2cc282ca5df1759ab8bf680117e4047728100969e7b43.jpg")
 #endif
 
 /*--------------------------------------------------------------------------------------

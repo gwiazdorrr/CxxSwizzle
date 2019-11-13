@@ -7,10 +7,6 @@
 
 #include <swizzle/setup_scalar.hpp>
 
-using batch_float_t = swizzle::float_type;
-using batch_int_t = swizzle::int_type;
-using batch_uint_t = swizzle::uint_type;
-using batch_bool_t = swizzle::bool_type;
 
 //namespace swizzle
 //{

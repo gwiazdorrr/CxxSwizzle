@@ -15,35 +15,16 @@
 #include <conio.h>
 #include <swizzle/detail/batch_write_mask.hpp>
 
-using vec2  = swizzle::vector< swizzle::float_type, 2>;
-using vec3  = swizzle::vector< swizzle::float_type, 3>;
-using vec4  = swizzle::vector< swizzle::float_type, 4>;
-                               
-using ivec2 = swizzle::vector< swizzle::int_type, 2>;
-using ivec3 = swizzle::vector< swizzle::int_type, 3>;
-using ivec4 = swizzle::vector< swizzle::int_type, 4>;
-                               
-using uvec2 = swizzle::vector< swizzle::uint_type, 2>;
-using uvec3 = swizzle::vector< swizzle::uint_type, 3>;
-using uvec4 = swizzle::vector< swizzle::uint_type, 4>;
-                               
-using bvec2 = swizzle::vector< swizzle::bool_type, 2>;
-using bvec3 = swizzle::vector< swizzle::bool_type, 3>;
-using bvec4 = swizzle::vector< swizzle::bool_type, 4>;
+using namespace swizzle;
 
-using mat2x2 = swizzle::matrix<swizzle::float_type, 2, 2>;
-using mat3x3 = swizzle::matrix<swizzle::float_type, 3, 3>;
-using mat4x4 = swizzle::matrix<swizzle::float_type, 4, 4>;
+namespace _cxxswizzle
+{
+    swizzle::naive_sampler_data texture_data[4];
+}
 
-using mat2 = mat2x2;
-using mat3 = mat3x3;
-using mat4 = mat4x4;
-
-using sampler2D = swizzle::naive_sampler2D<batch_float_t, batch_int_t, batch_uint_t>;
-
-static_assert(sizeof(vec2) == sizeof(batch_float_t[2]), "Too big");
-static_assert(sizeof(vec3) == sizeof(batch_float_t[3]), "Too big");
-static_assert(sizeof(vec4) == sizeof(batch_float_t[4]), "Too big");
+static_assert(sizeof(vec2) == sizeof(swizzle::float_type[2]), "Too big");
+static_assert(sizeof(vec3) == sizeof(swizzle::float_type[3]), "Too big");
+static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 
 //typedef swizzle::glsl::matrix< swizzle::vector, vec4::scalar_type, 2, 2> mat2;
 //typedef swizzle::glsl::matrix< swizzle::vector, vec4::scalar_type, 3, 3> mat3;
@@ -164,12 +145,12 @@ std::unique_ptr< T, std::function<void (T*)> > make_unique_with_deleter(std::fun
     return std::unique_ptr<T, decltype(deleter)>(nullptr, deleter);
 }
 
-//void debug_print(batch_float_t vec)
+//void debug_print(swizzle::float_type vec)
 //{
 //    using namespace swizzle;
 //    using namespace swizzle::detail;
 //
-//    batch_traits<batch_float_t>::aligned_storage_type storage;
+//    batch_traits<swizzle::float_type>::aligned_storage_type storage;
 //    float* p = reinterpret_cast<float*>(&storage);
 //
 //    store_aligned(vec, p);
@@ -181,10 +162,11 @@ std::unique_ptr< T, std::function<void (T*)> > make_unique_with_deleter(std::fun
 //    std::cout << "\n";
 //}
 
+
 struct fragment_shader_uniforms
 {
-    batch_float_t iTime;
-    batch_int_t iFrame;
+    swizzle::float_type iTime;
+    swizzle::int_type iFrame;
     vec2 iResolution;
     vec4 iMouse;
 };
@@ -207,6 +189,11 @@ static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, 
 
     float f = float(0x1000);
     using ::swizzle::detail::static_for;
+    using namespace ::swizzle;
+
+    using uint32_traits = detail::batch_traits<swizzle::uint_type>;
+    using float_traits = ::swizzle::detail::batch_traits<swizzle::float_type>;
+    static_assert(float_traits::size == uint32_traits::size);
 
     constexpr auto pixels_per_batch = float_traits::size;
     static_assert(pixels_per_batch == 1 || pixels_per_batch % 2 == 0, "1 or even scalar count");
@@ -216,8 +203,8 @@ static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, 
     auto render_begin = std::chrono::steady_clock::now();
 
 	// if there are more than 1 scalars in a vector, work on two rows with half width at the same time
-    batch_float_t x_offsets(0);
-	batch_float_t y_offsets(0);
+    swizzle::float_type x_offsets(0);
+	swizzle::float_type y_offsets(0);
 
     std::atomic<size_t> num_pixels = 0;
     std::atomic<int> num_threads = 0;
@@ -284,7 +271,7 @@ static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, 
         //debug_print(uniforms.iTime);
         for (int y = height_start; !cancelled && y < height_end; y += rows_per_batch)
         {
-            batch_float_t frag_coord_y = static_cast<float>(bmp->h - 1 - y) + y_offsets;
+            swizzle::float_type frag_coord_y = static_cast<float>(bmp->h - 1 - y) + y_offsets;
 
             uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch + p_min_aligned.x * 3;
 
@@ -294,9 +281,9 @@ static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, 
                 auto color =  shade(uniforms, vec2(static_cast<float>(x) + x_offsets, frag_coord_y));
                 color *= 255.0f + 0.5f;
 
-                store_aligned(static_cast<batch_uint_t>(color.r), pr);
-                store_aligned(static_cast<batch_uint_t>(color.g), pg);
-                store_aligned(static_cast<batch_uint_t>(color.b), pb);
+                store_aligned(static_cast<swizzle::uint_type>(color.r), pr);
+                store_aligned(static_cast<swizzle::uint_type>(color.g), pg);
+                store_aligned(static_cast<swizzle::uint_type>(color.b), pb);
 
                 if ( x < p_min.x || x + columns_per_batch > p_max.x || y < p_min.y || y + rows_per_batch > p_max.y )
                 {
@@ -364,7 +351,7 @@ const double seconds_to_micro = 1000000.0;
 const double micro_to_seconds = 1 / seconds_to_micro;
 
 
-bool load_texture(sampler2D& sampler, const char* name)
+bool load_texture(swizzle::naive_sampler_data& sampler, const char* name)
 {
 #ifdef SDLIMAGE_FOUND
     auto img = IMG_Load(name);
@@ -378,6 +365,8 @@ bool load_texture(sampler2D& sampler, const char* name)
         sampler.bytes = reinterpret_cast<uint8_t*>(img->pixels);
         sampler.width = img->w;
         sampler.height = img->h;
+        sampler.widthf = static_cast<float>(img->w);
+        sampler.heightf = static_cast<float>(img->h);
         sampler.pitch = img->w;
         sampler.bytes_per_pixel = img->format->BytesPerPixel;
 
@@ -424,6 +413,7 @@ void print_help()
     printf("-w <x> <y> <width> <height> set initial viewport\n");
     printf("-t <time>                   set initial time & pause\n");
     printf("-h                          show this message\n");
+    printf("-sN <path>                  set texture for sampler N\n");
 }
 
 int print_args_error()
@@ -502,13 +492,32 @@ int main(int argc, char* argv[])
             {
                 return print_args_error();
             }
-
+        }
+        else if ( !strcmp(arg, "-s0") || !strcmp(arg, "-s1") || !strcmp(arg, "-s2") || !strcmp(arg, "-s3") )
+        {
+            int sampler_index = arg[2] - '0';
+            if (i + 1 < argc)
+            {
+                ::_cxxswizzle::texture_data[sampler_index].path = argv[++i];
+            }
+            else
+            {
+                return print_args_error();
+            }
         }
         else if (!strcmp(arg, "-h"))
         {
             print_help();
             return 0;
         }
+    }
+
+    // load up textures
+    for (auto& data : ::_cxxswizzle::texture_data)
+    {
+        if (!data.path)
+            continue;
+        load_texture(data, data.path);
     }
 
     if (viewport.w == 0 || viewport.h == 0)
@@ -520,7 +529,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-
+    
 
     printf("p           - pause/unpause\n");
     printf("left arrow  - decrease time by 1 s\n");
@@ -834,147 +843,5 @@ int main(int argc, char* argv[])
     SDL_Quit();
     return 0; 
 }
-
-//
-//naive_sampler2D::naive_sampler2D( const char* path, WrapMode wrapMode ) 
-//    : m_wrapMode(wrapMode)
-//    , m_image(nullptr)
-//{
-//#ifdef SDLIMAGE_FOUND
-//    m_image = IMG_Load(path);
-//    if (!m_image)
-//    {
-//        std::cerr << "WARNING: Failed to load target_texture " << path << "\n";
-//        std::cerr << "  SDL_Image message: " << IMG_GetError() << "\n";
-//    }
-//#else
-//    std::cerr << "WARNING: target_texture won't be loaded, SDL_image was not found.\n";
-//#endif
-//
-//}
-//
-//naive_sampler2D::~naive_sampler2D()
-//{
-//    if ( m_image )
-//    {
-//        SDL_FreeSurface(m_image);
-//        m_image = nullptr;
-//    }
-//}
-//
-//
-//vec4 naive_sampler2D::fetch(const ivec2& coord) const
-//{
-//  //  vec2 mask = vec2::call_step(32.0f, vec2(coord));
-//
-//    //vec2 mask = vec2(ivec2::call_lessThan(coord, ivec2(32, 32)));
-//    //float f = 0;
-////    vec2::scalar_type f = swizzle::vector<float, 1>::call_abs(mask.x - mask.y);
-//    //return vec4::call_mix(checkers0, checkers1, f);
-//    return vec4(0);
-//}
-//
-////namespace Vc
-////{
-////    template <typename T>
-////    inline Vector<T> acos(const Vector<T>& x)
-////    {
-////        // silly acos that does store & load... I'm sorry
-////        std::aligned_storage_t<x.Size * sizeof(T), x.MemoryAlignment> storage;
-////        T* ptr = reinterpret_cast<T*>(&storage);
-////        x.store(ptr, Aligned);
-////        ::swizzle::detail::static_for<0, Vector<T>::Size>([&](size_t i) { ptr[i] = ::std::acos(ptr[i]); });
-////        x.load(ptr, Aligned);
-////        return atan2(y, x);
-////    }
-////}
-//vec4 naive_sampler2D::sample( const vec2& coord ) const
-//{
-//    return vec4(0);
-//    //
-//    //using namespace glsl_sandbox;
-//    //vec2 uv;
-//    //switch (m_wrapMode)
-//    //{
-//    //case Repeat:
-//    //    uv = mod(coord, 1.0f);
-//    //    break;
-//    //case MirrorRepeat:
-//    //    uv = abs(mod(coord - 1.0f, 2.0f) - 1.0f);
-//    //    break;
-//    //case Clamp:
-//    //default:
-//    //    uv = clamp(coord, 0.0f, 1.0f);
-//    //    break;
-//    //}
-//
-//    //// OGL uses left-bottom corner as origin...
-//    //uv.y = 1.0 - uv.y;
-//    ////if ( !m_image )
-//    ////{
-//    //    // checkers
-//    //    auto s = step(0.5f, uv);
-//    //    auto m2 = abs(s.x - s.y);
-//    //    return mix(checkers0, checkers1, m2);
-//    //    /*if (uv_x < 0.5 && uv_y < 0.5 || uv_x > 0.5 && uv_y > 0.5)
-//    //    {
-//    //        return vec4(1, 0, 0, 1);
-//    //    }
-//    //    else
-//    //    {
-//    //        return vec4(0, 1, 0, 1);
-//    //    }*/
-//    ////}
-//    ////else
-//    ////{
-//    ////    raw_batch_uint32_t x = batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(uv.x * (m_image->w - 1.0) + 0.5));
-//    ////    raw_batch_uint32_t y = batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(uv.y * (m_image->h - 1.0) + 0.5));
-//
-//    ////    auto& format = *m_image->format;
-//    ////    raw_batch_uint32_t index = (y * m_image->pitch + x * format.BytesPerPixel);
-//
-//    ////    // stack-alloc blob for storing indices and color components
-//    ////    uint8_t unaligned_blob[5 * (pixels_per_batch * sizeof(unsigned) + batch_uint32_align)];
-//    ////    unsigned* pindex = align_ptr<batch_uint32_align>(reinterpret_cast<unsigned*>(unaligned_blob));
-//    ////    unsigned* pr = align_ptr<batch_uint32_align>(pindex + pixels_per_batch);
-//    ////    unsigned* pg = align_ptr<batch_uint32_align>(pr + pixels_per_batch);
-//    ////    unsigned* pb = align_ptr<batch_uint32_align>(pg + pixels_per_batch);
-//    ////    unsigned* pa = align_ptr<batch_uint32_align>(pb + pixels_per_batch);
-//
-//    ////    batch_store_aligned(index, pindex);
-//    ////    
-//    ////    // fill the buffers
-//    ////    swizzle::detail::static_for<0, pixels_per_batch>([&](size_t i)
-//    ////    {
-//    ////        auto pixelPtr = static_cast<uint8_t*>(m_image->pixels) + pindex[i];
-//
-//    ////        uint32_t pixel = 0;
-//    ////        for (size_t i = 0; i < format.BytesPerPixel; ++i)
-//    ////        {
-//    ////            pixel |= (pixelPtr[i] << (i * 8));
-//    ////        }
-//
-//    ////        pr[i] = (pixel & format.Rmask) >> format.Rshift;
-//    ////        pg[i] = (pixel & format.Gmask) >> format.Gshift;
-//    ////        pb[i] = (pixel & format.Bmask) >> format.Bshift;
-//    ////        pa[i] = format.Amask ? ((pixel & format.Amask) >> format.Ashift) : 255;
-//    ////    });
-//
-//    ////    // load data
-//    ////    raw_batch_uint32_t r, g, b, a;
-//    ////    batch_load_aligned(r, pr);
-//    ////    batch_load_aligned(g, pg);
-//    ////    batch_load_aligned(b, pb);
-//    ////    batch_load_aligned(a, pa);
-//
-//    ////    vec4 result;
-//    ////    result.r = batch_cast<raw_batch_float_t>(r);
-//    ////    result.g = batch_cast<raw_batch_float_t>(g);
-//    ////    result.b = batch_cast<raw_batch_float_t>(b);
-//    ////    result.a = batch_cast<raw_batch_float_t>(a);
-//
-//    ////    return clamp(result / 255.0f, c_zero, c_one);
-//    ////}
-//}
 
 #include "glsl_sandbox.hpp"
