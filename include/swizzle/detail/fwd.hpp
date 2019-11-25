@@ -24,4 +24,7 @@ namespace swizzle
 
     template <class ScalarType, size_t NumRows, size_t NumColumns>
     using matrix = decltype(detail::make_matrix_type_helper<ScalarType, NumRows>(std::make_index_sequence<NumColumns>{}));
+
+    template <typename FloatType, typename Int32Type, typename UInt32Type>
+    struct naive_sampler2D;
 }

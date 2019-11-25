@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <swizzle/detail/utils.h>
 #include <swizzle/detail/vector_traits.h>
+#include <swizzle/detail/fwd.hpp>
 
 namespace swizzle
 {
@@ -52,4 +53,6 @@ namespace swizzle
     using mat2 = mat2x2;
     using mat3 = mat3x3;
     using mat4 = mat4x4;
+
+    using sampler2D = naive_sampler2D<float_type, int_type, uint_type>;
 }

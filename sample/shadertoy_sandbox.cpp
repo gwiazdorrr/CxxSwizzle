@@ -1,32 +1,28 @@
+#include "shadertoy_sandbox.hpp"
+
+using namespace swizzle;
+
 namespace
 {
-    #include <swizzle/define_vector_functions.hpp>
+    //static const sampler2D iChannel0 = cxxswizzle_reserved_namespace::texture_data[0];
+    //static const sampler2D iChannel1 = cxxswizzle_reserved_namespace::texture_data[1];
+    //static const sampler2D iChannel2 = cxxswizzle_reserved_namespace::texture_data[2];
+    //static const sampler2D iChannel3 = cxxswizzle_reserved_namespace::texture_data[3];
+    //static_assert(cxxswizzle_reserved_namespace::num_samplers == 4);
 
-    using sampler2D = swizzle::naive_sampler2D<float_type, int_type, uint_type>;
-
-    sampler2D iChannel0 = sampler2D(&::_cxxswizzle::texture_data[0]);
-    sampler2D iChannel1 = sampler2D(&::_cxxswizzle::texture_data[1]);
-    sampler2D iChannel2 = sampler2D(&::_cxxswizzle::texture_data[2]);
-    sampler2D iChannel3 = sampler2D(&::_cxxswizzle::texture_data[3]);
-
-    const struct
+    struct _cxxswizzle_fragment_shader : shadertoy::shader_inputs
     {
-        // TODO: this will fail if int is a batch, need to add something like vector indexer
-        vec3 operator[](int i) const
-        {
-            return vec3(::_cxxswizzle::texture_data[i].widthf, ::_cxxswizzle::texture_data[i].heightf, 0.0f);
-        }
+        #include <swizzle/define_vector_functions.hpp>
 
-    } iChannelResolution;
-
-    struct _cxxswizzle_fragment_shader : fragment_shader_uniforms
-    {
-        // put commonly used struct names here - support for inout needs to be explicit
+        // add custom types that are likely to be passed as out/inout here
         struct Ray;
         struct ray;
 
         struct inout
         {
+            using ray = ray & ;
+            using Ray = Ray & ;
+
             // proxies are needed for vectors, as they need to work with swizzles
             using vec2 = swizzle::inout_wrapper<vec2>;
             using vec3 = swizzle::inout_wrapper<vec3>;
@@ -46,19 +42,15 @@ namespace
             using int_type = int_type & ;
             using uint_type = uint_type & ;
             using bool_type = bool_type & ;
-
-            // add custom types here
-            using ray = ray & ;
-            using Ray = Ray & ;
         };
 
         vec2 gl_FragCoord;
         vec4 gl_FragColor;
 
         // need a function that's not likely to be defined in the shader itself; operator seems like a good choice
-        vec4 operator()(const fragment_shader_uniforms& uniforms, vec2 fragCoord)
+        vec4 operator()(const shader_inputs& uniforms, vec2 fragCoord)
         {
-            static_cast<fragment_shader_uniforms&>(*this) = uniforms;
+            static_cast<shader_inputs&>(*this) = uniforms;
             gl_FragCoord = fragCoord;
 
             // vvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -70,8 +62,7 @@ namespace
 
         #define CXXSWIZZLE_COMBINE1(X,Y) X##Y  // helper macro
         #define CXXSWIZZLE_COMBINE(X,Y) CXXSWIZZLE_COMBINE1(X,Y)
-        #define CXXSWIZZLE_TEXTURE_PATH_HINT(i, name) static inline auto CXXSWIZZLE_COMBINE(_cxxswizzle_texture_path, i) = []() { ::_cxxswizzle::texture_data[i].path = name; return true; }();
-
+        #define CXXSWIZZLE_TEXTURE_PATH_HINT(i, name) static inline auto CXXSWIZZLE_COMBINE(_cxxswizzle_texture_path, i) = []() { return ::shadertoy::default_texture_paths[i] = name; }();
 
         // change meaning of glsl keywords to match sandbox
         #define uniform extern
@@ -87,19 +78,32 @@ namespace
         // char is not a type in glsl so can be used freely
         #define char definitely_not_a_char
 
-        #undef M_PI
+        // cmath constants need to be undefined, as sometimes shaders define their own
+        #undef M_E       
+        #undef M_LOG2E   
+        #undef M_LOG10E  
+        #undef M_LN2     
+        #undef M_LN10    
+        #undef M_PI      
+        #undef M_PI_2    
+        #undef M_PI_4    
+        #undef M_1_PI    
+        #undef M_2_PI    
+        #undef M_2_SQRTPI
+        #undef M_SQRT2   
+        #undef M_SQRT1_2 
 
-        #ifdef SIMD_IF
-        #define if(x) SIMD_IF(x)
+        #ifdef CXXSWIZZLE_OVERRIDE_IF
+        #define if(x) CXXSWIZZLE_OVERRIDE_IF(x)
         #endif
-        #ifdef SIMD_ELSE
-        #define else SIMD_ELSE
+        #ifdef CXXSWIZZLE_OVERRIDE_ELSE
+        #define else CXXSWIZZLE_OVERRIDE_ELSE
         #endif
-        #ifdef SIMD_WHILE
-        #define while(x) SIMD_WHILE(x)
+        #ifdef CXXSWIZZLE_OVERRIDE_WHILE
+        #define while(x) CXXSWIZZLE_OVERRIDE_WHILE(x)
         #endif
-        #ifdef SIMD_CONDITION
-        #define condition(x) SIMD_CONDITION(x)
+        #ifdef CXXSWIZZLE_OVERRIDE_CONDITION
+        #define condition(x) CXXSWIZZLE_OVERRIDE_CONDITION(x)
         #endif
 
 
@@ -121,8 +125,12 @@ namespace
 #undef fragCoord
 #undef return
 #undef _cxxswizzle_fragment_shader
+#undef shadertoy
 
-vec4 shade(const fragment_shader_uniforms& uniforms, vec2 fragCoord)
+namespace shadertoy
 {
-    return _cxxswizzle_fragment_shader()(uniforms, fragCoord);
+    vec4 shade(const shader_inputs& uniforms, vec2 fragCoord)
+    {
+        return _cxxswizzle_fragment_shader()(uniforms, fragCoord);
+    }
 }

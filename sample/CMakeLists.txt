@@ -35,7 +35,7 @@ endif()
 # get all the shaders
 file(GLOB shaders RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag")
 
-source_group("" FILES main.cpp glsl_sandbox.hpp use_scalar.h use_simd.h use_simd_masked.h shader_include.hpp config.hpp )
+source_group("" FILES main.cpp shadertoy_sandbox.cpp shadertoy_sandbox.hpp use_scalar.h use_simd.h use_simd_masked.h shader_include.hpp config.hpp )
 # source_group("shaders" FILES ${shaders})
 
 set(NATVIS_FILE "")
@@ -60,7 +60,7 @@ macro(create_sample_internal prefix defines header useVcLib)
 		configure_file("${CMAKE_ROOT}/Modules/CMakeConfigurableFile.in" "${generated_shader_path}" @ONLY)
 		unset(CMAKE_CONFIGURABLE_FILE_CONTENT)
 
-	  	add_executable (${name} main.cpp glsl_sandbox.hpp ${header} ${shader} ${generated_shader_path} ${generated_config_path} ${NATVIS_FILE})
+	  	add_executable (${name} main.cpp shadertoy_sandbox.cpp shadertoy_sandbox.hpp ${header} ${shader} ${generated_shader_path} ${generated_config_path} ${NATVIS_FILE})
 		target_include_directories(${name} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include ${generated_include_dir})
 
 		if (USE_VCPKG)

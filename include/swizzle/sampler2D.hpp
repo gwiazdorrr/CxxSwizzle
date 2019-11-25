@@ -23,9 +23,7 @@ namespace swizzle
         wrap_modes wrap_mode = repeat;
 
         unsigned width = 256;
-        unsigned height = 256;
-        float widthf = static_cast<float>(width);
-        float heightf = static_cast<float>(height);
+        unsigned height = 256; 
         
         uint32_t rmask = 0;
         uint32_t gmask = 0;
@@ -59,16 +57,11 @@ namespace swizzle
         using vec4 = vector<float_type, 4>;
         using ivec2 = vector<int32_type, 2>;
 
-        vec4 checkers0 = vec4(0.6f);
-        vec4 checkers1 = vec4(0.9f);
-        vec3 resolution;
-        naive_sampler_data* data;
+        static inline const vec4 checkers0 = vec4(0.6f);
+        static inline const vec4 checkers1 = vec4(0.9f);
+        static inline const naive_sampler_data empty_data = {};
 
-        naive_sampler2D(naive_sampler_data* data)
-        {
-            this->data = data;
-            resolution = vec3(static_cast<float>(data->width), static_cast<float>(data->height), 0.0f);
-        }
+        const naive_sampler_data* data = &empty_data;
 
         inline friend vec4 textureLod(const this_type& sampler, const vec2& uv, const float_type& lod)
         {

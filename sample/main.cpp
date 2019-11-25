@@ -1,103 +1,19 @@
 // CxxSwizzle
 // Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
-#define CXXSWIZZLE_inout_wrapper_ENABLED
-#if defined(SAMPLE_USE_SIMD_VC)
-#include "use_simd.h"
-#else 
-#include "use_scalar.h"
-#endif
 
-#include <swizzle/vector.hpp>
-#include <swizzle/matrix.hpp>
-#include <swizzle/sampler2D.hpp>
-#include <swizzle/detail/simd_mask.h>
-#include <swizzle/inout_wrapper.hpp>
-#include <conio.h>
-#include <swizzle/detail/batch_write_mask.hpp>
+
+
+
+
+#include "shadertoy_sandbox.hpp"
 
 using namespace swizzle;
+using namespace shadertoy;
 
-namespace _cxxswizzle
-{
-    swizzle::naive_sampler_data texture_data[4];
-}
 
 static_assert(sizeof(vec2) == sizeof(swizzle::float_type[2]), "Too big");
 static_assert(sizeof(vec3) == sizeof(swizzle::float_type[3]), "Too big");
 static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
-
-//typedef swizzle::glsl::matrix< swizzle::vector, vec4::scalar_type, 2, 2> mat2;
-//typedef swizzle::glsl::matrix< swizzle::vector, vec4::scalar_type, 3, 3> mat3;
-//typedef swizzle::glsl::matrix< swizzle::vector, vec4::scalar_type, 4, 4> mat4;
-
-
-//namespace Vc
-//{
-//    Vector<float> radiands(const Vector<float>& value)
-//    {}
-//
-//}
-
-
-// todo: YOU CAN' do float cos = cos(rad);
-
-// ! A really, really simplistic sampler using SDLImage
-//struct SDL_Surface;
-//class naive_sampler2D : public swizzle::glsl::texture_functions::tag
-//{
-//public:
-//
-//
-//    typedef const vec2::scalar_type& float_type;
-//    typedef const vec2& tex_coord_type;
-//    typedef const vec3& cube_coord_type;
-//    typedef const ivec2& tex_fetch_coord_type;
-//
-//    naive_sampler2D(vec4 checkers0, vec4 checkers1);
-//    
-//    naive_sampler2D(const char* path, WrapMode wrapMode);
-//    ~naive_sampler2D();
-//
-//    vec4 texelFetch(const ivec2& coord, int lod) const
-//    {
-//        return fetch(coord);
-//    }
-//    vec4 sample(const vec3& coord) const
-//    {
-//        return sample(coord.xy);
-//    }
-//    vec4 sample(const vec2& coord) const;
-//    vec4 sample(const vec2& coord, float_type bias) const
-//    {
-//        return sample(coord);
-//    }
-//
-//    vec4 sampleLod(const vec2& coord, float_type lod) const
-//    {
-//        return sample(coord);
-//    }
-//
-//    vec4 fetch(const ivec2& coord) const;
-//
-//
-//
-//    //void setData(std::vector<uint8_t>, int width, int pitch)
-//    //{
-//    //}
-//
-//private:
-//    SDL_Surface *m_image;
-//    WrapMode m_wrapMode;
-//    vec4 checkers0 = vec4(1.0f, 0.0f, 0.0f, 1.0f);
-//    vec4 checkers1 = vec4(1.0f, 0.0f, 1.0f, 1.0f);
-//
-//    // do not allow copies to be made
-//    naive_sampler2D(const naive_sampler2D&);
-//    naive_sampler2D& operator=(const naive_sampler2D&);
-//};
-
-// this where the magic happens...
-
 
 // these headers, especially SDL.h & time.h set up names that are in conflict with sandbox'es;
 // sandbox should be moved to a separate h/cpp pair, but out of laziness... including them
@@ -162,15 +78,6 @@ std::unique_ptr< T, std::function<void (T*)> > make_unique_with_deleter(std::fun
 //    std::cout << "\n";
 //}
 
-
-struct fragment_shader_uniforms
-{
-    swizzle::float_type iTime;
-    swizzle::int_type iFrame;
-    vec2 iResolution;
-    vec4 iMouse;
-};
-
 struct render_stats
 {
     std::chrono::microseconds duration;
@@ -178,9 +85,7 @@ struct render_stats
     int num_threads;
 };
 
-vec4 shade(const fragment_shader_uniforms& uniforms, vec2 fragCoord);
-
-static render_stats render(fragment_shader_uniforms uniforms, SDL_Surface* bmp, SDL_Rect viewport, const std::atomic_bool& cancelled)
+static render_stats render(shader_inputs uniforms, SDL_Surface* bmp, SDL_Rect viewport, const std::atomic_bool& cancelled)
 {
     swizzle::vector<int, 2> p_min(std::max(0, std::min(bmp->w, viewport.x)), std::max(0, std::min(bmp->h, viewport.y)));
     auto p_max = p_min;
@@ -365,8 +270,6 @@ bool load_texture(swizzle::naive_sampler_data& sampler, const char* name)
         sampler.bytes = reinterpret_cast<uint8_t*>(img->pixels);
         sampler.width = img->w;
         sampler.height = img->h;
-        sampler.widthf = static_cast<float>(img->w);
-        sampler.heightf = static_cast<float>(img->h);
         sampler.pitch = img->w;
         sampler.bytes_per_pixel = img->format->BytesPerPixel;
 
@@ -456,7 +359,13 @@ int main(int argc, char* argv[])
     SDL_Rect viewport = { 0, 0, 0, 0 };
     float time = 0.0f;
     float time_scale = 1.0f;
-    
+
+    naive_sampler_data textures[::shadertoy::num_samplers];
+    for (int i = 0; i < ::shadertoy::num_samplers; ++i)
+    {
+        textures[i].path = ::shadertoy::default_texture_paths[i];
+    }
+
 
     for (int i = 1; i < argc; ++i)
     {
@@ -493,12 +402,13 @@ int main(int argc, char* argv[])
                 return print_args_error();
             }
         }
-        else if ( !strcmp(arg, "-s0") || !strcmp(arg, "-s1") || !strcmp(arg, "-s2") || !strcmp(arg, "-s3") )
+        else if (!strcmp(arg, "-s0") || !strcmp(arg, "-s1") || !strcmp(arg, "-s2") || !strcmp(arg, "-s3"))
         {
+            static_assert(::shadertoy::num_samplers == 4);
             int sampler_index = arg[2] - '0';
             if (i + 1 < argc)
             {
-                ::_cxxswizzle::texture_data[sampler_index].path = argv[++i];
+                textures[sampler_index].path = argv[++i];
             }
             else
             {
@@ -513,11 +423,11 @@ int main(int argc, char* argv[])
     }
 
     // load up textures
-    for (auto& data : ::_cxxswizzle::texture_data)
+    for (auto& texture : textures)
     {
-        if (!data.path)
+        if (!texture.path)
             continue;
-        load_texture(data, data.path);
+        load_texture(texture, texture.path);
     }
 
     if (viewport.w == 0 || viewport.h == 0)
@@ -529,8 +439,6 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    
-
     printf("p           - pause/unpause\n");
     printf("left arrow  - decrease time by 1 s\n");
     printf("right arrow - increase time by 1 s\n");
@@ -538,6 +446,14 @@ int main(int argc, char* argv[])
     printf("space       - blit now! (show incomplete render)\n");
     printf("esc         - quit\n");
     printf("\n");
+    printf("--- Textures: ---\n");
+    
+    for (int i = 0; i < 4; ++i)
+    {
+        printf("iChannel%d: %s\n", i, textures[i].path);
+    }
+    printf("\n");
+
 
     // initial setup
 	SDL_SetMainReady();
@@ -597,16 +513,27 @@ int main(int argc, char* argv[])
             abort_render_token = false;
             auto s = target_surface.get();
 
-            fragment_shader_uniforms uniforms = {};
-            uniforms.iTime = time;
-            uniforms.iFrame = num_frames;
-            uniforms.iResolution = vec2(static_cast<float>(s->w), static_cast<float>(s->h));
-            uniforms.iMouse.x = mouse_x / static_cast<float>(s->w);
-            uniforms.iMouse.y = mouse_y / static_cast<float>(s->h);
-            uniforms.iMouse.z = mouse_pressed ? 1.0f : 0.0f;
-            uniforms.iMouse.w = 0.0f;
+            shader_inputs inputs = {};
+            inputs.iTime = time;
+            inputs.iFrame = num_frames;
+            inputs.iResolution = vec3(static_cast<float>(s->w), static_cast<float>(s->h), 0.0f);
+            inputs.iMouse.x = mouse_x / static_cast<float>(s->w);
+            inputs.iMouse.y = mouse_y / static_cast<float>(s->h);
+            inputs.iMouse.z = mouse_pressed ? 1.0f : 0.0f;
+            inputs.iMouse.w = 0.0f;
 
-            return std::async(render, uniforms, s, viewport, std::ref(abort_render_token));
+            inputs.iChannel0.data = &textures[0];
+            inputs.iChannel1.data = &textures[1];
+            inputs.iChannel2.data = &textures[2];
+            inputs.iChannel3.data = &textures[3];
+            
+            for (int i = 0; i < 4; ++i)
+            {
+                inputs.iChannelResolution[i] = vec3(textures[i].width, textures[i].height, 0.0f);
+            }
+            
+
+            return std::async(render, inputs, s, viewport, std::ref(abort_render_token));
         };
 
         std::future<render_stats> render_task = renderAsync();
@@ -844,4 +771,4 @@ int main(int argc, char* argv[])
     return 0; 
 }
 
-#include "glsl_sandbox.hpp"
+//#include "glsl_sandbox.hpp"
