@@ -116,16 +116,17 @@ namespace
 }
 
 // need to undef any stuff that might possibly have been defined in the shader...
+#undef namespace
+#undef shadertoy
 #undef vec4
 #undef shade
 #undef const
-#undef fragment_shader_uniforms
+#undef shader_inputs
 #undef uniforms
 #undef vec2
 #undef fragCoord
 #undef return
 #undef _cxxswizzle_fragment_shader
-#undef shadertoy
 
 namespace shadertoy
 {
