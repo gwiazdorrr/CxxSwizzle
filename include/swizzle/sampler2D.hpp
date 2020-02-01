@@ -100,8 +100,8 @@ namespace swizzle
             uv.y = 1.0f - uv.y;
 
             ivec2 icoord;
-            icoord.x = min(data->width - 1, int32_type(uv.x * data->width));
-            icoord.y = min(data->height - 1, int32_type(uv.y * data->height));
+            icoord.x = min(data->width - 1, static_cast<int32_type>(uv.x * data->width));
+            icoord.y = min(data->height - 1, static_cast<int32_type>(uv.y * data->height));
             return fetch(icoord);
         }
 
