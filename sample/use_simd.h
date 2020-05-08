@@ -8,7 +8,7 @@
 // need to include scalars as well because we don't need literals
 // to use simd (like sin(1))
 // #include <swizzle/glsl/scalar_support.h>
-
+#if 1
 namespace swizzle
 {
     using write_mask = detail::batch_write_mask<::Vc::float_m, 16, false>;
@@ -32,13 +32,14 @@ namespace swizzle
         }
     };
 
-#define SIMD_IF(x)    if (::swizzle::write_mask current_mask_holder = ::swizzle::write_mask::push(x))
-#define SIMD_ELSE     if (::swizzle::write_mask::invert_tag{})
-#define SIMD_WHILE(x) while(::swizzle::write_mask current_mask_holder = ::swizzle::write_mask::push(x)) 
-#define SIMD_CONDITION(x)    ::swizzle::write_mask current_mask_holder = ::swizzle::write_mask::push(x)
+#define CXXSWIZZLE_OVERRIDE_IF(x)    if (::swizzle::write_mask current_mask_holder = ::swizzle::write_mask::push(x))
+#define CXXSWIZZLE_OVERRIDE_ELSE     if (::swizzle::write_mask::invert_tag{})
+#define CXXSWIZZLE_OVERRIDE_WHILE(x) while(::swizzle::write_mask current_mask_holder = ::swizzle::write_mask::push(x)) 
+#define CXXSWIZZLE_OVERRIDE_CONDITION(x)    ::swizzle::write_mask current_mask_holder = ::swizzle::write_mask::push(x)
+#define CXXSWIZZLE_OVERRIDE_BREAK    ::swizzle::write_mask::mul_head()
 
 }
-
+#endif
 #ifdef SAMPLE_USE_SIMD_MASKING
 
 typedef ::swizzle::detail::write_mask_scope<Vc::float_m, 16> pusher;

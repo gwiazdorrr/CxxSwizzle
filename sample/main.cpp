@@ -107,9 +107,9 @@ static render_stats render(shader_inputs uniforms, SDL_Surface* bmp, SDL_Rect vi
 
     auto render_begin = std::chrono::steady_clock::now();
 
-	// if there are more than 1 scalars in a vector, work on two rows with half width at the same time
+    // if there are more than 1 scalars in a vector, work on two rows with half width at the same time
     swizzle::float_type x_offsets(0);
-	swizzle::float_type y_offsets(0);
+    swizzle::float_type y_offsets(0);
 
     std::atomic<size_t> num_pixels = 0;
     std::atomic<int> num_threads = 0;
@@ -118,10 +118,10 @@ static render_stats render(shader_inputs uniforms, SDL_Surface* bmp, SDL_Rect vi
         float_traits::aligned_storage_type aligned_storage;
         float* aligned = reinterpret_cast<float*>(&aligned_storage);
 
-		static_for<0, float_traits::size>([&](size_t i) { aligned[i] = static_cast<float>(i % columns_per_batch) + 0.5f; });
+        static_for<0, float_traits::size>([&](size_t i) { aligned[i] = static_cast<float>(i % columns_per_batch) + 0.5f; });
         load_aligned(x_offsets, aligned);
 
-		static_for<0, float_traits::size>([&](size_t i) { aligned[i] = static_cast<float>(1 - i / columns_per_batch) + 0.5f; });
+        static_for<0, float_traits::size>([&](size_t i) { aligned[i] = static_cast<float>(1 - i / columns_per_batch) + 0.5f; });
         load_aligned(y_offsets, aligned);
     }
   
@@ -341,6 +341,7 @@ SDL_Rect fix_rect(SDL_Rect rect)
     return rect;
 }
 
+
 int main(int argc, char* argv[])
 {
     using namespace std;
@@ -456,7 +457,7 @@ int main(int argc, char* argv[])
 
 
     // initial setup
-	SDL_SetMainReady();
+    SDL_SetMainReady();
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
         fprintf(stderr, "ERROR: Unable to init SDL\n");

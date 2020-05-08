@@ -78,6 +78,17 @@ namespace swizzle
             return sampler.sample(uv);
         }
 
+        inline friend vec4 texelFetch(const this_type& sampler, const ivec2& p, int32_type lod)
+        {
+            return sampler.fetch(p);
+        }
+
+        // pretend to be a 3D sampler
+        inline friend vec4 texture(const this_type& sampler, const vec3& uv)
+        {
+            return sampler.sample(uv.xy);
+        }
+
     private:
         vec4 sample(const vec2& coord) const
         {
@@ -109,10 +120,7 @@ namespace swizzle
         {
             if (!data->bytes)
             {
-                auto remainders = vec2::call_mod(vec2(coord), static_cast<float>(data->checkers_size * 2));
-                auto mask = vec2::call_step(remainders, vec2(static_cast<float>(data->checkers_size)));
-                auto d = vec2::call_dot(mask, mask);
-                return vec4::call_mix(checkers0, checkers1, d);
+                return vec4(0.0f, 0.0f, 0.0f, 1.0f);
             }
             else
             {
