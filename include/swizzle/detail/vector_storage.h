@@ -6,15 +6,24 @@ namespace swizzle
 {
     namespace detail
     {
-        template <size_t Size, template <size_t...> class TProxyGenerator, class TData>
-        struct vector_base;
+        template <size_t Size, template <size_t...> class TProxyGenerator, typename TData>
+        struct vector_storage;
 
-        template <template <size_t...> class TProxyGenerator, class TData>
-        struct vector_base<1, TProxyGenerator, TData>
+        template <template <size_t...> class TProxyGenerator, typename TData>
+        struct vector_storage<1, TProxyGenerator, TData>
         {
+            template <typename Func>
+            static void apply_index(Func && func)
+            {
+                func(0);
+            }
+
+            vector_storage()
+            {}
+
             union
             {
-                TData m_data;
+                TData data;
                 struct
                 {
                     typename TProxyGenerator<0>::type x;
@@ -33,12 +42,21 @@ namespace swizzle
             };
         };
 
-        template <template <size_t...> class TProxyGenerator, class TData>
-        struct vector_base<2, TProxyGenerator, TData>
+        template <template <size_t...> class TProxyGenerator, typename TData>
+        struct vector_storage<2, TProxyGenerator, TData>
         {
+            template <typename Func>
+            static void apply_index(Func && func)
+            {
+                func(0, 1);
+            }
+
+            vector_storage()
+            {}
+
             union
             {
-                TData m_data;
+                TData data;
 
                 struct
                 {
@@ -89,12 +107,21 @@ namespace swizzle
             };
         };
 
-        template <template <size_t...> class TProxyGenerator, class TData>
-        struct vector_base<3, TProxyGenerator, TData>
+        template <template <size_t...> class TProxyGenerator, typename TData>
+        struct vector_storage<3, TProxyGenerator, TData>
         {
+            template <typename Func>
+            static void apply_index(Func && func)
+            {
+                func(0, 1, 2);
+            }
+
+            vector_storage()
+            {}
+
             union
             {
-                TData m_data;
+                TData data;
 
                 struct
                 {
@@ -237,12 +264,20 @@ namespace swizzle
             };
         };
 
-        template <template <size_t...> class TProxyGenerator, class TData>
-        struct vector_base<4, TProxyGenerator, TData>
+        template <template <size_t...> class TProxyGenerator, typename TData>
+        struct vector_storage<4, TProxyGenerator, TData>
         {
+            template <typename Func>
+            static void apply_index(Func && func)
+            {
+                func(0, 1, 2, 3);
+            }
+
+            vector_storage() {}
+
             union
             {
-                TData m_data;
+                TData data;
 
                 struct
                 {

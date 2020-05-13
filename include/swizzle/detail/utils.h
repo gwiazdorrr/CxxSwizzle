@@ -36,6 +36,8 @@ namespace swizzle
 
 
         //! A type to indicate that operation is not available for some combination of input types.
+        template <typename T>
+        struct operation_not_available_t;
         struct operation_not_available;
         template <int> struct operation_not_available_n;
 
@@ -55,14 +57,14 @@ namespace swizzle
         inline typename std::enable_if<Begin != End, void>::type static_for_impl(Func func, std::integral_constant<size_t, Begin>, std::integral_constant<size_t, End>)
         {
             func(Begin);
-            static_for_impl( func, std::integral_constant<size_t, Begin+1>(), std::integral_constant<size_t, End>() );
+            static_for_impl(func, std::integral_constant<size_t, Begin + 1>(), std::integral_constant<size_t, End>());
         }
 
         //! Trigger Func for each value from [Begin, End) range.
         template <size_t Begin, size_t End, class Func>
         inline void static_for(Func func)
         {
-            static_for_impl( func, std::integral_constant<size_t, Begin>(), std::integral_constant<size_t, End>() );
+            static_for_impl(func, std::integral_constant<size_t, Begin>(), std::integral_constant<size_t, End>());
         }
 
 
@@ -79,10 +81,10 @@ namespace swizzle
         {
 #ifdef _MSC_VER
             // VC is happy with this syntax, but unhappy with the alternative...
-            func.operator()<Begin>(std::forward<Args>(args)...);
+            func.operator() < Begin > (std::forward<Args>(args)...);
 #else
             // ... that's the only option for g++. WTF?!
-            func.template operator()<Begin>(std::forward<Args>(args)...);
+            func.template operator() < Begin > (std::forward<Args>(args)...);
 #endif
             static_for_with_static_call_impl(func, std::integral_constant<size_t, Begin + 1>(), std::integral_constant<size_t, End>(), std::forward<Args>(args)...);
         }
@@ -98,7 +100,7 @@ namespace swizzle
         template <template<typename> class Func, typename Arg1, typename... Args>
         inline Arg1& static_foreach(Arg1& result, Args&&... args)
         {
-            Func<typename std::remove_reference<Arg1>::type> functor {};
+            Func<typename std::remove_reference<Arg1>::type> functor{};
             static_for_with_static_call<0, Arg1::num_of_components>(functor, result, std::forward<Args>(args)...);
             return result;
         }
@@ -106,7 +108,7 @@ namespace swizzle
 
         //! Calls and returns a result of the decay memeber function (provided there's one).
         template <class T>
-        inline auto decay(T&& t) -> decltype( t.decay() )
+        inline auto decay(T&& t) -> decltype(t.decay())
         {
             return t.decay();
         }
@@ -190,5 +192,20 @@ namespace swizzle
         {
             typedef Head type;
         };
+
+        template <class Head, class... T>
+        using last_t = typename last<Head, T...>::type;
+
+        template <size_t Count, size_t... Left, size_t RightFirst, size_t... Right>
+        constexpr auto take_n_resolver(std::index_sequence<Left...> left, std::index_sequence<RightFirst, Right...>)
+        {
+            if constexpr (Count == 1)
+                return std::index_sequence<Left..., RightFirst> {};
+            else 
+                return take_n_resolver<Count - 1>(std::index_sequence<Left..., RightFirst>{}, std::index_sequence<Right...>{});
+        }
+
+        template <size_t Count, size_t... Values>
+        using take_n = decltype(take_n_resolver<Count>(std::index_sequence<>{}, std::index_sequence<Values...>{}));
     }
 }

@@ -38,13 +38,14 @@ namespace swizzle
         {
             //! A class providing static functions matching GLSL's vector functions. Uses naive approach, i.e.
             //! everything is done components-wise, using stdlib's math functions.
-            template <class Base, template <class, size_t> class VectorType, class ScalarType, size_t Size>
+            template <class Base, template <class, size_t> class VectorType, class ScalarType, size_t Size, class BoolType>
             class vector_functions_adapter : public Base
             {
             public:
                 typedef VectorType<ScalarType, Size> vector_type;
                 typedef const VectorType<ScalarType, Size>& vector_arg_type;
-                typedef VectorType<bool, Size> bool_vector_type;
+                typedef BoolType bool_type;
+                typedef VectorType<bool_type, Size> bool_vector_type;
                 typedef ScalarType scalar_type;
                 typedef const ScalarType& scalar_arg_type;
 
@@ -383,6 +384,15 @@ namespace swizzle
                     }
                 };
 
+                struct functor_round
+                {
+                    template <size_t i> void operator()(vector_type& result, vector_arg_type x)
+                    {
+                        using namespace std;
+                        result.at(i) = round(x.at(i));
+                    }
+                };
+
 
             public:
 
@@ -429,6 +439,8 @@ namespace swizzle
                 CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_VVV(smoothstep)
                 CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_SSV(smoothstep)
 
+                CXXSWIZZLE_DETAIL_SIMPLE_TRANSFORM_V(round)
+
                 // these are more complex
 
                 static vector_type call_reflect(vector_arg_type I, vector_arg_type N)
@@ -470,7 +482,7 @@ namespace swizzle
                     return vector_type(x) * rsqrt(dot);
                 }
 
-                static typename std::conditional<Size == 3, vector_type, not_available>::type call_cross(const vector_type& x, const vector_type& y)
+                static typename std::conditional_t<Size == 3, vector_type, not_available> call_cross(const vector_type& x, const vector_type& y)
                 {
                     auto rx = x[1] * y[2] - x[2] * y[1];
                     auto ry = x[2] * y[0] - x[0] * y[2];
@@ -480,51 +492,61 @@ namespace swizzle
 
                 static bool_vector_type call_lessThan(vector_arg_type x, vector_arg_type y)
                 {
-                    return construct<bool>([&](size_t i) -> bool { return x[i] < y[i]; });
+                    return construct<bool_type>([&](size_t i) -> bool_type { return x[i] < y[i]; });
                 }
 
                 static bool_vector_type call_lessThanEqual(vector_arg_type x, vector_arg_type y)
                 {
-                    return construct<bool>([&](size_t i) -> bool { return x[i] <= y[i]; });
+                    return construct<bool_type>([&](size_t i) -> bool_type { return x[i] <= y[i]; });
                 }
 
                 static bool_vector_type call_greaterThan(vector_arg_type x, vector_arg_type y)
                 {
-                    return construct<bool>([&](size_t i) -> bool { return x[i] > y[i]; });
+                    return construct<bool_type>([&](size_t i) -> bool_type { return x[i] > y[i]; });
                 }
 
                 static bool_vector_type call_greaterThanEqual(vector_arg_type x, vector_arg_type y)
                 {
-                    return construct<bool>([&](size_t i) -> bool { return x[i] >= y[i]; });
+                    return construct<bool_type>([&](size_t i) -> bool_type { return x[i] >= y[i]; });
                 }
 
                 static bool_vector_type call_equal(vector_arg_type x, vector_arg_type y)
                 {
-                    return construct<bool>([&](size_t i) -> bool { return x[i] == y[i]; });
+                    return construct<bool_type>([&](size_t i) -> bool_type { return x[i] == y[i]; });
                 }
 
                 static bool_vector_type call_notEqual(vector_arg_type x, vector_arg_type y)
                 {
-                    return construct<bool>([&](size_t i) -> bool { return x[i] != y[i]; });
+                    return construct<bool_type>([&](size_t i) -> bool_type { return x[i] != y[i]; });
                 }
 
-                static bool call_any(typename std::conditional<std::is_same<ScalarType, bool>::value, vector_arg_type, not_available>::type x)
+                static bool_type call_any(std::conditional_t<std::is_same_v<ScalarType, bool_type>, vector_arg_type, not_available> x)
                 {
-                    bool result = false;
+                    bool_type result = false;
                     detail::static_for<0, Size>([&](size_t i) -> void { result |= x[i]; });
                     return result;
                 }
 
-                static bool call_all(typename std::conditional< std::is_same<scalar_type, bool>::value, vector_arg_type, not_available>::type x)
+                static bool_type call_all(std::conditional_t< std::is_same_v<scalar_type, bool_type>, vector_arg_type, not_available> x)
                 {
-                    bool result = true;
+                    bool_type result = true;
                     detail::static_for<0, Size>([&](size_t i) -> void { result &= x[i]; });
                     return result;
                 }
 
-                static vector_type call_not(typename std::conditional< std::is_same<scalar_type, bool>::value, vector_arg_type, not_available>::type x)
+                static vector_type call_not(std::conditional_t< std::is_same_v<scalar_type, bool_type>, vector_arg_type, not_available> x)
                 {
-                    return construct<bool>([&](size_t i) -> bool { return !x[i]; });
+                    return construct<bool_type>([&](size_t i) -> bool_type { return !x[i]; });
+                }
+
+                static vector_type call_dFdx( vector_arg_type x)
+                {
+                    return construct<scalar_type>([&](size_t i) -> scalar_type { return dFdx(x[i]); });
+                }
+
+                static vector_type call_dFdy(vector_arg_type x)
+                {
+                    return construct<scalar_type>([&](size_t i) -> scalar_type { return dFdy(x[i]); });
                 }
             };
         }

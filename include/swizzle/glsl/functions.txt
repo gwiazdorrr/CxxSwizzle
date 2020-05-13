@@ -1,0 +1,129 @@
+// functions
+// 8.1
+
+genType radians(genType degrees)
+genType degrees(genType radians)
+genType cos(genType angle)
+genType tan(genType angle)
+genType sin(genType angle)
+genType asin(genType x)
+genType acos(genType x)
+genType atan(genType y_over_x)
+genType atan(genType y, genType x)
+genType sinh(genType x)
+genType cosh(genType x)
+genType tanh(genType x)
+genType asinh(genType x)
+genType acosh(genType x)
+genType atanh(genType x)
+
+// 8.2
+
+genType pow(genType x, genType y)
+genType exp(genType x)
+genType log(genType x)
+genType exp2(genType x)
+genType log2(genType x)
+genType sqrt(genType x)
+genType inversesqrt(genType x)
+
+// 8.3
+
+genType abs(genType_arg x)
+genType sign(genType_arg x)
+genType floor(genType x)
+genType trunc(genType x)
+genType round(genType x)
+genType roundEven(genType x)
+genType ceil(genType x)
+genType fract(genType x)
+genType mod(genType x, float y)
+genType mod(genType x, genType y)
+genType modf(genType x, out_genType i)
+
+genType min(genType x, genType y)
+genType min(genType x, float y)
+genIType min(genIType x, genIType y)
+genIType min(genIType x, int y)
+genUType min(genUType x, genUType y)
+genUType min(genUType x, uint y)
+
+genType max(genType x, genType y)
+genType max(genType x, float y)
+genIType max(genIType x, genIType y)
+genIType max(genIType x, int y)
+genUType max(genUType x, genUType y)
+genUType max(genUType x, uint y)
+
+genType clamp(genType x, genType minVal, genType maxVal)
+genType clamp(genType x, float minVal, float maxVal)
+genIType clamp(genIType x, genIType minVal, genIType maxVal)
+genIType clamp(genIType x, int minVal, int maxVal)
+genUType clamp(genUType x, genUType minVal, genUType maxVal)
+genUType clamp(genUType x, uint minVal, uint maxVal)
+
+genType mix(genType x, genType y, genType a)
+genType mix(genType x, genType y, float a)
+
+genType mix(genType x, genType y, genBType a)
+
+genType step(genType edge, genType x)
+genType step(float edge, genType x)
+
+genType smoothstep(genType edge0, genType edge1, genType x)
+genType smoothstep(float edge0, float edge1, genType x)
+
+genBType isnan(genType x)
+genBType isinf(genType x)
+
+genIType floatBitsToInt(genType value)
+genUType floatBitsToUint(genType value)
+genType intBitsToFloat(genIType value)
+genType uintBitsToFloat(genUType value)
+
+
+// 8.4
+float length(genType x)
+float distance(genType p0, genType p1)
+float dot(genType x, genType y)
+vec3 cross(vec3 x, vec3 y)
+genType normalize(genType x)
+genType faceforward(genType N, genType I, genType Nref)
+genType reflect(genType N, genType I)
+genType refract(genType N, genType I, float Nref)
+
+
+
+// 8.6
+bvec lessThan(vec x, vec y)
+bvec lessThan(ivec x, ivec y)
+bvec lessThan(uvec x, uvec y)
+
+bvec lessThanEqual(vec x, vec y)
+bvec lessThanEqual(ivec x, ivec y)
+bvec lessThanEqual(uvec x, uvec y)
+
+bvec greaterThan(vec x, vec y)
+bvec greaterThan(ivec x, ivec y)
+bvec greaterThan(uvec x, uvec y)
+
+bvec greaterThanEqual(vec x, vec y)
+bvec greaterThanEqual(ivec x, ivec y)
+bvec greaterThanEqual(uvec x, uvec y)
+
+bvec equal(vec x, vec y)
+bvec equal(ivec x, ivec y)
+bvec equal(uvec x, uvec y)
+
+bvec notEqual(vec x, vec y)
+bvec notEqual(ivec x, ivec y)
+bvec notEqual(uvec x, uvec y)
+
+bool any(bvec x)
+bool all(bvec x)
+bool not(bvec x)
+
+// 8.8
+genType dFdx(genType p)
+genType dFdy(genType p)
+genType fwidth(genType p)

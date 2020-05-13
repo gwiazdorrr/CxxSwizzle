@@ -17,66 +17,66 @@ namespace swizzle
         template <typename VectorType, typename ScalarType, typename VectorArgType = const VectorType&, typename ScalarArgType = const ScalarType&>
         struct common_binary_operators
         {
-            typedef VectorArgType vector_arg_type;
-            typedef ScalarArgType scalar_arg_type;
+            typedef VectorArgType VectorArgType;
+            typedef ScalarArgType ScalarArgType;
 
-            friend VectorType operator+(vector_arg_type v, scalar_arg_type s)
+            friend VectorType operator+(VectorArgType v, ScalarArgType s)
             {
                 VectorType result(v);
                 return result += s;
             }
-            friend VectorType operator+(scalar_arg_type s, vector_arg_type v)
+            friend VectorType operator+(ScalarArgType s, VectorArgType v)
             {
                 return v + s;
             }
-            friend VectorType operator+(vector_arg_type v1, vector_arg_type v2)
+            friend VectorType operator+(VectorArgType v1, VectorArgType v2)
             {
                 VectorType result(v1);
                 return result += v2;
             }
 
-            friend VectorType operator*(vector_arg_type v, scalar_arg_type s)
+            friend VectorType operator*(VectorArgType v, ScalarArgType s)
             {
                 VectorType result(v);
                 return result *= s;
             }
-            friend VectorType operator*(scalar_arg_type s, vector_arg_type v)
+            friend VectorType operator*(ScalarArgType s, VectorArgType v)
             {
                 return v * s;
             }
-            friend VectorType operator*(vector_arg_type v1, vector_arg_type v2)
+            friend VectorType operator*(VectorArgType v1, VectorArgType v2)
             {
                 VectorType result(v1);
                 return result *= v2;
             }
 
-            friend VectorType operator-(vector_arg_type v, scalar_arg_type s)
+            friend VectorType operator-(VectorArgType v, ScalarArgType s)
             {
                 VectorType result(v);
                 return result -= s;
             }
-            friend VectorType operator-(scalar_arg_type s, vector_arg_type v)
+            friend VectorType operator-(ScalarArgType s, VectorArgType v)
             {
                 VectorType result(s);
                 return result -= v;
             }
-            friend VectorType operator-(vector_arg_type v1, vector_arg_type v2)
+            friend VectorType operator-(VectorArgType v1, VectorArgType v2)
             {
                 VectorType result(v1);
                 return result -= v2;
             }
 
-            friend VectorType operator/(vector_arg_type v, scalar_arg_type s)
+            friend VectorType operator/(VectorArgType v, ScalarArgType s)
             {
                 VectorType result(v);
                 return result /= s;
             }
-            friend VectorType operator/(scalar_arg_type s, vector_arg_type v)
+            friend VectorType operator/(ScalarArgType s, VectorArgType v)
             {
                 VectorType result(s);
                 return result /= v;
             }
-            inline friend VectorType operator/(vector_arg_type v1, vector_arg_type v2)
+            inline friend VectorType operator/(VectorArgType v1, VectorArgType v2)
             {
                 VectorType result(v1);
                 return result /= v2;

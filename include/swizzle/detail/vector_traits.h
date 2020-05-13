@@ -82,6 +82,9 @@ namespace swizzle
         {};
 
 
+        template <class T>
+        struct get_batch_size : std::integral_constant<size_t, 1> {};
+
 
         //! A shortcut for getting the number of vector's components.
         template <class T, class = std::true_type >
@@ -111,5 +114,17 @@ namespace swizzle
                 T...
             > 
         {};
+
+        template <class... T>
+        constexpr size_t get_total_size_v = get_total_size<T...>::value;
+
+        template <typename T>
+        constexpr bool is_scalar_bool_v = std::is_same_v<T, bool>;
+
+        template <typename T>
+        constexpr bool is_scalar_integral_v = std::is_integral_v<T> && !std::is_same_v<T, bool>;
+
+        template <typename T>
+        constexpr bool is_scalar_floating_point_v = std::is_floating_point_v<T>;
     }
 }

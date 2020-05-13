@@ -4,38 +4,44 @@
 
 #include <array>
 #include <swizzle/detail/indexed_proxy.h>
-#include <swizzle/detail/vector_base.h>
+#include <swizzle/detail/vector_storage.h>
+#include <swizzle/detail/vector_traits.h>
+#include <swizzle/detail/fwd.h>
+
 
 namespace swizzle
 {
-    namespace glsl
+    namespace detail
     {
-        template < class ScalarType, size_t Size >
-        class vector;
-
-        //! A type that simplifies creating proxies factories for the vector.
-        template <class ScalarType, size_t Size>
-        struct vector_helper
+        template<typename ScalarType, size_t Size, typename DataType, typename BoolType = bool >
+        struct vector_build_info_base
         {
-            static_assert(std::is_pod<ScalarType>::value, "Needs to be a POD");
+            using data_type = DataType;
 
-            //! These can be incomplete types at this point.
-            typedef std::array<ScalarType, Size> data_type;
-
-            template <size_t... indices>
+            template <size_t... Index>
             struct proxy_generator
             {
-                typedef detail::indexed_proxy< vector<ScalarType, sizeof...(indices)>, data_type, indices...> type;
+                typedef swizzle::detail::indexed_proxy< glsl::vector<ScalarType, sizeof...(Index)>, data_type, Index...> type;
             };
 
-            //! A factory of 1-component proxies.
-            template <size_t x>
-            struct proxy_generator<x>
+            template <size_t Index>
+            struct proxy_generator<Index>
             {
                 typedef ScalarType type;
             };
 
-            typedef detail::vector_base< Size, proxy_generator, data_type > base_type;
+            typedef ::swizzle::detail::vector_storage< Size, proxy_generator, data_type > base_type;
+
+            typedef BoolType bool_type;
+
+            static const bool is_bool = is_scalar_bool_v<ScalarType>;
+            static const bool is_integral = is_scalar_integral_v<ScalarType>;
+            static const bool is_floating_point = is_scalar_floating_point_v<ScalarType>;
+            static const bool is_number = is_integral || is_floating_point;
         };
+
+        template <typename ScalarType, size_t Size>
+        struct vector_build_info : vector_build_info_base<ScalarType, Size, std::array<ScalarType, Size>, bool>
+        {};
     }
 }

@@ -39,7 +39,7 @@ namespace swizzle
             //! Copying constructor
             matrix(const matrix& other)
             {
-                m_data = other.m_data;
+                data = other.data;
             }
 
             //! Constructor for matrices smaller than current one
@@ -62,14 +62,14 @@ namespace swizzle
                 // fill rest with 1s
                 const size_t min_inner = min_n > min_m ? min_m : min_n;
                 const size_t min_outer = N > M ? M : N;
-                detail::static_for<min_inner, min_outer>([&](size_t i) -> void { m_data[i][i] = 1; });
+                detail::static_for<min_inner, min_outer>([&](size_t i) -> void { data[i][i] = 1; });
             }
 
             //! Init with s diagonally
             matrix(const scalar_type& s)
             {
                 const size_t min_dim = N > M ? M : N;
-                detail::static_for<0, min_dim>([&](size_t i) -> void { m_data[i][i] = s; });
+                detail::static_for<0, min_dim>([&](size_t i) -> void { data[i][i] = s; });
             }
 
             template <class T0, class... T,
@@ -89,38 +89,38 @@ namespace swizzle
             //! Row accessor.
             column_type& operator[](size_t i)
             {
-                return m_data[i];
+                return data[i];
             }
 
             //! Row accessor.
             const column_type& operator[](size_t i) const
             {
-                return m_data[i];
+                return data[i];
             }
 
             // Scalar operators
 
             matrix_type& operator+=(const scalar_type& v)
             {
-                detail::static_for<0, M>([&](size_t col) -> void { m_data[col] += v; } );
+                detail::static_for<0, M>([&](size_t col) -> void { data[col] += v; } );
                 return *this;
             }
 
             matrix_type& operator-=(const scalar_type& v)
             {
-                detail::static_for<0, M>([&](size_t col) -> void { m_data[col] -= v; } );
+                detail::static_for<0, M>([&](size_t col) -> void { data[col] -= v; } );
                 return *this;
             }
 
             matrix_type& operator*=(const scalar_type& v)
             {
-                detail::static_for<0, M>([&](size_t col) -> void { m_data[col] *= v; } );
+                detail::static_for<0, M>([&](size_t col) -> void { data[col] *= v; } );
                 return *this;
             }
 
             matrix_type& operator/=(const scalar_type& v)
             {
-                detail::static_for<0, M>([&](size_t col) -> void { m_data[col] /= v; } );
+                detail::static_for<0, M>([&](size_t col) -> void { data[col] /= v; } );
                 return *this;
             }
 
@@ -128,13 +128,13 @@ namespace swizzle
 
             matrix_type& operator+=(const matrix_type& v)
             {
-                detail::static_for<0, M>([&](size_t col) -> void { m_data[col] += v[col]; } );
+                detail::static_for<0, M>([&](size_t col) -> void { data[col] += v[col]; } );
                 return *this;
             }
 
             matrix_type& operator-=(const matrix_type& v)
             {
-                detail::static_for<0, M>([&](size_t col) -> void { m_data[col] -= v[col]; } );
+                detail::static_for<0, M>([&](size_t col) -> void { data[col] -= v[col]; } );
                 return *this;
             }
 
@@ -146,7 +146,7 @@ namespace swizzle
 
             matrix_type& operator/=(const matrix_type& v)
             {
-                detail::static_for<0, M>([&](size_t col) -> void { m_data[col] /= v[col]; } );
+                detail::static_for<0, M>([&](size_t col) -> void { data[col] /= v[col]; } );
                 return *this;
             }
 
@@ -155,7 +155,7 @@ namespace swizzle
             bool operator==(const matrix_type& o) const
             {
                 bool are_equal = true;
-                detail::static_for<0, M>( [&](size_t i) -> void { are_equal &= ( m_data[i] == o[i] ); });
+                detail::static_for<0, M>( [&](size_t i) -> void { are_equal &= ( data[i] == o[i] ); });
                 return are_equal;
             }
 
@@ -184,13 +184,13 @@ namespace swizzle
             //! \return Column
             const column_type& column(size_t i) const
             {
-                return m_data[i];
+                return data[i];
             }
 
             //! \return Column
             column_type& column(size_t i)
             {
-                return m_data[i];
+                return data[i];
             }
 
             row_type row(size_t i) const
@@ -205,12 +205,12 @@ namespace swizzle
 
             scalar_type& cell(size_t row, size_t col)
             {
-                return m_data[col][row];
+                return data[col][row];
             }
 
             const scalar_type& cell(size_t row, size_t col) const
             {
-                return m_data[col][row];
+                return data[col][row];
             }
 
             //! Matrix-vector multiplication.
@@ -290,7 +290,7 @@ namespace swizzle
             }
 
         private:
-            std::array< column_type, M > m_data; 
+            std::array< column_type, M > data; 
         };
 
         template <template <class, size_t> class VectorType, class ScalarType, size_t M, size_t N, size_t OtherM>

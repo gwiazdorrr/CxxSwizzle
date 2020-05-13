@@ -3,21 +3,23 @@
 
 #if defined(USE_SIMD)
 #include "use_simd.h"
-#else
+#else 
 #include "use_scalar.h"
 #endif
 
-#include <swizzle/glsl/vector.h>
+#include <swizzle/glsl/vector_base.h>
 #include <swizzle/glsl/matrix.h>
 #include <swizzle/glsl/texture_functions.h>
 
-typedef swizzle::glsl::vector< float_type, 2 > vec2;
-typedef swizzle::glsl::vector< float_type, 3 > vec3;
-typedef swizzle::glsl::vector< float_type, 4 > vec4;
 
-static_assert(sizeof(vec2) == sizeof(float_type[2]), "Too big");
-static_assert(sizeof(vec3) == sizeof(float_type[3]), "Too big");
-static_assert(sizeof(vec4) == sizeof(float_type[4]), "Too big");
+
+typedef swizzle::glsl::vector< batch_float_t, 2 > vec2;
+typedef swizzle::glsl::vector< batch_float_t, 3 > vec3;
+typedef swizzle::glsl::vector< batch_float_t, 4 > vec4;
+
+static_assert(sizeof(vec2) == sizeof(batch_float_t[2]), "Too big");
+static_assert(sizeof(vec3) == sizeof(batch_float_t[3]), "Too big");
+static_assert(sizeof(vec4) == sizeof(batch_float_t[4]), "Too big");
 
 typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 2, 2> mat2;
 typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 3, 3> mat3;
@@ -66,7 +68,7 @@ namespace glsl_sandbox
         typedef vec3& vec3;
         typedef vec4& vec4;
 #endif
-        typedef ::float_type& float_type;
+        typedef ::batch_float_t& batch_float_t;
     }
 
     namespace in
@@ -74,52 +76,51 @@ namespace glsl_sandbox
         typedef const ::vec2& vec2;
         typedef const ::vec3& vec3;
         typedef const ::vec4& vec4;
-        typedef const ::float_type& float_type;
+        typedef const ::batch_float_t& batch_float_t;
     }
 
     #include <swizzle/glsl/vector_functions.h>
 
-    // constants shaders are using
-    float_type time = 1;
-    vec2 mouse(0, 0);
-    vec2 resolution;
 
-    // constants some shaders from shader toy are using
-    vec2& iResolution = resolution;
-    float_type& iGlobalTime = time;
-    vec2& iMouse = mouse;
 
     sampler2D diffuse("diffuse.png", sampler2D::Repeat);
     sampler2D specular("specular.png", sampler2D::Repeat);
-
-    struct fragment_shader
-    {
-        vec2 gl_FragCoord;
-        vec4 gl_FragColor;
-        void operator()(void);
-    };
 
     // change meaning of glsl keywords to match sandbox
     #define uniform extern
     #define in in::
     #define out ref::
     #define inout ref::
-    #define main fragment_shader::operator()
-    #define float float_type   
+    #define main operator()
+    #define mainImage operator()
+    #define float batch_float_t   
     #define bool bool_type
     
     #pragma warning(push)
     #pragma warning(disable: 4244) // disable return implicit conversion warning
     #pragma warning(disable: 4305) // disable truncation warning
     
-    //#include "shaders/sampler.frag"
-    //#include "shaders/leadlight.frag"
-    //#include "shaders/terrain.frag"
-    //#include "shaders/complex.frag"
-    //#include "shaders/road.frag"
-    //#include "shaders/gears.frag"
-    //#include "shaders/water_turbulence.frag"
-    #include "shaders/sky.frag"
+    struct fragment_shader_uniforms
+    {
+        vec2 iResolution;
+        batch_float_t iTime;
+        vec2 iMouse;
+    };
+
+    struct fragment_shader : fragment_shader_uniforms
+    {
+        vec2 gl_FragCoord;
+        vec4 gl_FragColor;
+
+        //#include "shaders/sampler.frag"
+        //#include "shaders/leadlight.frag"
+        //#include "shaders/terrain.frag"
+        //#include "shaders/complex.frag"
+        //#include "shaders/road.frag"
+        //#include "shaders/gears.frag"
+        //#include "shaders/water_turbulence.frag"
+        #include "shaders/sky.frag"
+    };
 
     // be a dear a clean up
     #pragma warning(pop)
@@ -138,7 +139,14 @@ namespace glsl_sandbox
 
 #include <iostream>
 #include <sstream>
+#include <iomanip>
+#include <mutex>
+#include <condition_variable>
+#include <future>
+
+#define SDL_MAIN_HANDLED
 #include <SDL.h>
+#include <SDL_video.h>
 
 #ifdef SDLIMAGE_FOUND
 #include <SDL_image.h>
@@ -151,9 +159,11 @@ namespace glsl_sandbox
 #include <omp.h>
 #endif
 
+
+
 //! A handy way of creating (and checking) unique_ptrs of SDL objects
 template <class T>
-std::unique_ptr< T, std::function<void (T*)> > makeUnique(T* value, std::function<void (T*)> deleter)
+std::unique_ptr< T, std::function<void (T*)> > make_unique_with_deleter(T* value, std::function<void (T*)> deleter)
 {
     if (!value)
     {
@@ -164,177 +174,162 @@ std::unique_ptr< T, std::function<void (T*)> > makeUnique(T* value, std::functio
 
 //! As above, but allows null initialisation
 template <class T>
-std::unique_ptr< T, std::function<void (T*)> > makeUnique(std::function<void (T*)> deleter)
+std::unique_ptr< T, std::function<void (T*)> > make_unique_with_deleter(std::function<void (T*)> deleter)
 {
     return std::unique_ptr<T, decltype(deleter)>(nullptr, deleter);
 }
 
-//! Just a RAII wrapper around SDL_mutex
-struct ScopedLock
-{
-    SDL_mutex* mutex;
-
-    explicit ScopedLock( SDL_mutex* mutex ) : mutex(mutex)
-    {
-        SDL_LockMutex(mutex);
-    }
-
-    template <class T>
-    explicit  ScopedLock( std::unique_ptr<SDL_mutex, T>& mutex ) : mutex(mutex.get())
-    {
-        SDL_LockMutex(this->mutex);
-    }
-
-    ~ScopedLock()
-    {
-        SDL_UnlockMutex(mutex);
-    }
-};
-
-
-//! The surface to draw on.
-auto g_surface = makeUnique<SDL_Surface>( SDL_FreeSurface );
-//! Mutex used when exchaning frame between threads
-auto g_frameHandshakeMutex = makeUnique<SDL_mutex>( SDL_CreateMutex(), SDL_DestroyMutex );
-//! Signaled when a frame has been processed
-auto m_frameReceivedEvent = makeUnique<SDL_cond>( SDL_CreateCond(), SDL_DestroyCond );
-//! Signaled when a frame is ready to be processed
-auto m_frameReadyEvent = makeUnique<SDL_cond>( SDL_CreateCond(), SDL_DestroyCond );
-//! Additional flag set when a frame becomes ready, in case main thread is not waiting
-bool g_frameReady = false;
-//! Stop drawing
-bool g_cancelDraw = false;
-//! Quit!
-bool g_quit = false;
-
-const float_type c_one = 1.0f;
-const float_type c_zero = 0.0f;
+const batch_float_t c_one = 1.0f;
+const batch_float_t c_zero = 0.0f;
 
 template <size_t Align, typename T>
-T* alignPtr(T* ptr)
+T* align_ptr(T* ptr)
 {
     static_assert((Align & (Align - 1)) == 0, "Align needs to be a power of two");
     auto value = reinterpret_cast<ptrdiff_t>(ptr);
     return reinterpret_cast<T*>((value + Align) & (~(Align - 1)));
 }
 
-//! Thread used for rendering; it invokes the shader
-static int renderThread(void*)
+static_assert(batch_scalar_count == 1 || batch_scalar_count % 2 == 0, "1 or even scalar count");
+constexpr auto columns_per_batch = batch_scalar_count > 1 ? batch_scalar_count / 2 : 1;
+constexpr auto rows_per_batch = batch_scalar_count > 1 ? 2 : 1;
+
+static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface* bmp, const std::atomic_bool& cancelled)
 {
     using ::swizzle::detail::static_for;
 
-    // feel with 0...scalar_count
-    raw_float_type offsets;
+
+
+	// if there are more than 1 scalars in a vector, work on two rows with half width at the same time
+    raw_batch_float_t x_offsets;
+	raw_batch_float_t y_offsets;
+
     {
         // well... this calls for an explanation: why not std::aligned_storage?
         // turns out there's a thing like max_align_t that defines max possible
         // align; SSE/AVX data has greater align than max_align_t on compilers
         // I checked, so std::aligned_storage is useless here.
 
-        uint8_t unalignedBlob[scalar_count * sizeof(float) + float_entries_align];
-        float* aligned = alignPtr<float_entries_align>(reinterpret_cast<float*>(unalignedBlob));
-        static_for<0, scalar_count>([&](size_t i) { aligned[i] = static_cast<float>(i); });
+        uint8_t unaligned_blob[batch_scalar_count * sizeof(float) + batch_float_align];
+        float* aligned = align_ptr<batch_float_align>(reinterpret_cast<float*>(unaligned_blob));
 
-        load_aligned(offsets, aligned);
+		static_for<0, batch_scalar_count>([&](size_t i) { aligned[i] = static_cast<float>(i % columns_per_batch); });
+        batch_load_aligned(x_offsets, aligned);
+
+		static_for<0, batch_scalar_count>([&](size_t i) { aligned[i] = static_cast<float>(1 - i / columns_per_batch); });
+		batch_load_aligned(y_offsets, aligned);
     }
-   
-
-    while (true)
-    {
-        auto bmp = g_surface.get();
 
 #if !defined(_DEBUG) && OMP_ENABLED
 #pragma omp parallel 
-        {
-            int thredsCount = omp_get_num_threads();
-            int threadNum = omp_get_thread_num();
+    {
+        // each thread needs to have at least rows_per_batch rows to process; also, we don't want even number of rows
+        // if rows_per_batch > 1
+        int threads_count = omp_get_num_threads();
+        int thread_num = omp_get_thread_num();
 
-            int heightStep = thredsCount;
-            int heightStart = threadNum;
-            int heightEnd = bmp->h;
+        // ceil
+        int height_per_thread = (bmp->h + threads_count - 1) / threads_count;
+        height_per_thread = std::max(rows_per_batch, height_per_thread);
+        int height_per_threadRem = height_per_thread % rows_per_batch;
+
+        int height_start = thread_num * height_per_thread;
+        int height_end = height_start + height_per_thread;
+
+        height_end = std::min(bmp->h, height_end);
+
 #else
-        {
-            int heightStep = 1;
-            int heightStart = 0;
-            int heightEnd = bmp->h;
+    {
+        int height_start = 0;
+        int height_end = bmp->h;
 #endif
-            // check the comment above for explanation
-            unsigned unalignedBlob[3 * (scalar_count + uint_entries_align / sizeof(unsigned))];
-            unsigned* pr = alignPtr<uint_entries_align>(unalignedBlob);
-            unsigned* pg = alignPtr<uint_entries_align>(pr + scalar_count);
-            unsigned* pb = alignPtr<uint_entries_align>(pg + scalar_count);
+        glsl_sandbox::fragment_shader shader;
+        static_cast<glsl_sandbox::fragment_shader_uniforms&>(shader) = uniforms;
 
-            glsl_sandbox::fragment_shader shader;
-  
-            for (int y = heightStart; !g_cancelDraw && y < heightEnd; y += heightStep)
+        // check the comment above for explanation
+        unsigned unaligned_blob[3 * (batch_scalar_count + batch_uint32_align / sizeof(unsigned))];
+        unsigned* pr = align_ptr<batch_uint32_align>(unaligned_blob);
+        unsigned* pg = align_ptr<batch_uint32_align>(pr + batch_scalar_count);
+        unsigned* pb = align_ptr<batch_uint32_align>(pg + batch_scalar_count);
+
+        assert(rows_per_batch <= height_end - height_start);
+
+        for (int y = height_start; !cancelled && y < height_end; y += rows_per_batch)
+        {
+            shader.gl_FragCoord.y = static_cast<float>(bmp->h - 1 - y) + y_offsets;
+
+            uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch;
+            
+            for (int x = 0; x < bmp->w; x += columns_per_batch)
             {
-                shader.gl_FragCoord.y = static_cast<float>(bmp->h - 1 - y);
+                shader.gl_FragCoord.x = static_cast<float>(x) + x_offsets;
 
-                uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch;
+                // vvvvvvvvvvvvvvvvvvvvvvvvvv
+                // THE SHADER IS INVOKED HERE
+                // ^^^^^^^^^^^^^^^^^^^^^^^^^^
+                shader(shader.gl_FragColor, shader.gl_FragCoord);
+				
+                // convert to [0;255]
+                auto color = glsl_sandbox::clamp(shader.gl_FragColor, c_zero, c_one);
+                color *= 255 + 0.5f;
 
-                int limitX = bmp->w - scalar_count;
-                for (int x = 0; x < bmp->w; x += scalar_count)
+                batch_store_aligned(batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(color.r)), pr);
+                batch_store_aligned(batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(color.g)), pg);
+                batch_store_aligned(batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(color.b)), pb);
+
+                if (x > bmp->w - columns_per_batch || y > bmp->h - rows_per_batch)
                 {
-                    // since we are likely moving by more than one pixel,
-                    // this will shift x and ptr left in case of width and scalar_count
-                    // not being aligned; will redraw up to (scalar_count-1) pixels,
-                    // but well, what you gonna do.
-                    if (x > limitX)
+                    // slow case: parially out of the surface
+                    for (int row = 0; row < bmp->h - y; ++row)
                     {
-                        ptr -= 3 * (x - limitX);
-                        x = limitX;
+                        auto p = ptr + row * bmp->pitch;
+                        for (int col = 0; col < bmp->w - x; ++col)
+                        {
+                            *p++ = static_cast<uint8_t>(pr[col]);
+                            *p++ = static_cast<uint8_t>(pg[col]);
+                            *p++ = static_cast<uint8_t>(pb[col]);
+                        }
                     }
-
-                    shader.gl_FragCoord.x = static_cast<float>(x) + offsets;
-                    
-                    // vvvvvvvvvvvvvvvvvvvvvvvvvv
-                    // THE SHADER IS INVOKED HERE
-                    // ^^^^^^^^^^^^^^^^^^^^^^^^^^
-                    shader();
-
-                    // convert to [0;255]
-                    auto color = glsl_sandbox::clamp(shader.gl_FragColor, c_zero, c_one);
-                    color *= 255 + 0.5f;
-
-                    // save in the bitmap
-                    store_aligned(static_cast<uint_type>(static_cast<raw_float_type>(color.r)), pr);
-                    store_aligned(static_cast<uint_type>(static_cast<raw_float_type>(color.g)), pg);
-                    store_aligned(static_cast<uint_type>(static_cast<raw_float_type>(color.b)), pb);
-
-                    static_for<0, scalar_count>([&](size_t i)
-                    {
-                        *ptr++ = static_cast<uint8_t>(pr[i]);
-                        *ptr++ = static_cast<uint8_t>(pg[i]);
-                        *ptr++ = static_cast<uint8_t>(pb[i]);
-                    });
                 }
-            }
-        }
+                else
+                {
+                    {
+                        auto p = ptr;
+                        static_for<0, columns_per_batch>([&](size_t j)
+                        {
+                            *p++ = static_cast<uint8_t>(pr[j]);
+                            *p++ = static_cast<uint8_t>(pg[j]);
+                            *p++ = static_cast<uint8_t>(pb[j]);
+                        });
+                    }
+                    // handle second row (if present)
+                    {
+                        auto p = ptr + bmp->pitch;
+                        static_for<columns_per_batch, batch_scalar_count>([&](size_t j)
+                        {
+                            *p++ = static_cast<uint8_t>(pr[j]);
+                            *p++ = static_cast<uint8_t>(pg[j]);
+                            *p++ = static_cast<uint8_t>(pb[j]);
+                        });
+                    }
+                }
 
-        ScopedLock lock(g_frameHandshakeMutex);
-        if ( g_quit )
-        {
-            return 0;
-        }
-        else
-        {
-            // frame is ready, change bool and raise signal (in case main thread is waiting)
-            g_frameReady = true;
-            SDL_CondSignal(m_frameReadyEvent.get());
-
-            // wait for the main thread to process the frame
-            SDL_CondWait(m_frameReceivedEvent.get(), g_frameHandshakeMutex.get());
-            if ( g_quit )
-            {
-                return 0;
+                ptr += 3 * columns_per_batch;
             }
         }
     }
 }
 
+static std::chrono::microseconds render_timed(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface* bmp, const std::atomic_bool& cancelled)
+{
+    auto begin = std::chrono::steady_clock::now();
+    render(uniforms, bmp, cancelled);
+    auto end = std::chrono::steady_clock::now();
+    return std::chrono::duration_cast<std::chrono::microseconds>(end - begin);
+}
 
 
-extern "C" int main(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     using namespace std;
 
@@ -344,28 +339,28 @@ extern "C" int main(int argc, char* argv[])
     int initted = IMG_Init(flags);
     if ((initted & flags) != flags) 
     {
-        cerr << "WARNING: failed to initialise required jpg and png support: " << IMG_GetError() << endl;
+        cerr << "WARNING: failed to initialize required jpg and png support: " << IMG_GetError() << endl;
     }
 #endif
 
     // get initial resolution
-    swizzle::glsl::vector<int, 2> initialResolution;
-    initialResolution.x = 128;
-    initialResolution.y = 128;
+    swizzle::glsl::vector<int, 2> initial_resolution;
+    initial_resolution.x = 128;
+    initial_resolution.y = 128;
     if (argc == 2)
     {
         std::stringstream s;
         s << argv[1];
-        if ( !(s >> initialResolution) )
+        if ( !(s >> initial_resolution) )
         {
             cerr << "ERROR: unable to parse resolution argument" << endl;
             return 1;
         }
     }
 
-    if ( initialResolution.x <= 0 || initialResolution.y < 0 )
+    if ( initial_resolution.x <= 0 || initial_resolution.y < 0 )
     {
-        cerr << "ERROR: invalid resolution: " << initialResolution  << endl;
+        cerr << "ERROR: invalid resolution: " << initial_resolution  << endl;
         return 1;
     }
 
@@ -375,81 +370,90 @@ extern "C" int main(int argc, char* argv[])
     cout << "space - blit now! (show incomplete render)\n";
     cout << "esc   - quit\n\n";
 
-    // it doesn't need cleaning up
-    SDL_Surface* screen = nullptr;
+    // initial setup
+	SDL_SetMainReady();
+    if (SDL_Init(SDL_INIT_VIDEO) < 0)
+    {
+        cerr << "Unable to init SDL" << endl;
+        return 1;
+    }
 
     try 
     {
-        // a function to resize the screen; throws if unsuccessful
-        auto resizeOrCreateScreen = [&](int w, int h) -> void
+        auto window = make_unique_with_deleter<SDL_Window>(SDL_CreateWindow("CxxSwizzle sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+            initial_resolution.x, initial_resolution.y, SDL_WINDOW_RESIZABLE), SDL_DestroyWindow);
+        auto renderer = make_unique_with_deleter<SDL_Renderer>(SDL_CreateRenderer(window.get(), -1, 0), SDL_DestroyRenderer);
+        auto target_surface = make_unique_with_deleter<SDL_Surface>(SDL_FreeSurface);
+        auto target_texture = make_unique_with_deleter<SDL_Texture>(SDL_DestroyTexture);
+
+        // a function used to resize the target_surface
+        auto resize_or_create_surface = [&](int w, int h) -> void
         {
-            screen = SDL_SetVideoMode( w, h, 24, SDL_SWSURFACE | SDL_RESIZABLE);
-            if ( !screen )
+            target_surface.reset( SDL_CreateRGBSurface(0, w, h, 24, 0x000000ff, 0x0000ff00, 0x00ff0000, 0 ) );
+            if ( !target_surface )
             {
-                throw std::runtime_error("Unable to set video mode");
+                throw std::runtime_error("Unable to create target_surface");
             }
+
+            target_texture.reset(SDL_CreateTexture(renderer.get(), SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, w, h));
+            if ( !target_texture )
+                throw std::runtime_error("Unable to create target_texture");
         };
 
-        // a function used to resize the surface
-        auto resizeOrCreateSurface = [&](int w, int h) -> void
-        {
-            g_surface.reset( SDL_CreateRGBSurface(SDL_SWSURFACE, w, h, 24, 0x000000ff, 0x0000ff00, 0x00ff0000, 0 ) );
-            if ( !g_surface )
-            {
-                throw std::runtime_error("Unable to create surface");
-            }
-            // update shader value
-            glsl_sandbox::resolution.x = static_cast<float>(w);
-            glsl_sandbox::resolution.y = static_cast<float>(h);
-        };
-
-        // initial setup
-        if (SDL_Init( SDL_INIT_VIDEO ) < 0 )
-        {
-            throw std::runtime_error("Unable to init SDL");
-        }
-        SDL_EnableKeyRepeat(200, 16);
-        SDL_WM_SetCaption("SDL/Swizzle", "SDL/Swizzle");
-
-        resizeOrCreateScreen(initialResolution.x, initialResolution.y);
-        resizeOrCreateSurface(initialResolution.x, initialResolution.y);
+        resize_or_create_surface(initial_resolution.x, initial_resolution.y);
         
-        float timeScale = 1;
+        double time_scale = 1.0;
         int frame = 0;
-        float time = 0;
-        vec2 mousePosition(0, 0);
-        bool pendingResize = false;
-        bool mousePressed = false;
+        float time = 0.0f;
+        vec2 mouse_position(0.0f, 0.0f);
+        bool pending_resize = false;
+        bool mouse_pressed = false;
 
+        std::atomic_bool abort_render_token = false;
 
-        auto renderThreadInstance = SDL_CreateThread(renderThread, nullptr);
+        auto renderAsync = [&]() -> std::future<std::chrono::microseconds>
+        {
+            glsl_sandbox::fragment_shader_uniforms uniforms;
 
-        clock_t begin = clock();
-        clock_t frameBegin = begin;
-        float lastFPS = 0;
+            abort_render_token = false;
 
-        while (!g_quit) 
+            auto s = target_surface.get();
+            uniforms.iTime = time;
+            uniforms.iResolution = vec2(static_cast<float>(s->w), static_cast<float>(s->h));
+            uniforms.iMouse = mouse_position / uniforms.iResolution;
+
+            return std::async(render_timed, uniforms, s, std::ref(abort_render_token));
+        };
+
+        std::future<std::chrono::microseconds> render_task = renderAsync();
+        std::chrono::microseconds last_render_duration;
+        auto begin = std::chrono::steady_clock::now();
+        auto micro_to_seconds = 1 / 1000000.0;
+
+        for (;;)
         {
             bool blitNow = false;
+            bool quit = false;
 
             // process events
             SDL_Event event;
             while (SDL_PollEvent(&event)) 
             {
-                switch ( event.type ) 
+                switch (event.type)
                 {
-                case SDL_VIDEORESIZE:
-                    if ( event.resize.w != screen->w || event.resize.h != screen->h )
+                case SDL_WINDOWEVENT:
+                    switch (event.window.event)
                     {
-                        resizeOrCreateScreen( event.resize.w, event.resize.h );
-                        ScopedLock lock(g_frameHandshakeMutex);
-                        g_cancelDraw = pendingResize = true;
+                    case SDL_WINDOWEVENT_SIZE_CHANGED:
+                    {
+                        abort_render_token = pending_resize = true;
+                    }
+                    break;
                     }
                     break;
                 case SDL_QUIT:
                     {
-                        ScopedLock lock(g_frameHandshakeMutex);
-                        g_quit = g_cancelDraw = true;
+                        abort_render_token = quit = true;
                     }
                     break; 
                 case SDL_KEYDOWN:
@@ -460,99 +464,91 @@ extern "C" int main(int argc, char* argv[])
                         break;
                     case SDLK_ESCAPE:
                         {
-                            ScopedLock lock(g_frameHandshakeMutex);
-                            g_quit = g_cancelDraw = true;
+                            abort_render_token = quit = true;
                         }
                         break;
                     case SDLK_PLUS:
                     case SDLK_EQUALS:
-                        timeScale *= 2.0f;
+                        time_scale *= 2.0;
                         break;
                     case SDLK_MINUS:
-                        timeScale /= 2.0f;
+                        time_scale /= 2.0;
                         break;
                     default:
                         break;
                     }
                     break;
                 case SDL_MOUSEMOTION:
-                    if (mousePressed)
+                    if (mouse_pressed)
                     {
-                        mousePosition.x = static_cast<float>(event.button.x);
-                        mousePosition.y = static_cast<float>(g_surface->h - 1 - event.button.y);
+                        mouse_position.x = static_cast<float>(event.button.x);
+                        mouse_position.y = static_cast<float>(target_surface->h - 1 - event.button.y);
                     }
                     break;
                 case SDL_MOUSEBUTTONDOWN:
-                    mousePressed = true;
-                    mousePosition.x = static_cast<float>(event.button.x);
-                    mousePosition.y = static_cast<float>(g_surface->h - 1 - event.button.y);
+                    mouse_pressed = true;
+                    mouse_position.x = static_cast<float>(event.button.x);
+                    mouse_position.y = static_cast<float>(target_surface->h - 1 - event.button.y);
                     break;
                 case SDL_MOUSEBUTTONUP:
-                    mousePressed = false;
+                    mouse_pressed = false;
                 default:
                     break;
                 }
             }
 
-            bool doFlip = false;
+            if (quit)
             {
-                ScopedLock lock(g_frameHandshakeMutex);
-                if ( g_quit )
-                {
-                    if ( g_frameReady )
-                    {
-                        // unlock waiting thread
-                        SDL_CondSignal( m_frameReceivedEvent.get() );
-                    }
-                }
-                // if either the flag is set or variable has been signaled do the blit
-                else if ( blitNow || g_frameReady || SDL_CondWaitTimeout(m_frameReadyEvent.get(), g_frameHandshakeMutex.get(), 33) == 0 )
-                {
-                    doFlip = true;
-                    SDL_BlitSurface( g_surface.get(), NULL, screen, NULL );
-
-                    if ( pendingResize )
-                    {
-                        resizeOrCreateSurface(screen->w, screen->h);
-                        pendingResize = false;
-                    }
-
-                    if (g_frameReady)
-                    {
-                        auto currClock = clock();
-                        lastFPS = 1.0f / static_cast<float>((currClock - frameBegin) / double(CLOCKS_PER_SEC));
-                        frameBegin = currClock;
-                    }
-
-                    if (!blitNow || g_frameReady)
-                    {
-                        // transfer variables (resolution is transfered elsewhere)
-                        glsl_sandbox::time = time;
-                        glsl_sandbox::mouse = mousePosition / vec2(screen->w, screen->h);
-                        // reset flags
-                        g_cancelDraw = g_frameReady = false;
-                        SDL_CondSignal( m_frameReceivedEvent.get() );
-                    }
-                }
+                break;
             }
 
-            if (doFlip)
-            {
-                ++frame;
-                SDL_Flip( screen );
-            }
+            bool frameReady = !(bool)render_task.wait_for(chrono::microseconds{ 33 });
 
-            cout << "frame: " << frame << "\t time: " << time << "\t timescale: " << timeScale << "\t fps: " << lastFPS << "     \r";
+            if (pending_resize)
+            {
+                if (frameReady)
+                {
+                    int w, h;
+                    SDL_GetWindowSize(window.get(), &w, &h);
+
+                    resize_or_create_surface(w, h);
+                    pending_resize = false;
+
+                    render_task = renderAsync();
+                }
+            }
+            else
+            {
+                if (blitNow || frameReady)
+                {
+                    SDL_UpdateTexture(target_texture.get(), NULL, target_surface->pixels, target_surface->pitch);
+                    SDL_RenderClear(renderer.get());
+                    SDL_RenderCopy(renderer.get(), target_texture.get(), NULL, NULL);
+                    SDL_RenderPresent(renderer.get());
+                }
+
+                if (frameReady)
+                {
+                    ++frame;
+                    last_render_duration = render_task.get();
+                    render_task = renderAsync();
+                }
+            }
+            
+
+            // clear line
+            cout << "\r" << (char)27 << "[2K";
+            cout << "frame: " << frame << "\t time: " << time << "\t time_scale: " << time_scale << "\t time: " << last_render_duration.count() * micro_to_seconds;
             cout.flush();
 
-            clock_t delta = clock() - begin;
-            time += static_cast<float>(delta / double(CLOCKS_PER_SEC) * timeScale);
-            begin = clock();
+            auto delta = chrono::duration_cast<chrono::microseconds>(chrono::steady_clock::now() - begin);
+            time += static_cast<float>(delta.count() * micro_to_seconds * time_scale);
+            begin = chrono::steady_clock::now();
         }
 
         // wait for the render thread to stop
         cout << "\nwaiting for the worker thread to finish...";
-        SDL_WaitThread(renderThreadInstance, nullptr);
+        render_task.wait();
     } 
     catch ( exception& error ) 
     {
@@ -576,11 +572,11 @@ sampler2D::sampler2D( const char* path, WrapMode wrapMode )
     m_image = IMG_Load(path);
     if (!m_image)
     {
-        std::cerr << "WARNING: Failed to load texture " << path << "\n";
+        std::cerr << "WARNING: Failed to load target_texture " << path << "\n";
         std::cerr << "  SDL_Image message: " << IMG_GetError() << "\n";
     }
 #else
-    std::cerr << "WARNING: Texture " << path << " won't be loaded, SDL_image was not found.\n";
+    std::cerr << "WARNING: target_texture " << path << " won't be loaded, SDL_image was not found.\n";
 #endif
 
 }
@@ -601,14 +597,14 @@ vec4 sampler2D::sample( const vec2& coord )
     switch (m_wrapMode)
     {
     case Repeat:
-        uv = mod(coord, 1);
+        uv = mod(coord, 1.0f);
         break;
     case MirrorRepeat:
-        uv = abs(mod(coord - 1, 2) - 1);
+        uv = abs(mod(coord - 1.0f, 2.0f) - 1.0f);
         break;
     case Clamp:
     default:
-        uv = clamp(coord, 0, 1);
+        uv = clamp(coord, 0.0f, 1.0f);
         break;
     }
 
@@ -620,7 +616,7 @@ vec4 sampler2D::sample( const vec2& coord )
         // checkers
         auto s = step(0.5f, uv);
         auto m2 = abs(s.x - s.y);
-        return mix(vec4(1, 0, 0, 1), vec4(0, 1, 0, 1), m2);
+        return mix(vec4(1.0f, 0.0f, 0.0f, 1.0f), vec4(0.0f, 1.0f, 0.0f, 1.0f), m2);
         /*if (uv_x < 0.5 && uv_y < 0.5 || uv_x > 0.5 && uv_y > 0.5)
         {
             return vec4(1, 0, 0, 1);
@@ -632,24 +628,24 @@ vec4 sampler2D::sample( const vec2& coord )
     }
     else
     {
-        uint_type x = static_cast<uint_type>(static_cast<raw_float_type>(uv.x * (m_image->w - 1) + 0.5));
-        uint_type y = static_cast<uint_type>(static_cast<raw_float_type>(uv.y * (m_image->h - 1) + 0.5));
+        raw_batch_uint32_t x = batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(uv.x * (m_image->w - 1.0) + 0.5));
+        raw_batch_uint32_t y = batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(uv.y * (m_image->h - 1.0) + 0.5));
 
         auto& format = *m_image->format;
-        uint_type index = (y * m_image->pitch + x * format.BytesPerPixel);
+        raw_batch_uint32_t index = (y * m_image->pitch + x * format.BytesPerPixel);
 
         // stack-alloc blob for storing indices and color components
-        uint8_t unalignedBlob[5 * (scalar_count * sizeof(unsigned) + uint_entries_align)];
-        unsigned* pindex = alignPtr<uint_entries_align>(reinterpret_cast<unsigned*>(unalignedBlob));
-        unsigned* pr = alignPtr<uint_entries_align>(pindex + scalar_count);
-        unsigned* pg = alignPtr<uint_entries_align>(pr + scalar_count);
-        unsigned* pb = alignPtr<uint_entries_align>(pg + scalar_count);
-        unsigned* pa = alignPtr<uint_entries_align>(pb + scalar_count);
+        uint8_t unaligned_blob[5 * (batch_scalar_count * sizeof(unsigned) + batch_uint32_align)];
+        unsigned* pindex = align_ptr<batch_uint32_align>(reinterpret_cast<unsigned*>(unaligned_blob));
+        unsigned* pr = align_ptr<batch_uint32_align>(pindex + batch_scalar_count);
+        unsigned* pg = align_ptr<batch_uint32_align>(pr + batch_scalar_count);
+        unsigned* pb = align_ptr<batch_uint32_align>(pg + batch_scalar_count);
+        unsigned* pa = align_ptr<batch_uint32_align>(pb + batch_scalar_count);
 
-        store_aligned(index, pindex);
+        batch_store_aligned(index, pindex);
         
         // fill the buffers
-        swizzle::detail::static_for<0, scalar_count>([&](size_t i)
+        swizzle::detail::static_for<0, batch_scalar_count>([&](size_t i)
         {
             auto pixelPtr = static_cast<uint8_t*>(m_image->pixels) + pindex[i];
             
@@ -666,17 +662,17 @@ vec4 sampler2D::sample( const vec2& coord )
         });
 
         // load data
-        uint_type r, g, b, a;
-        load_aligned(r, pr);
-        load_aligned(g, pg);
-        load_aligned(b, pb);
-        load_aligned(a, pa);
+        raw_batch_uint32_t r, g, b, a;
+        batch_load_aligned(r, pr);
+        batch_load_aligned(g, pg);
+        batch_load_aligned(b, pb);
+        batch_load_aligned(a, pa);
 
         vec4 result;
-        result.r = static_cast<raw_float_type>(r);
-        result.g = static_cast<raw_float_type>(g);
-        result.b = static_cast<raw_float_type>(b);
-        result.a = static_cast<raw_float_type>(a);
+        result.r = batch_cast<raw_batch_float_t>(r);
+        result.g = batch_cast<raw_batch_float_t>(g);
+        result.b = batch_cast<raw_batch_float_t>(b);
+        result.a = batch_cast<raw_batch_float_t>(a);
 
         return clamp(result / 255.0f, c_zero, c_one);
     }

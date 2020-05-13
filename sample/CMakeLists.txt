@@ -1,61 +1,54 @@
 # CxxSwizzle
 # Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
-find_package(SDL REQUIRED)
-find_package(SDL_image)
+find_package(SDL2 REQUIRED)
 find_package(OpenMP)
+# find_package(Vc CONFIG PATHS "${VC_INSTALL}" REQUIRED)
 
-# this will look in the local cmake directory only if Vc hasn't been built/installed locally
-
-if(MSVC)
-	# hint to use supplied, patched build
-	find_package(Vc CONFIG PATHS "${CMAKE_SOURCE_DIR}/external/cmake")
+if (OPENMP_FOUND)
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -DOMP_ENABLED=1")
 else()
-	# regular search
-	find_package(Vc)
+	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -DOMP_ENABLED=0")
 endif()
 
-if(SDL_FOUND)
+# get all the shaders
+file(GLOB shaders RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag")
 
-	if (OPENMP_FOUND)
-		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -DOMP_ENABLED=1")
-	else()
-		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -DOMP_ENABLED=0")
-	endif()
-	
-	# get all the shaders
-	file(GLOB shaders RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.frag")
+source_group("" FILES main.cpp use_scalar.h use_simd.h use_simd_masked.h )
+source_group("shaders" FILES ${shaders})
 
-	source_group("" FILES main.cpp use_scalar.h use_simd.h use_simd_masked.h )
-	source_group("shaders" FILES ${shaders})
-	
-	add_executable (sample_scalar main.cpp use_scalar.h ${shaders})
-	include_directories(${SDL_INCLUDE_DIR} ${CxxSwizzle_SOURCE_DIR}/include)
-	target_link_libraries (sample_scalar ${SDL_LIBRARY})
+add_executable (sample_scalar main.cpp use_scalar.h ${shaders})
+target_include_directories(sample_scalar PRIVATE ${CxxSwizzle_SOURCE_DIR}/include)
+target_link_libraries(sample_scalar PRIVATE SDL2::Main)
+set_target_properties(sample_scalar PROPERTIES COMPILE_FLAGS "-DUSE_SCALAR")
 
-	if(SDLIMAGE_FOUND)
-		include_directories(${SDL_IMAGE_INCLUDE_DIR})
-		target_link_libraries (sample_scalar ${SDL_IMAGE_LIBRARY})
-		set_target_properties(sample_scalar PROPERTIES COMPILE_FLAGS "-DUSE_SCALAR -DSDLIMAGE_FOUND")
-	else()
-		set_target_properties(sample_scalar PROPERTIES COMPILE_FLAGS "-DUSE_SCALAR")
-		message(WARNING "SDL_image not found, loading textures not going to be available.")
-	endif()
 
-	
-	if(Vc_FOUND)
-		add_executable(sample_simd main.cpp use_simd.h ${shaders})
-		target_link_libraries(sample_simd ${SDL_LIBRARY} ${Vc_LIBRARIES})
-		
-		if(SDLIMAGE_FOUND)
-			target_link_libraries(sample_simd ${SDL_IMAGE_LIBRARY})
-			set_target_properties(sample_simd PROPERTIES COMPILE_FLAGS "${Vc_DEFINITIONS} -DUSE_SIMD -DSDLIMAGE_FOUND")
-		else()
-			set_target_properties(sample_simd PROPERTIES COMPILE_FLAGS "${Vc_DEFINITIONS} -DUSE_SIMD")
-		endif()
+set (BUILD_SIMD_SAMPLE True CACHE BOOL "BUILD_SIMD_SAMPLE")
+if (BUILD_SIMD_SAMPLE)
 
-		target_include_directories(sample_simd PRIVATE ${Vc_INCLUDE_DIR})
-	else()
-		message(WARNING "Vc not found, SIMD sample not going to be available.")
-	endif()
+    set (VC_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/Vc-install)
+
+    ExternalProject_Add(Vc
+      GIT_REPOSITORY    https://github.com/VcDevel/Vc
+      GIT_TAG           1.4
+      CMAKE_ARGS        -DCMAKE_INSTALL_PREFIX:PATH=${VC_INSTALL} -DBUILD_TESTING=OFF
+    )
+
+    set (Vc_LIBRARIES ${VC_INSTALL}/lib/Vc.lib)
+    set (Vc_INCLUDE_DIR ${VC_INSTALL}/include)
+
+    add_executable(sample_simd main.cpp use_simd.h ${shaders})
+    target_include_directories(sample_simd PRIVATE ${CxxSwizzle_SOURCE_DIR}/include)
+    target_link_libraries(sample_simd PRIVATE SDL2::Main)
+    
+    target_link_libraries(sample_simd PRIVATE ${Vc_LIBRARIES})
+    target_include_directories(sample_simd PRIVATE ${Vc_INCLUDE_DIR})
+    add_dependencies(sample_simd Vc)
+
+    if(MSVC)
+        set_target_properties(sample_simd PROPERTIES COMPILE_FLAGS "-DUSE_SIMD /Gv")
+    else()
+        set_target_properties(sample_simd PROPERTIES COMPILE_FLAGS "-DUSE_SIMD")
+    endif()
+    
 endif()
