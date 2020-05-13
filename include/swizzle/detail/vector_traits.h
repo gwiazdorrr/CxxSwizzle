@@ -127,23 +127,27 @@ namespace swizzle
         template <class... T>
         constexpr size_t get_total_component_count_v = get_total_component_count<T...>::value;
 
-        template <typename StorageType, size_t Align, size_t Size, typename BoolType, bool IsBool, bool IsIntegral, bool IsFloatingPoint>
+        template <typename StorageType, typename PrimitiveType, size_t Align, size_t BatchSize, size_t BatchCount, typename BoolType, bool IsBool, bool IsIntegral, bool IsFloatingPoint>
         struct batch_traits_builder
         {
             using bool_type = BoolType;
-            using storage_type = StorageType;
+            using storage_type = std::conditional_t< (BatchCount == 1), StorageType, std::array<StorageType, BatchCount> >;
+            using primitive_type = PrimitiveType;
             static const bool is_bool = IsBool;
             static const bool is_integral = IsIntegral;
             static const bool is_floating_point = IsFloatingPoint;
-            static const size_t size = Size;
+            static const size_t size = BatchSize * BatchCount;
             static const size_t align = Align;
+            using aligned_storage_type = std::aligned_storage_t<sizeof(storage_type), align>;
         };
 
         template <typename T>
         struct batch_traits : batch_traits_builder<
             T,
+            T,
             alignof(T), 
-            sizeof(T), 
+            1,
+            1,
             bool,
             std::is_same_v<T, bool>,
             std::is_integral_v<T> && !std::is_same_v<T, bool>,

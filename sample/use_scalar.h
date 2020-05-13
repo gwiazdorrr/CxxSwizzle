@@ -9,32 +9,28 @@
 #include <swizzle/glsl/scalar_support.h>
 #include <cstdint>
 
-typedef float batch_float_t;
-typedef float raw_batch_float_t;
-typedef uint32_t raw_batch_uint32_t;
-using batch_int_t = int32_t;
-using batch_uint_t = uint32_t;
-using batch_bool_t = bool;
+using batch_float_t = swizzle::detail::simd_float<>;
+using batch_int_t = swizzle::detail::simd_int32<>;
+using batch_uint_t = swizzle::detail::simd_uint32<>;
+using batch_bool_t = swizzle::detail::simd_bool<>;
 
-const size_t batch_scalar_count = 1;
-const size_t batch_float_align = std::alignment_of<raw_batch_float_t>::value;
-const size_t batch_uint32_align = std::alignment_of<raw_batch_uint32_t>::value;
-
-template <typename T>
-inline void batch_store_aligned(T&& value, typename std::remove_reference<T>::type* target)
+namespace swizzle
 {
-    *target = std::forward<T>(value);
+    namespace detail
+    {
+        template <> struct get_vector_type_impl<float> : get_vector_type_impl<batch_float_t> {};
+        template <> struct get_vector_type_impl<double> : get_vector_type_impl<batch_float_t> {};
+        template <> struct get_vector_type_impl<int> : get_vector_type_impl<batch_int_t> {};
+        template <> struct get_vector_type_impl<uint32_t> : get_vector_type_impl<batch_uint_t> {};
+    }
 }
 
-template <typename T>
-inline void batch_load_aligned(T& value, const T* data)
-{
-    value = *data;
-}
 
-template <typename To, typename From>
-To batch_cast(From&& value)
-{
-    return static_cast<To>(value);
-}
-
+//
+//typedef float batch_float_t;
+//typedef float raw_batch_float_t;
+//typedef uint32_t raw_batch_uint32_t;
+//using batch_int_t = int32_t;
+//using batch_uint_t = uint32_t;
+//using batch_bool_t = bool;
+//

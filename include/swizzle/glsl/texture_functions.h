@@ -19,9 +19,27 @@ namespace swizzle
             }
 
             template <class Sampler>
-            auto texture(const Sampler& sampler, typename Sampler::tex_coord_type coord, float bias) -> decltype ( sampler.sample(coord, bias) )
+            auto texture(Sampler& sampler, typename Sampler::cube_coord_type coord) -> decltype (sampler.sample(coord))
+            {
+                return sampler.sample(coord);
+            }
+
+            template <class Sampler>
+            auto texelFetch(Sampler& sampler, typename Sampler::tex_fetch_coord_type coord, int lod) -> decltype (sampler.texelFetch(coord, lod))
+            {
+                return sampler.texelFetch(coord, lod);
+            }
+
+            template <class Sampler>
+            auto texture(const Sampler& sampler, typename Sampler::tex_coord_type coord, typename Sampler::float_type bias) -> decltype (sampler.sample(coord, bias))
             {
                 return sampler.sample(coord, bias);
+            }
+
+            template <class Sampler>
+            auto textureLod(Sampler& sampler, typename Sampler::tex_coord_type coord, double lod) -> decltype (sampler.sampleLod(coord, lod))
+            {
+                return sampler.sample(coord, lod);
             }
 
             template <class Sampler>

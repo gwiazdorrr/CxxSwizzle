@@ -24,9 +24,17 @@ typedef swizzle::vector< batch_uint_t, 2 > uvec2;
 typedef swizzle::vector< batch_uint_t, 3 > uvec3;
 typedef swizzle::vector< batch_uint_t, 4 > uvec4;
 
+typedef swizzle::vector< batch_bool_t, 2 > bvec2;
+typedef swizzle::vector< batch_bool_t, 3 > bvec3;
+typedef swizzle::vector< batch_bool_t, 4 > bvec4;
+
 typedef swizzle::matrix< swizzle::vector, batch_float_t, 2, 2 > mat2;
 typedef swizzle::matrix< swizzle::vector, batch_float_t, 3, 3 > mat3;
 typedef swizzle::matrix< swizzle::vector, batch_float_t, 4, 4 > mat4;
+
+using mat2x2 = mat2;
+using mat3x3 = mat3;
+using mat4x4 = mat4;
 
 static_assert(sizeof(vec2) == sizeof(batch_float_t[2]), "Too big");
 static_assert(sizeof(vec3) == sizeof(batch_float_t[3]), "Too big");
@@ -37,8 +45,15 @@ static_assert(sizeof(vec4) == sizeof(batch_float_t[4]), "Too big");
 //typedef swizzle::glsl::matrix< swizzle::vector, vec4::scalar_type, 4, 4> mat4;
 
 
+//namespace Vc
+//{
+//    Vector<float> radiands(const Vector<float>& value)
+//    {}
+//
+//}
 
 
+// todo: YOU CAN' do float cos = cos(rad);
 
 //template <typename ValueType, ValueType Value, ValueType... Values>
 //std::integer_sequence<ValueType, Values..., Value> append_integer_sequence_resolver(std::integer_sequence<ValueType, Values...>)
@@ -76,13 +91,38 @@ public:
         MirrorRepeat
     };
 
+    typedef const vec2::scalar_type& float_type;
     typedef const vec2& tex_coord_type;
+    typedef const vec3& cube_coord_type;
+    typedef const ivec2& tex_fetch_coord_type;
 
     naive_sampler2D(vec4 checkers0, vec4 checkers1);
     
     naive_sampler2D(const char* path, WrapMode wrapMode);
     ~naive_sampler2D();
+
+    vec4 texelFetch(const ivec2& coord, int lod) const
+    {
+        return fetch(coord);
+    }
+    vec4 sample(const vec3& coord) const
+    {
+        return sample(coord.xy);
+    }
     vec4 sample(const vec2& coord) const;
+    vec4 sample(const vec2& coord, float_type bias) const
+    {
+        return sample(coord);
+    }
+
+    vec4 sampleLod(const vec2& coord, float_type lod) const
+    {
+        return sample(coord);
+    }
+
+    vec4 fetch(const ivec2& coord) const;
+
+
 
     void setData(std::vector<uint8_t>, int width, int pitch)
     {
@@ -91,8 +131,8 @@ public:
 private:
     SDL_Surface *m_image;
     WrapMode m_wrapMode;
-    vec4 checkers0;
-    vec4 checkers1;
+    vec4 checkers0 = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    vec4 checkers1 = vec4(1.0f, 0.0f, 1.0f, 1.0f);
 
     // do not allow copies to be made
     naive_sampler2D(const naive_sampler2D&);
@@ -107,6 +147,15 @@ namespace glsl_sandbox
 
 
     naive_sampler2D iChannel0(nullptr, naive_sampler2D::Repeat);
+    naive_sampler2D iChannel1(nullptr, naive_sampler2D::Repeat);
+    naive_sampler2D iChannel2(nullptr, naive_sampler2D::Repeat);
+    naive_sampler2D iChannel3(nullptr, naive_sampler2D::Repeat);
+    vec3 iChannelResolution[4] = {
+        vec3(128, 128, 1),
+        vec3(128, 128, 1),
+        vec3(128, 128, 1),
+        vec3(128, 128, 1)
+    };
 
     // change meaning of glsl keywords to match sandbox
     #define uniform extern
@@ -144,6 +193,7 @@ namespace glsl_sandbox
         vec2 iResolution;
         batch_float_t iTime;
         vec3 iMouse;
+        int iFrame;
     };
 
     struct fragment_shader : fragment_shader_uniforms
@@ -153,11 +203,30 @@ namespace glsl_sandbox
 
         void aaa()
         {
+            int aaaa = int(6666);
+            float sss = 0.0f;
+            // light visibility across the volume
+            float ssha = 0.0f;
+
+            // mix reflecting and refracting contributions
+            float dif = 0.0f;
+
+            ::swizzle::detail::get_vector_type<batch_float_t, batch_float_t, double>::type::call_mix(sss, ssha, 0.2);
+
+            auto tmp = mix(sss, ssha, 0.2);
+            dif = mix(dif, tmp, 0.5);
+
+            
+            /*aaaa.call_mix(sss, ssha, 0.2);
+            auto a = mix(sss, ssha, 0.2);
+            dif = mix(dif, a, 0.5);*/
+
+
             //vec2 a;
             //mix(a, a, 0.0);
 //            mix(0.0, 0.0, 0.0);
 
-            ::swizzle::detail::get_vector_type<double, double, double>::type::call_mix(0.0, 0.0, 0.0);
+            //::swizzle::detail::get_vector_type<double, double, double>::type::call_mix(0.0, 0.0, 0.0);
             //mix(a, a, a);
         }
 
@@ -211,7 +280,11 @@ namespace glsl_sandbox
         //#include "shaders/road.frag"
         //#include "shaders/gears.frag"
         //#include "shaders/water_turbulence.frag"
+//#include "shaders/elevated_coast.frag"
+
         #include "shader.frag"
+
+#undef time
     };
 
     // be a dear a clean up
@@ -298,32 +371,47 @@ T* align_ptr(T* ptr)
     return reinterpret_cast<T*>((value + Align) & (~(Align - 1)));
 }
 
-static_assert(batch_scalar_count == 1 || batch_scalar_count % 2 == 0, "1 or even scalar count");
-constexpr auto columns_per_batch = batch_scalar_count > 1 ? batch_scalar_count / 2 : 1;
-constexpr auto rows_per_batch = batch_scalar_count > 1 ? 2 : 1;
+//void debug_print(batch_float_t vec)
+//{
+//    using namespace swizzle;
+//    using namespace swizzle::detail;
+//
+//    batch_traits<batch_float_t>::aligned_storage_type storage;
+//    float* p = reinterpret_cast<float*>(&storage);
+//
+//    store_aligned(vec, p);
+//
+//    for (int i = 0; i < batch_traits<vec4::scalar_type>::size; ++i)
+//    {
+//        std::cout << p[i] << " ";
+//    }
+//    std::cout << "\n";
+//}
+
 
 static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface* bmp, const std::atomic_bool& cancelled)
 {
+    //debug_print(uniforms.iTime);
+
+    float f = float(0x1000);
     using ::swizzle::detail::static_for;
 
+
+    //debug_print(uniforms.iTime);
+
 	// if there are more than 1 scalars in a vector, work on two rows with half width at the same time
-    raw_batch_float_t x_offsets;
-	raw_batch_float_t y_offsets;
+    batch_float_t x_offsets(0);
+	batch_float_t y_offsets(0);
 
     {
-        // well... this calls for an explanation: why not std::aligned_storage?
-        // turns out there's a thing like max_align_t that defines max possible
-        // align; SSE/AVX data has greater align than max_align_t on compilers
-        // I checked, so std::aligned_storage is useless here.
+        float_traits::aligned_storage_type aligned_storage;
+        float* aligned = reinterpret_cast<float*>(&aligned_storage);
 
-        uint8_t unaligned_blob[batch_scalar_count * sizeof(float) + batch_float_align];
-        float* aligned = align_ptr<batch_float_align>(reinterpret_cast<float*>(unaligned_blob));
+		static_for<0, float_traits::size>([&](size_t i) { aligned[i] = static_cast<float>(i % columns_per_batch); });
+        load_aligned(x_offsets, aligned);
 
-		static_for<0, batch_scalar_count>([&](size_t i) { aligned[i] = static_cast<float>(i % columns_per_batch); });
-        batch_load_aligned(x_offsets, aligned);
-
-		static_for<0, batch_scalar_count>([&](size_t i) { aligned[i] = static_cast<float>(1 - i / columns_per_batch); });
-		batch_load_aligned(y_offsets, aligned);
+		static_for<0, float_traits::size>([&](size_t i) { aligned[i] = static_cast<float>(1 - i / columns_per_batch); });
+        load_aligned(y_offsets, aligned);
     }
 
 #if !defined(_DEBUG) && OMP_ENABLED
@@ -350,39 +438,56 @@ static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface*
         int height_end = bmp->h;
 #endif
 
-        glsl_sandbox::fragment_shader shader;
-        static_cast<glsl_sandbox::fragment_shader_uniforms&>(shader) = uniforms;
+        //debug_print(uniforms.iTime);
+
+        uint32_traits::aligned_storage_type aligned_blob_r;
+        uint32_traits::aligned_storage_type aligned_blob_g;
+        uint32_traits::aligned_storage_type aligned_blob_b;
 
         // check the comment above for explanation
-        unsigned unaligned_blob[3 * (batch_scalar_count + batch_uint32_align / sizeof(unsigned))];
-        unsigned* pr = align_ptr<batch_uint32_align>(unaligned_blob);
-        unsigned* pg = align_ptr<batch_uint32_align>(pr + batch_scalar_count);
-        unsigned* pb = align_ptr<batch_uint32_align>(pg + batch_scalar_count);
+        uint32_t* pr = reinterpret_cast<uint32_t*>(&aligned_blob_r);
+        uint32_t* pg = reinterpret_cast<uint32_t*>(&aligned_blob_g);
+        uint32_t* pb = reinterpret_cast<uint32_t*>(&aligned_blob_b);
 
         assert(rows_per_batch <= height_end - height_start);
 
+        //debug_print(uniforms.iTime);
+
         for (int y = height_start; !cancelled && y < height_end; y += rows_per_batch)
         {
-            shader.gl_FragCoord.y = static_cast<float>(bmp->h - 1 - y) + y_offsets;
+            batch_float_t fy = static_cast<float>(bmp->h - 1 - y) + y_offsets;
 
             uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch;
             
             for (int x = 0; x < bmp->w; x += columns_per_batch)
             {
+                glsl_sandbox::fragment_shader shader;
+                static_cast<glsl_sandbox::fragment_shader_uniforms&>(shader) = uniforms;
+
+                shader.gl_FragCoord.y = fy;
                 shader.gl_FragCoord.x = static_cast<float>(x) + x_offsets;
 
                 // vvvvvvvvvvvvvvvvvvvvvvvvvv
                 // THE SHADER IS INVOKED HERE
+                
+               
                 // ^^^^^^^^^^^^^^^^^^^^^^^^^^
                 shader(shader.gl_FragColor, shader.gl_FragCoord);
-				
-                // convert to [0;255]
-                auto color = glsl_sandbox::clamp(shader.gl_FragColor, c_zero, c_one);
-                color *= 255 + 0.5f;
+                
 
-                batch_store_aligned(batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(color.r)), pr);
-                batch_store_aligned(batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(color.g)), pg);
-                batch_store_aligned(batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(color.b)), pb);
+                // convert to [0;255]
+                auto color = shader.gl_FragColor;// , c_zero, c_one);
+                color *= 255.0f + 0.5f;
+                //debug_print(color.x);
+                //debug_print(color.y);
+
+                //vec4 color(255.0f, 0.0f, 0.0f, 1.0f);
+                /*::Vc::float_v a;
+                a.data()*/
+
+                store_aligned(static_cast<batch_uint_t>(color.r), pr);
+                store_aligned(static_cast<batch_uint_t>(color.g), pg);
+                store_aligned(static_cast<batch_uint_t>(color.b), pb);
 
                 if (x > bmp->w - columns_per_batch || y > bmp->h - rows_per_batch)
                 {
@@ -415,7 +520,7 @@ static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface*
                     // handle second row (if present)
                     {
                         auto p = ptr + bmp->pitch;
-                        static_for<columns_per_batch, batch_scalar_count>([&](size_t j)
+                        static_for<columns_per_batch, pixels_per_batch>([&](size_t j)
                         {
                             *p++ = static_cast<uint8_t>(pr[j]);
                             *p++ = static_cast<uint8_t>(pg[j]);
@@ -428,15 +533,18 @@ static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface*
             }
         }
     }
-}
+  }
 
-static std::chrono::microseconds render_timed(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface* bmp, const std::atomic_bool& cancelled)
+static std::chrono::microseconds render_timed(glsl_sandbox::fragment_shader_uniforms& uniforms, SDL_Surface* bmp, const std::atomic_bool& cancelled)
 {
+    //debug_print(uniforms.iTime);
+    //printf("\n\n%hd\n\n", uniforms.wtfffff);
     auto begin = std::chrono::steady_clock::now();
     render(uniforms, bmp, cancelled);
     auto end = std::chrono::steady_clock::now();
     return std::chrono::duration_cast<std::chrono::microseconds>(end - begin);
 }
+
 
 
 int main(int argc, char* argv[])
@@ -520,18 +628,27 @@ int main(int argc, char* argv[])
         bool mouse_pressed = false;
 
         std::atomic_bool abort_render_token = false;
+        glsl_sandbox::fragment_shader_uniforms uniforms;
 
         auto renderAsync = [&]() -> std::future<std::chrono::microseconds>
         {
-            glsl_sandbox::fragment_shader_uniforms uniforms;
+            uniforms = {};
 
             abort_render_token = false;
             auto s = target_surface.get();
             uniforms.iTime = time;
-            uniforms.iResolution = vec2(static_cast<float>(s->w), static_cast<float>(s->h));
+            
+            uniforms.iFrame = frame;
+            uniforms.iResolution = vec2(static_cast<batch_float_t>(s->w), static_cast<batch_float_t>(s->h));
             uniforms.iMouse.xy = mouse_position / uniforms.iResolution;
+            uniforms.wtfffff = 7777;
+            glsl_sandbox::fragment_shader_uniforms copppy = uniforms;
 
-            return std::async(render_timed, uniforms, s, std::ref(abort_render_token));
+            //debug_print(uniforms.iTime);
+            //debug_print(copppy.iTime);
+
+
+            return std::async(render_timed, std::ref(uniforms), s, std::ref(abort_render_token));
         };
 
         std::future<std::chrono::microseconds> render_task = renderAsync();
@@ -699,6 +816,33 @@ naive_sampler2D::~naive_sampler2D()
     }
 }
 
+
+vec4 naive_sampler2D::fetch(const ivec2& coord) const
+{
+  //  vec2 mask = vec2::call_step(32.0f, vec2(coord));
+
+    //vec2 mask = vec2(ivec2::call_lessThan(coord, ivec2(32, 32)));
+    //float f = 0;
+//    vec2::scalar_type f = swizzle::vector<float, 1>::call_abs(mask.x - mask.y);
+    //return vec4::call_mix(checkers0, checkers1, f);
+    return vec4(0);
+}
+
+//namespace Vc
+//{
+//    template <typename T>
+//    inline Vector<T> acos(const Vector<T>& x)
+//    {
+//        // silly acos that does store & load... I'm sorry
+//        std::aligned_storage_t<x.Size * sizeof(T), x.MemoryAlignment> storage;
+//        T* ptr = reinterpret_cast<T*>(&storage);
+//        x.store(ptr, Aligned);
+//        ::swizzle::detail::static_for<0, Vector<T>::Size>([&](size_t i) { ptr[i] = ::std::acos(ptr[i]); });
+//        x.load(ptr, Aligned);
+//        return atan2(y, x);
+//    }
+//}
+
 vec4 naive_sampler2D::sample( const vec2& coord ) const
 {
     using namespace glsl_sandbox;
@@ -720,8 +864,8 @@ vec4 naive_sampler2D::sample( const vec2& coord ) const
     // OGL uses left-bottom corner as origin...
     uv.y = 1.0 - uv.y;
     
-    if ( !m_image )
-    {
+    //if ( !m_image )
+    //{
         // checkers
         auto s = step(0.5f, uv);
         auto m2 = abs(s.x - s.y);
@@ -734,55 +878,55 @@ vec4 naive_sampler2D::sample( const vec2& coord ) const
         {
             return vec4(0, 1, 0, 1);
         }*/
-    }
-    else
-    {
-        raw_batch_uint32_t x = batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(uv.x * (m_image->w - 1.0) + 0.5));
-        raw_batch_uint32_t y = batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(uv.y * (m_image->h - 1.0) + 0.5));
+    //}
+    //else
+    //{
+    //    raw_batch_uint32_t x = batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(uv.x * (m_image->w - 1.0) + 0.5));
+    //    raw_batch_uint32_t y = batch_cast<raw_batch_uint32_t>(static_cast<raw_batch_float_t>(uv.y * (m_image->h - 1.0) + 0.5));
 
-        auto& format = *m_image->format;
-        raw_batch_uint32_t index = (y * m_image->pitch + x * format.BytesPerPixel);
+    //    auto& format = *m_image->format;
+    //    raw_batch_uint32_t index = (y * m_image->pitch + x * format.BytesPerPixel);
 
-        // stack-alloc blob for storing indices and color components
-        uint8_t unaligned_blob[5 * (batch_scalar_count * sizeof(unsigned) + batch_uint32_align)];
-        unsigned* pindex = align_ptr<batch_uint32_align>(reinterpret_cast<unsigned*>(unaligned_blob));
-        unsigned* pr = align_ptr<batch_uint32_align>(pindex + batch_scalar_count);
-        unsigned* pg = align_ptr<batch_uint32_align>(pr + batch_scalar_count);
-        unsigned* pb = align_ptr<batch_uint32_align>(pg + batch_scalar_count);
-        unsigned* pa = align_ptr<batch_uint32_align>(pb + batch_scalar_count);
+    //    // stack-alloc blob for storing indices and color components
+    //    uint8_t unaligned_blob[5 * (pixels_per_batch * sizeof(unsigned) + batch_uint32_align)];
+    //    unsigned* pindex = align_ptr<batch_uint32_align>(reinterpret_cast<unsigned*>(unaligned_blob));
+    //    unsigned* pr = align_ptr<batch_uint32_align>(pindex + pixels_per_batch);
+    //    unsigned* pg = align_ptr<batch_uint32_align>(pr + pixels_per_batch);
+    //    unsigned* pb = align_ptr<batch_uint32_align>(pg + pixels_per_batch);
+    //    unsigned* pa = align_ptr<batch_uint32_align>(pb + pixels_per_batch);
 
-        batch_store_aligned(index, pindex);
-        
-        // fill the buffers
-        swizzle::detail::static_for<0, batch_scalar_count>([&](size_t i)
-        {
-            auto pixelPtr = static_cast<uint8_t*>(m_image->pixels) + pindex[i];
+    //    batch_store_aligned(index, pindex);
+    //    
+    //    // fill the buffers
+    //    swizzle::detail::static_for<0, pixels_per_batch>([&](size_t i)
+    //    {
+    //        auto pixelPtr = static_cast<uint8_t*>(m_image->pixels) + pindex[i];
 
-            uint32_t pixel = 0;
-            for (size_t i = 0; i < format.BytesPerPixel; ++i)
-            {
-                pixel |= (pixelPtr[i] << (i * 8));
-            }
+    //        uint32_t pixel = 0;
+    //        for (size_t i = 0; i < format.BytesPerPixel; ++i)
+    //        {
+    //            pixel |= (pixelPtr[i] << (i * 8));
+    //        }
 
-            pr[i] = (pixel & format.Rmask) >> format.Rshift;
-            pg[i] = (pixel & format.Gmask) >> format.Gshift;
-            pb[i] = (pixel & format.Bmask) >> format.Bshift;
-            pa[i] = format.Amask ? ((pixel & format.Amask) >> format.Ashift) : 255;
-        });
+    //        pr[i] = (pixel & format.Rmask) >> format.Rshift;
+    //        pg[i] = (pixel & format.Gmask) >> format.Gshift;
+    //        pb[i] = (pixel & format.Bmask) >> format.Bshift;
+    //        pa[i] = format.Amask ? ((pixel & format.Amask) >> format.Ashift) : 255;
+    //    });
 
-        // load data
-        raw_batch_uint32_t r, g, b, a;
-        batch_load_aligned(r, pr);
-        batch_load_aligned(g, pg);
-        batch_load_aligned(b, pb);
-        batch_load_aligned(a, pa);
+    //    // load data
+    //    raw_batch_uint32_t r, g, b, a;
+    //    batch_load_aligned(r, pr);
+    //    batch_load_aligned(g, pg);
+    //    batch_load_aligned(b, pb);
+    //    batch_load_aligned(a, pa);
 
-        vec4 result;
-        result.r = batch_cast<raw_batch_float_t>(r);
-        result.g = batch_cast<raw_batch_float_t>(g);
-        result.b = batch_cast<raw_batch_float_t>(b);
-        result.a = batch_cast<raw_batch_float_t>(a);
+    //    vec4 result;
+    //    result.r = batch_cast<raw_batch_float_t>(r);
+    //    result.g = batch_cast<raw_batch_float_t>(g);
+    //    result.b = batch_cast<raw_batch_float_t>(b);
+    //    result.a = batch_cast<raw_batch_float_t>(a);
 
-        return clamp(result / 255.0f, c_zero, c_one);
-    }
+    //    return clamp(result / 255.0f, c_zero, c_one);
+    //}
 }

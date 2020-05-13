@@ -83,15 +83,15 @@ namespace swizzle
             ((Columns < num_rows ? data[Columns] = set_return<Columns>(zero, s) : zero), ...);
         }
 
-        template <class T0, class... T,
+        template <class T0, class T1, class... T,
             class = typename std::enable_if< 
-                !(num_rows*num_columns <= detail::get_total_component_count_v<T0, T...> - detail::get_total_component_count_v<typename detail::last<T0, T...>::type >) &&
-                (num_rows*num_columns <= detail::get_total_component_count_v<T0, T...>),
+                !(num_rows*num_columns <= detail::get_total_component_count_v<T0, T1, T...> - detail::get_total_component_count_v<typename detail::last<T0, T1, T...>::type >) &&
+                (num_rows*num_columns <= detail::get_total_component_count_v<T0, T1, T...>),
                 void>::type 
             >
-        explicit matrix_(T0&& t0, T&&... ts)
+        explicit matrix_(T0&& t0, T1&& t1, T&&... ts)
         {
-            construct<0>(std::forward<T0>(t0), std::forward<T>(ts)..., detail::nothing{});
+            construct<0>(std::forward<T0>(t0), std::forward<T1>(t1), std::forward<T>(ts)..., detail::nothing{});
         }
 
         
@@ -155,7 +155,7 @@ namespace swizzle
         matrix_type& operator*=(const matrix_type& v)
         {
             // Matrix multiplication is "special"
-            return *this = mul(*this, v);
+            return *this = mul<num_columns>(*this, v);
         }
 
         matrix_type& operator/=(const matrix_type& v)

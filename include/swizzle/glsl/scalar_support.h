@@ -7,31 +7,110 @@
 #include <cmath>
 #include <algorithm>
 #include <cstdint>
+#include <swizzle/detail/primitive_adapters.h>
 
 namespace swizzle
 {
-	namespace detail
-	{
-        template <>
-        struct get_vector_type_impl<bool> : default_vector_type_impl<bool>
+    namespace detail
+    {
+#if DUPA
+        typedef bool simd_bool;
+        typedef float simd_float;
+        typedef int32_t simd_int32;
+        typedef uint32_t simd_uint32;
+#else
+        template <typename AssignPolicy = default_assign_policy> using simd_bool = bool_batch<bool, AssignPolicy, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>;
+        template <typename AssignPolicy = default_assign_policy> using simd_float = float_batch<float, simd_bool<AssignPolicy>, AssignPolicy, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>;
+        template <typename AssignPolicy = default_assign_policy> using simd_int32 = int_batch<int32_t, simd_bool<AssignPolicy>, AssignPolicy, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>;
+        template <typename AssignPolicy = default_assign_policy> using simd_uint32 = uint_batch<uint32_t, simd_bool<AssignPolicy>, AssignPolicy, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>;
+
+        template <typename AssignPolicy>
+        struct get_vector_type_impl<simd_bool<AssignPolicy>> : default_vector_type_impl<simd_bool<AssignPolicy>>
         {};
 
-		template <>
-		struct get_vector_type_impl<float> : default_vector_type_impl<float>
-		{};
+        template <typename AssignPolicy>
+        struct get_vector_type_impl<simd_float<AssignPolicy>> : default_vector_type_impl<simd_float<AssignPolicy>>
+        {};
 
-		template <>
-		struct get_vector_type_impl<double> : default_vector_type_impl<float>
-		{};
+        template <typename AssignPolicy>
+        struct get_vector_type_impl<simd_int32<AssignPolicy>> : default_vector_type_impl<simd_int32<AssignPolicy>>
+        {};
 
-		template <>
-		struct get_vector_type_impl<uint32_t> : default_vector_type_impl<uint32_t>
-		{};
+        template <typename AssignPolicy>
+        struct get_vector_type_impl<simd_uint32<AssignPolicy>> : default_vector_type_impl<simd_uint32<AssignPolicy>>
+        {};
 
-		template <>
-		struct get_vector_type_impl<int32_t> : default_vector_type_impl<int32_t>
-		{};
+        template <typename AssignPolicy>
+        struct batch_traits<simd_float<AssignPolicy>> : batch_traits_builder<
+            float,
+            float,
+            4, 1, simd_float<AssignPolicy>::size,
+            simd_bool<AssignPolicy>,
+            false, false, true>
+        {};
+
+        template <typename AssignPolicy>
+        struct batch_traits<simd_int32<AssignPolicy>> : batch_traits_builder<
+            int32_t,
+            int32_t,
+            4, 1, simd_int32<AssignPolicy>::size,
+            simd_int32<AssignPolicy>,
+            false, false, true>
+        {};
+
+        template <typename AssignPolicy>
+        struct batch_traits<simd_uint32<AssignPolicy>> : batch_traits_builder<
+            uint32_t,
+            uint32_t,
+            4, 1, simd_uint32<AssignPolicy>::size,
+            simd_bool<AssignPolicy>,
+            false, true, false>
+        {};
+
+        template <typename AssignPolicy>
+        struct batch_traits<simd_bool<AssignPolicy>> : batch_traits_builder<
+            bool,
+            bool,
+            4, 1, simd_bool<AssignPolicy>::size,
+            simd_bool<AssignPolicy>,
+            true, false, false>
+        {};
+
+
+
+#endif
 	}
+
+
+    template <typename To, typename From>
+    inline To batch_cast(const From& value)
+    {
+        return To(value);
+    }
+
+
+    template <typename T>
+    inline T batch_scalar_cast(T value)
+    {
+        return value;
+    }
+
+    inline bool batch_collapse(bool value)
+    {
+        return value;
+    }
+
+    template <typename T, typename U>
+    inline void batch_load_aligned(T& t, const U* ptr)
+    {
+        load_aligned(t, ptr);
+    }
+
+    template <typename T, typename U>
+    inline void batch_store_aligned(const T& t, U* ptr)
+    {
+        store_aligned(t, ptr);
+    }
 }
 
 // add missing math functions
@@ -64,6 +143,18 @@ namespace swizzle
     using std::min;
     using std::max;
     using std::modf;
+
+    inline float min(float a, float b)
+    {
+        // NaN bug "simulation": https://www.shadertoy.com/view/4tsyzf
+        return a < b || (b != b) ? a : b;
+    }
+
+    inline float max(float a, float b)
+    {
+        // NaN bug "simulation": https://www.shadertoy.com/view/4tsyzf
+        return a > b || (b != b) ? a : b;
+    }
 
     inline float isnan(float x)
     {
@@ -190,5 +281,20 @@ namespace swizzle
     inline void load_aligned(float& target, const float* ptr)
     {
         target = *ptr;
+    }
+
+    inline void store_aligned(const uint32_t& target, uint32_t* ptr)
+    {
+        *ptr = target;
+    }
+
+    inline void store_aligned(const int32_t& target, int32_t* ptr)
+    {
+        *ptr = target;
+    }
+
+    inline void store_aligned(const float& target, float* ptr)
+    {
+        *ptr = target;
     }
 }

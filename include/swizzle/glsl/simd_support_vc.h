@@ -18,16 +18,16 @@ namespace swizzle
         // batch types definitions
 
         template <typename AssignPolicy = default_assign_policy>
-        using vc_bool = bool_batch<::Vc::float_m, AssignPolicy>;
+        using vc_bool = bool_batch<::Vc::float_m, AssignPolicy, 0, 1, 2, 3>;
 
         template <typename AssignPolicy = default_assign_policy>
-        using vc_int = int_batch<::Vc::int32_v, vc_bool<AssignPolicy>, AssignPolicy>;
+        using vc_int = int_batch<::Vc::int32_v, vc_bool<AssignPolicy>, AssignPolicy, 0, 1, 2, 3>;
 
         template <typename AssignPolicy = default_assign_policy>
-        using vc_uint = uint_batch<::Vc::uint32_v, vc_bool<AssignPolicy>, AssignPolicy>;
+        using vc_uint = uint_batch<::Vc::uint32_v, vc_bool<AssignPolicy>, AssignPolicy, 0, 1, 2, 3>;
 
         template <typename AssignPolicy = default_assign_policy>
-        using vc_float = float_batch<::Vc::float_v, vc_bool<AssignPolicy>, AssignPolicy>;
+        using vc_float = float_batch<::Vc::float_v, vc_bool<AssignPolicy>, AssignPolicy, 0, 1, 2, 3>;
 
 
         // batch types traits definitions
@@ -35,7 +35,8 @@ namespace swizzle
         template <typename AssignPolicy>
         struct batch_traits<vc_float<AssignPolicy>> : batch_traits_builder<
             ::Vc::float_v,
-            ::Vc::VectorAlignment, ::Vc::float_v::Size,
+            float,
+            ::Vc::VectorAlignment, ::Vc::float_v::Size, vc_float<AssignPolicy>::size,
             vc_bool<AssignPolicy>,
             false, false, true>
         {};
@@ -43,7 +44,8 @@ namespace swizzle
         template <typename AssignPolicy>
         struct batch_traits<vc_int<AssignPolicy>> : batch_traits_builder<
             ::Vc::int32_v,
-            ::Vc::VectorAlignment, ::Vc::int32_v::Size,
+            int32_t,
+            ::Vc::VectorAlignment, ::Vc::int32_v::Size, vc_int<AssignPolicy>::size,
             vc_bool<AssignPolicy>,
             false, true, false>
         {};
@@ -51,7 +53,8 @@ namespace swizzle
         template <typename AssignPolicy>
         struct batch_traits<vc_uint<AssignPolicy>> : batch_traits_builder<
             ::Vc::uint32_v,
-            ::Vc::VectorAlignment, ::Vc::uint32_v::Size,
+            uint32_t,
+            ::Vc::VectorAlignment, ::Vc::uint32_v::Size, vc_uint<AssignPolicy>::size,
             vc_bool<AssignPolicy>,
             false, true, false>
         {};
@@ -59,7 +62,8 @@ namespace swizzle
         template <typename AssignPolicy>
         struct batch_traits<vc_bool<AssignPolicy>> : batch_traits_builder<
             ::Vc::float_m,
-            ::Vc::VectorAlignment, ::Vc::float_m::Size,
+            bool,
+            ::Vc::VectorAlignment, ::Vc::float_m::Size, vc_bool<AssignPolicy>::size,
             vc_bool<AssignPolicy>,
             true, false, false>
         {};
@@ -82,11 +86,17 @@ namespace swizzle
         // free functions needed for wrappers to work
 
         template <typename T>
-        ::Vc::Vector<T> batch_cast(const ::Vc::float_m& value)
+        inline ::Vc::Vector<T> batch_cast(const ::Vc::float_m& value)
         {
             ::Vc::Vector<T> result(::Vc::Zero);
             result(value) = 1.0f;
             return result;
+        }
+
+        template <typename To, typename From> 
+        inline ::Vc::Vector<To> batch_cast(const ::Vc::Vector<From>& value)
+        {
+            return ::Vc::Vector<To>(value);
         }
 
         template <typename T>
@@ -109,6 +119,12 @@ namespace swizzle
         inline void batch_load_aligned(::Vc::Vector<T>& value, const T* data)
         {
             value.load(data, Vc::Aligned);
+        }
+
+        template <typename T>
+        inline void batch_store_aligned(const ::Vc::Vector<T>& value, T* data)
+        {
+            value.store(data, Vc::Aligned);
         }
     }
 }
@@ -176,6 +192,45 @@ namespace Vc_VERSIONED_NAMESPACE
         result(m2) = -1;
         return result;
     }
+
+    template <typename T>
+    inline Vector<T> atan(const Vector<T>& y, const Vector<T>& x)
+    {
+        return atan2(y, x);
+    }
+
+    template <typename T>
+    inline Vector<T> tan(const Vector<T>& x)
+    {
+        return sin(x) / cos(x);
+    }
+
+    template <typename T>
+    inline Vector<T> acos(const Vector<T>& x)
+    {
+        // silly acos that does store & load... I'm sorry
+        std::aligned_storage_t<x.Size * sizeof(T), x.MemoryAlignment> storage;
+        T* ptr = reinterpret_cast<T*>(&storage);
+        x.store(ptr, Aligned);
+        ::swizzle::detail::static_for<0, Vector<T>::Size>([&](size_t i) { ptr[i] = ::std::acos(ptr[i]); });
+
+        Vector<T> result;
+        result.load(ptr, Aligned);
+        return result;
+    }
+
+    template <typename T>
+    inline Vector<T> radians(const Vector<T>& x)
+    {
+        return  x * (180.0f / 3.14159265358979323846f);
+    }
+
+    template <typename T>
+    inline Vector<T> degrees(const Vector<T>& x)
+    {
+        return x * (3.14159265358979323846f / 180.0f);
+    }
+
 
 #if Vc_IMPL_AVX 
     template <typename T>

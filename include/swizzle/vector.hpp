@@ -111,6 +111,12 @@ namespace swizzle
             ((at(Index) = scalar_type(s)), ...);
         }
 
+        template <class LikelyOtherScalarType>
+        inline explicit vector_(const vector_<LikelyOtherScalarType, Index...>& t0)
+        {
+            compose<0>(t0);
+        }
+
         // Block of generic proxy-constructors calling construct member function. Compiler
         // will likely optimise this.
         template <class T0, class T1, class... T,
@@ -174,26 +180,32 @@ namespace swizzle
         void construct(detail::nothing)
         {}
 
-        //! Puts scalar at given position. Used only during construction.
-        template <size_t Index>
-        void compose(scalar_arg v)
+        template <size_t Index, typename SomeScalarType>
+        void compose(SomeScalarType&& scalar, std::enable_if_t<std::is_constructible_v<scalar_type, SomeScalarType>>* = nullptr)
         {
-            data[Index] = static_cast<internal_scalar_type>(v);
+            at(Index) = scalar_type(std::forward<SomeScalarType>(scalar));
         }
 
-        //! For construction from int literal to work
-        template <size_t Index>
-        void compose(int v)
-        {
-            compose<Index>(scalar_type(v));
-        }
+        ////! Puts scalar at given position. Used only during construction.
+        //template <size_t Index>
+        //void compose(scalar_arg v)
+        //{
+        //    data[Index] = static_cast<internal_scalar_type>(v);
+        //}
 
-        //! For construction from double literal to work
-        template <size_t Index>
-        void compose(detail::only_if<build_info::is_floating_point, double> v)
-        {
-            compose<Index>(scalar_type(v));
-        }
+        ////! For construction from int literal to work
+        //template <size_t Index>
+        //void compose(detail::only_if<!std::is_same_v<scalar_type, int>, int, __LINE__> v)
+        //{
+        //    compose<Index>(scalar_type(v));
+        //}
+
+        ////! For construction from double literal to work
+        //template <size_t Index>
+        //void compose(detail::only_if<build_info::is_floating_point, double> v)
+        //{
+        //    compose<Index>(scalar_type(v));
+        //}
 
         template <size_t Index, typename OtherScalarType, size_t... OtherIndex>
         void compose(const vector_<OtherScalarType, OtherIndex...>& v)
@@ -205,7 +217,7 @@ namespace swizzle
         template <size_t Offset, typename DataTypeB, size_t... DataIndex>
         inline void compose_impl(const DataTypeB& src, std::index_sequence<DataIndex...>)
         {
-            ((at(DataIndex + Offset) = src.at(DataIndex)), ...);
+            ((at(DataIndex + Offset) = scalar_type(src.at(DataIndex))), ...);
         }
 
     public:
@@ -369,25 +381,29 @@ namespace swizzle
         }
         static this_type call_clamp(number_vector_arg x, number_scalar_arg_cond minVal, number_scalar_arg_cond maxVal)
         {
-            return this_type(max(min(x.at(Index), maxVal), minVal)...);
+            return this_type(min(max(x.at(Index), minVal), maxVal)...);
         }
         static this_type call_clamp(number_vector_arg x, number_vector_arg minVal, number_vector_arg maxVal)
         {
-            return this_type(max(min(x.at(Index), maxVal.at(Index)), minVal.at(Index))...);
+            return this_type(min(max(x.at(Index), minVal.at(Index)), maxVal.at(Index))...);
         }
         static this_type call_mix(float_vector_arg x, float_vector_arg y, float_scalar_arg_cond a)
         {
             return this_type(x.at(Index) + a * (y.at(Index) - x.at(Index))...);
         }
+        static this_type call_mix(float_vector_arg x, float_vector_arg y, double a)
+        {
+            return this_type(x.at(Index) + scalar_type(a) * (y.at(Index) - x.at(Index))...);
+        }
         static this_type call_mix(float_vector_arg x, float_vector_arg y, float_vector_arg a)
         {
             return this_type(x.at(Index) + a.at(Index) * (y.at(Index) - x.at(Index))...);
         }
-        /*static this_type call_mix(float_vector_arg x, float_vector_arg y, const bool_vector_type& a)
-        {
-            this_type mask = call_step(this_type(scalar_type{ 0 }), this_type{ a });
-            return call_mix(x, y, mask);
-        }*/
+        //static this_type call_mix(float_vector_arg x, float_vector_arg y, const bool_vector_type& a)
+        //{
+        //    this_type mask = call_step(this_type(scalar_type{ 0 }), this_type{ a });
+        //    return call_mix(x, y, mask);
+        //}
 
         static this_type call_step(float_vector_arg edge, float_vector_arg x)
         {
@@ -603,6 +619,11 @@ namespace swizzle
             this_type result;
             ((result.at(Index) = -at(Index)), ...);
             return result;
+        }
+
+        inline this_type& operator*=(const matrix<vector, scalar_type, num_of_components, num_of_components>& mat)
+        {
+            return *this = mat.mul(*this, mat);
         }
 
     private:

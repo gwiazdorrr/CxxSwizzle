@@ -29,16 +29,8 @@ typedef ::swizzle::detail::default_assign_policy assign_policy_type;
 using batch_float_t = swizzle::detail::vc_float<assign_policy_type>;
 using batch_int_t = swizzle::detail::vc_int<assign_policy_type>;
 using batch_uint_t = swizzle::detail::vc_uint<assign_policy_type>;
-using batch_bool_t = swizzle::detail::vc_bool<assign_policy_type>;
+using batch_bool_t = swizzle::detail::vc_bool<assign_policy_type>; 
 
-typedef batch_float_t::data_type raw_batch_float_t;
-typedef batch_uint_t::data_type raw_batch_uint32_t;
-
-static_assert(static_cast<size_t>(raw_batch_float_t::Size) == static_cast<size_t>(raw_batch_uint32_t::Size), "Both float and uint types need to have same number of entries");
-const size_t batch_scalar_count = raw_batch_float_t::Size;
-const size_t batch_float_align = Vc::VectorAlignment;
-const size_t batch_uint32_align = Vc::VectorAlignment;
- 
 namespace swizzle
 {
     namespace detail
@@ -49,21 +41,21 @@ namespace swizzle
     }
 }
 
-template <typename T>
-inline void batch_store_aligned(const Vc::Vector<T>& value, T* target)
-{
-    value.store(target, Vc::Aligned);
-}
-
-template <typename T>
-inline void batch_load_aligned(Vc::Vector<T>& value, const T* data)
-{
-    value.load(data, Vc::Aligned);
-}
-
-template <typename To, typename From>
-To batch_cast(const From& value)
-{
-    return ::Vc::simd_cast<To>(value);
-}
-
+//template <typename T>
+//inline void batch_store_aligned(const Vc::Vector<T>& value, T* target)
+//{
+//    value.store(target, Vc::Aligned);
+//}
+//
+//template <typename T>
+//inline void batch_load_aligned(Vc::Vector<T>& value, const T* data)
+//{
+//    value.load(data, Vc::Aligned);
+//}
+//
+//template <typename To, typename From>
+//To batch_cast(const From& value)
+//{
+//    return ::Vc::simd_cast<To>(value);
+//}
+//

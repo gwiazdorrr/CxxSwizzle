@@ -6,22 +6,24 @@
 #include <cstdint>
 #include <swizzle/detail/utils.h>
 
-#define CXXSWIZZLE_FORCE_INLINE __forceinline
+#define CXXSWIZZLE_FORCE_INLINE
 
 namespace swizzle
 {
-    namespace detail
-    {
+    /*namespace detail
+    {*/
         struct default_assign_policy
         {
             template <typename T>
-            static void assign(T& a, const T& b)
+            CXXSWIZZLE_FORCE_INLINE static void assign(T& a, const T& b)
             {
                 a = b;
             }
         };
 
-        template <typename WrapperType, typename BoolType>
+        struct construct_tag {};
+
+        template <typename WrapperType, typename BoolType, size_t... Index>
         struct batch_binary_operators
         {
             using this_type = WrapperType;
@@ -30,49 +32,160 @@ namespace swizzle
   
             // binary operators
 
-            CXXSWIZZLE_FORCE_INLINE friend this_type operator+(this_arg a, this_arg b)   { return static_cast<this_type>(a.data + b.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type operator-(this_arg a, this_arg b)   { return static_cast<this_type>(a.data - b.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type operator*(this_arg a, this_arg b)   { return static_cast<this_type>(a.data * b.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type operator/(this_arg a, this_arg b)   { return static_cast<this_type>(a.data / b.data); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type operator+(this_arg a, this_arg b)   { return this_type(construct_tag{}, a.at<Index>() + b.at<Index>()...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type operator-(this_arg a, this_arg b)   { return this_type(construct_tag{}, a.at<Index>() - b.at<Index>()...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type operator*(this_arg a, this_arg b)   { return this_type(construct_tag{}, a.at<Index>() * b.at<Index>()...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type operator/(this_arg a, this_arg b)   { return this_type(construct_tag{}, a.at<Index>() / b.at<Index>()...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type operator%(this_arg a, this_arg b)   { return this_type(construct_tag{}, a.at<Index>() % b.at<Index>()...); }
 
-            CXXSWIZZLE_FORCE_INLINE friend bool_type operator>(this_arg a, this_arg b)   { return static_cast<bool_type::data_type>(a.data > b.data); }
-            CXXSWIZZLE_FORCE_INLINE friend bool_type operator>=(this_arg a, this_arg b)  { return static_cast<bool_type::data_type>(a.data >= b.data); }
-            CXXSWIZZLE_FORCE_INLINE friend bool_type operator<(this_arg a, this_arg b)   { return static_cast<bool_type::data_type>(a.data < b.data); }
-            CXXSWIZZLE_FORCE_INLINE friend bool_type operator<=(this_arg a, this_arg b)  { return static_cast<bool_type::data_type>(a.data <= b.data); }
-            CXXSWIZZLE_FORCE_INLINE friend bool_type operator==(this_arg a, this_arg b)  { return static_cast<bool_type::data_type>(a.data == b.data); }
-            CXXSWIZZLE_FORCE_INLINE friend bool_type operator!=(this_arg a, this_arg b)  { return static_cast<bool_type::data_type>(a.data != b.data); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type operator&(this_arg a, this_arg b)   { return this_type(construct_tag{}, a.at<Index>() & b.at<Index>()...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type operator>>(this_arg a, this_arg b)  { return this_type(construct_tag{}, a.at<Index>() >> b.at<Index>()...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type operator<<(this_arg a, this_arg b)  { return this_type(construct_tag{}, a.at<Index>() << b.at<Index>()...); }
+
+            CXXSWIZZLE_FORCE_INLINE friend bool_type operator>(this_arg a, this_arg b)   { return bool_type(construct_tag{}, static_cast<bool_type::data_type>(a.at<Index>() >  b.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend bool_type operator>=(this_arg a, this_arg b)  { return bool_type(construct_tag{}, static_cast<bool_type::data_type>(a.at<Index>() >= b.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend bool_type operator<(this_arg a, this_arg b)   { return bool_type(construct_tag{}, static_cast<bool_type::data_type>(a.at<Index>() <  b.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend bool_type operator<=(this_arg a, this_arg b)  { return bool_type(construct_tag{}, static_cast<bool_type::data_type>(a.at<Index>() <= b.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend bool_type operator==(this_arg a, this_arg b)  { return bool_type(construct_tag{}, static_cast<bool_type::data_type>(a.at<Index>() == b.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend bool_type operator!=(this_arg a, this_arg b)  { return bool_type(construct_tag{}, static_cast<bool_type::data_type>(a.at<Index>() != b.at<Index>())...); }
         };
 
-        template <typename DataType, typename AssignPolicy>
+        template <typename DataType, typename PrimitiveType, typename AssignPolicy, size_t... Index>
         struct batch_base
         {
+            static const size_t size = sizeof...(Index);
             using data_type = DataType;
             using assign_policy = AssignPolicy;
+            using primitive_type = PrimitiveType;
 
-            data_type data;
+            using storage_type = std::conditional_t< size == 1, data_type, std::array<DataType, size> >;
+             
 
-            batch_base()
+            storage_type storage;
+
+            CXXSWIZZLE_FORCE_INLINE batch_base()
             {}
 
-            batch_base(typename data_type& data)
-                : data(data)
+            CXXSWIZZLE_FORCE_INLINE batch_base(const typename detail::only_if<size != 1, storage_type&> storage)
+                : storage(storage)
             {}
 
-            //! To avoid ADL-hell, cast is explict.
-            CXXSWIZZLE_FORCE_INLINE explicit operator data_type() const
+            CXXSWIZZLE_FORCE_INLINE batch_base(const typename data_type& d)
             {
-                return data;
+                ((at<Index>() = d), ...);
+            }
+
+            template <size_t Index, size_t Size = size>
+            CXXSWIZZLE_FORCE_INLINE std::enable_if_t< (Size > 1), data_type>& at()
+            {
+                return storage[Index];
+            }
+
+            template <size_t Index, size_t Size = size>
+            CXXSWIZZLE_FORCE_INLINE std::enable_if_t< (Size == 1), data_type>& at()
+            {
+                return storage;
+            }
+
+            template <size_t Index, size_t Size = size>
+            CXXSWIZZLE_FORCE_INLINE const std::enable_if_t< (Size > 1), data_type>& at() const
+            {
+                return storage[Index];
+            }
+
+            template <size_t Index, size_t Size = size>
+            CXXSWIZZLE_FORCE_INLINE const std::enable_if_t< (Size == 1), data_type>& at() const
+            {
+                return storage;
+            }
+
+        public:
+            template <typename... Types>
+            CXXSWIZZLE_FORCE_INLINE explicit batch_base(construct_tag, Types&& ... values)
+            {
+                static_assert(sizeof...(Types) == sizeof...(Index));
+                construct<0>(std::forward<Types>(values)...);
+            }
+            
+
+            template <size_t Index, typename... Types>
+            CXXSWIZZLE_FORCE_INLINE void construct(const data_type& first, Types&& ... others)
+            {
+                at<Index>() = first;
+                construct<Index + 1>(std::forward<Types>(others)...);
+            }
+
+            //template <size_t Index, typename... Types>
+            //CXXSWIZZLE_FORCE_INLINE void construct(data_type&& first, Types&& ... others)
+            //{
+            //    at<Index>() = std::move(first);
+            //    construct<Index + 1>(std::forward<Types>(others)...);
+            //}
+
+            template <size_t Index>
+            CXXSWIZZLE_FORCE_INLINE void construct()
+            {}
+        public:
+
+            //template<class First, class... T, class E = std::enable_if_t<(std::is_same_v<T, data_type> && ... && sizeof...(T) == sizeof...(Index))> >
+            //explicit batch_base(First&& f, T... values)
+            //{
+            //    storage[0] = 
+            //    // do stuff with the ints "tt..."
+            //}
+
+            //batch_base( only_if< construct_tag>, )
+
+            CXXSWIZZLE_FORCE_INLINE batch_base(const batch_base& other)
+                : storage(other.storage)
+            {}
+
+            CXXSWIZZLE_FORCE_INLINE batch_base(detail::only_if<!std::is_same_v<primitive_type, data_type>, primitive_type> value): batch_base(batch_scalar_cast(value))
+            {}
+
+            template <typename OtherBatchType, typename OtherPrimitiveType>
+            CXXSWIZZLE_FORCE_INLINE explicit batch_base(const batch_base<OtherBatchType, OtherPrimitiveType, AssignPolicy, Index...>& value)
+            {
+                ((at<Index>() = batch_cast<data_type>(value.at<Index>())), ...);
             }
 
             CXXSWIZZLE_FORCE_INLINE void assign(const batch_base& other)
             {
-                AssignPolicy::assign(data, other.data);
+                ((at<Index>() = other.at<Index>()), ...);
+                //( (AssignPolicy::assign(at<Index>(), other.at<Index>())), ...);
+            }
+
+            template <size_t Index>
+            CXXSWIZZLE_FORCE_INLINE void assign_at(const data_type& other)
+            {
+                AssignPolicy::assign(at<Index>(), other);
+            }
+
+            friend CXXSWIZZLE_FORCE_INLINE void load_aligned(batch_base& target, const PrimitiveType* ptr)
+            {
+                target.load_aligned_internal(ptr);
+            }
+
+            friend CXXSWIZZLE_FORCE_INLINE void store_aligned(const batch_base& target, PrimitiveType* ptr)
+            {
+                target.store_aligned_internal(ptr);
+            }
+
+        private:
+            CXXSWIZZLE_FORCE_INLINE void load_aligned_internal(const PrimitiveType* ptr)
+            {
+                (batch_load_aligned(at<Index>(), ptr + Index * sizeof(data_type) / sizeof(primitive_type)), ...);
+            }
+
+            CXXSWIZZLE_FORCE_INLINE void store_aligned_internal(PrimitiveType* ptr) const
+            {
+                (batch_store_aligned(at<Index>(), ptr + Index * sizeof(data_type) / sizeof(primitive_type)), ...);
             }
         };
 
 
-        template <typename DataType, typename AssignPolicy = default_assign_policy>
-        struct bool_batch : batch_base<DataType, AssignPolicy>
+        template <typename DataType, typename AssignPolicy, size_t... Index>
+        struct bool_batch : batch_base<DataType, bool, AssignPolicy, Index...>
         {
             using batch_base::batch_base;
             using this_type = bool_batch;
@@ -88,26 +201,28 @@ namespace swizzle
 
             // for CxxSwizzle ADL-magic
 
-            this_type decay() const
+            CXXSWIZZLE_FORCE_INLINE this_type decay() const
             {
                 return *this;
             }
 
             // implement if you really need to.
-            CXXSWIZZLE_FORCE_INLINE operator bool() const { return batch_collapse(data); }
+            CXXSWIZZLE_FORCE_INLINE operator bool() const { return (batch_collapse(at<Index>()) || ...); }
 
-            CXXSWIZZLE_FORCE_INLINE friend this_type operator||(this_arg a, this_arg b)   { return static_cast<this_type>(a.data || b.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type operator&&(this_arg a, this_arg b)   { return static_cast<this_type>(a.data && b.data); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type operator||(this_arg a, this_arg b)   { return this_type(construct_tag{}, a.at<Index>() || b.at<Index>()...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type operator&&(this_arg a, this_arg b)   { return this_type(construct_tag{}, a.at<Index>() && b.at<Index>()...); }
+            CXXSWIZZLE_FORCE_INLINE this_type operator!() const                           { return this_type(construct_tag{}, !at<Index>()...); }
         };
 
-        template <typename DataType, typename BoolType, typename AssignPolicy = default_assign_policy>
-        struct int_batch : batch_base<DataType, AssignPolicy>, batch_binary_operators<int_batch<DataType, BoolType, AssignPolicy>, BoolType>
+        template <typename DataType, typename BoolType, typename AssignPolicy, size_t... Index>
+        struct int_batch : batch_base<DataType, int, AssignPolicy, Index...>, batch_binary_operators<int_batch<DataType, BoolType, AssignPolicy, Index...>, BoolType, Index...>
         {
             using batch_base::batch_base;
             using this_type = int_batch;
             using this_arg = const this_type&;
 
-            int_batch(int value): int_batch(batch_scalar_cast(value)) {}
+            explicit int_batch(double value): int_batch(static_cast<int>(value)) {}
+
 
             CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)
             {
@@ -117,61 +232,55 @@ namespace swizzle
 
             CXXSWIZZLE_FORCE_INLINE this_type& operator++()
             {
-                assign(data + batch_scalar_cast(1));
+                (assign_at<Index>(at<Index>() + batch_scalar_cast(1)), ...);
                 return *this;
             }
 
             CXXSWIZZLE_FORCE_INLINE this_type operator++(int)
             {
                 this_type result = *this;
-                assign(data + batch_scalar_cast(1));
+                (assign_at<Index>(at<Index>() + batch_scalar_cast(1)), ...);
                 return result;
             }
 
             CXXSWIZZLE_FORCE_INLINE this_type& operator--()
             {
-                assign(data - batch_scalar_cast(1));
+                (assign_at<Index>(at<Index>() - batch_scalar_cast(1)), ...);
                 return *this;
             }
 
             CXXSWIZZLE_FORCE_INLINE this_type operator--(int)
             {
                 this_type result = *this;
-                assign(data - batch_scalar_cast(1));
+                (assign_at<Index>(at<Index>() - batch_scalar_cast(1)), ...);
                 return result;
             }
 
             // for CxxSwizzle ADL-magic
 
-            this_type decay() const
+            CXXSWIZZLE_FORCE_INLINE this_type decay() const
             {
                 return *this;
             }
 
-            friend CXXSWIZZLE_FORCE_INLINE void load_aligned(this_type& target, const int32_t* ptr)
-            {
-                batch_load_aligned(target.data, ptr);
-            }
+            CXXSWIZZLE_FORCE_INLINE this_type operator-() const { return this_type(construct_tag{}, -at<Index>()...); }
+            CXXSWIZZLE_FORCE_INLINE this_type& operator+=(this_arg other) { return *this = *this + other; }
+            CXXSWIZZLE_FORCE_INLINE this_type& operator-=(this_arg other) { return *this = *this - other; }
+            CXXSWIZZLE_FORCE_INLINE this_type& operator*=(this_arg other) { return *this = *this * other; }
+            CXXSWIZZLE_FORCE_INLINE this_type& operator/=(this_arg other) { return *this = *this / other; }
+            CXXSWIZZLE_FORCE_INLINE this_type& operator%=(this_arg other) { return *this = *this % other; }
 
-            this_type operator-() const             { return -data; }
-            this_type& operator+=(this_arg other)   { return *this = *this + other; }
-            this_type& operator-=(this_arg other)   { return *this = *this - other; }
-            this_type& operator*=(this_arg other)   { return *this = *this * other; }
-            this_type& operator/=(this_arg other)   { return *this = *this / other; }
-
-            CXXSWIZZLE_FORCE_INLINE friend this_type min(this_arg x, this_arg y) { return min(x.data, y.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type max(this_arg x, this_arg y) { return max(x.data, y.data); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type min(this_arg x, this_arg y) { return this_type(construct_tag{}, min(x.at<Index>(), y.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type max(this_arg x, this_arg y) { return this_type(construct_tag{}, max(x.at<Index>(), y.at<Index>())...); }
             //CXXSWIZZLE_FORCE_INLINE friend this_type clamp(this_arg x, this_arg minVal, this_arg maxVal) { return clamp(x.data, minVal.data, maxVal.data); }
         };
 
-        template <typename DataType, typename BoolType, typename AssignPolicy = default_assign_policy>
-        struct uint_batch : batch_base<DataType, AssignPolicy>, batch_binary_operators<uint_batch<DataType, BoolType, AssignPolicy>, BoolType>
+        template <typename DataType, typename BoolType, typename AssignPolicy, size_t... Index>
+        struct uint_batch : batch_base<DataType, uint32_t, AssignPolicy, Index...>, batch_binary_operators<uint_batch<DataType, BoolType, AssignPolicy, Index...>, BoolType, Index...>
         {
             using batch_base::batch_base;
             using this_type = uint_batch;
             using this_arg = const this_type&;
-
-            uint_batch(unsigned value) : uint_batch(batch_scalar_cast(value)) {}
 
             CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)
             {
@@ -181,46 +290,37 @@ namespace swizzle
 
             // for CxxSwizzle ADL-magic
 
-            this_type decay() const
+            CXXSWIZZLE_FORCE_INLINE this_type decay() const
             {
                 return *this;
             }
 
-            friend CXXSWIZZLE_FORCE_INLINE void load_aligned(this_type& target, const uint32_t* ptr)
-            {
-                batch_load_aligned(target.data, ptr);
-            }
+            CXXSWIZZLE_FORCE_INLINE this_type operator-() const             { return this_type(construct_tag{}, -at<Index>()...); }
+            CXXSWIZZLE_FORCE_INLINE this_type& operator+=(this_arg other)   { return *this = *this + other; }
+            CXXSWIZZLE_FORCE_INLINE this_type& operator-=(this_arg other)   { return *this = *this - other; }
+            CXXSWIZZLE_FORCE_INLINE this_type& operator*=(this_arg other)   { return *this = *this * other; }
+            CXXSWIZZLE_FORCE_INLINE this_type& operator/=(this_arg other)   { return *this = *this / other; }
 
-            this_type operator-() const             { return -data; }
-            this_type& operator+=(this_arg other)   { return *this = *this + other; }
-            this_type& operator-=(this_arg other)   { return *this = *this - other; }
-            this_type& operator*=(this_arg other)   { return *this = *this * other; }
-            this_type& operator/=(this_arg other)   { return *this = *this / other; }
-
-            CXXSWIZZLE_FORCE_INLINE friend this_type min(this_arg x, this_arg y) { return min(x.data, y.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type max(this_arg x, this_arg y) { return max(x.data, y.data); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type min(this_arg x, this_arg y) { return this_type(construct_tag{}, min(x.at<Index>(), y.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type max(this_arg x, this_arg y) { return this_type(construct_tag{}, max(x.at<Index>(), y.at<Index>())...); }
             //CXXSWIZZLE_FORCE_INLINE friend this_type clamp(this_arg x, this_arg minVal, this_arg maxVal) { return clamp(x.data, minVal.data, maxVal.data); }
         };
 
 
-        template <typename DataType, typename BoolType, typename AssignPolicy = default_assign_policy>
-        struct float_batch : batch_base<DataType, AssignPolicy>, batch_binary_operators<float_batch<DataType, BoolType, AssignPolicy>, BoolType>
+        template <typename DataType, typename BoolType, typename AssignPolicy, size_t... Index>
+        struct float_batch : batch_base<DataType, float, AssignPolicy, Index...>, batch_binary_operators<float_batch<DataType, BoolType, AssignPolicy, Index...>, BoolType, Index...>
         {
             using batch_base::batch_base;
             using this_type = float_batch;
             using this_arg = const this_type&;
             using bool_type = BoolType;
 
-            float_batch(float value) : float_batch(batch_scalar_cast(value)) {}
-            float_batch(double value): float_batch(batch_scalar_cast(static_cast<float>(value))) {}
-            float_batch(const bool_type& value) : float_batch(batch_cast<float>(value.data)) {}
-            explicit float_batch(int32_t value) : float_batch(static_cast<float>(value)) {}
-            explicit float_batch(uint32_t value): float_batch(static_cast<float>(value)) {}
+ 
+            CXXSWIZZLE_FORCE_INLINE float_batch(double value): float_batch(batch_scalar_cast(static_cast<float>(value))) {}
+            CXXSWIZZLE_FORCE_INLINE float_batch(const bool_type& value) : float_batch(batch_cast<float>(value.storage)) {}
+            CXXSWIZZLE_FORCE_INLINE explicit float_batch(int32_t value) : float_batch(static_cast<float>(value)) {}
+            CXXSWIZZLE_FORCE_INLINE explicit float_batch(uint32_t value): float_batch(static_cast<float>(value)) {}
 
-
-            template <typename IntDataType>
-            explicit float_batch(const int_batch<IntDataType, bool_type, AssignPolicy>& aa)
-            {}
 
             CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)
             {
@@ -228,76 +328,84 @@ namespace swizzle
                 return *this;
             }
 
+            CXXSWIZZLE_FORCE_INLINE this_type& operator++()
+            {
+                assign(data + batch_scalar_cast(1.0f));
+                return *this;
+            }
+
+            CXXSWIZZLE_FORCE_INLINE this_type operator++(int)
+            {
+                auto result = *this;
+                assign(data + batch_scalar_cast(1.0f));
+                return result;
+            }
+
             // for CxxSwizzle ADL-magic
 
-            this_type decay() const
+            CXXSWIZZLE_FORCE_INLINE this_type decay() const
             {
                 return *this;
             }
 
-            friend CXXSWIZZLE_FORCE_INLINE void load_aligned(this_type& target, const float* ptr)
-            {
-                batch_load_aligned(target.data, ptr);
-            }
-
-            this_type operator-() const             { return -data; }
-            this_type& operator+=(this_arg other)   { return *this = *this + other; }
-            this_type& operator-=(this_arg other)   { return *this = *this - other; }
-            this_type& operator*=(this_arg other)   { return *this = *this * other; }
-            this_type& operator/=(this_arg other)   { return *this = *this / other; }
+            CXXSWIZZLE_FORCE_INLINE this_type operator-() const             { return this_type(construct_tag{}, -at<Index>()...); }
+            CXXSWIZZLE_FORCE_INLINE this_type& operator+=(this_arg other)   { return *this = *this + other; }
+            CXXSWIZZLE_FORCE_INLINE this_type& operator-=(this_arg other)   { return *this = *this - other; }
+            CXXSWIZZLE_FORCE_INLINE this_type& operator*=(this_arg other)   { return *this = *this * other; }
+            CXXSWIZZLE_FORCE_INLINE this_type& operator/=(this_arg other)   { return *this = *this / other; }
 
             // functions
             // 8.1
 
-            CXXSWIZZLE_FORCE_INLINE friend this_type radians(this_arg degrees) { return radians(degrees.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type degrees(this_arg radians) { return degrees(radians.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type cos(this_arg angle) { return cos(angle.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type tan(this_arg angle) { return tan(angle.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type sin(this_arg angle) { return sin(angle.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type asin(this_arg x) { return asin(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type acos(this_arg x) { return acos(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type atan(this_arg y_over_x) { return atan(y_over_x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type atan(this_arg y, this_arg x) { return atan(y.data, x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type sinh(this_arg x) { return sinh(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type cosh(this_arg x) { return cosh(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type tanh(this_arg x) { return tanh(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type asinh(this_arg x) { return asinh(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type acosh(this_arg x) { return acosh(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type atanh(this_arg x) { return atanh(x.data); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type radians(this_arg degrees) { return this_type(construct_tag{}, radians(degrees.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type degrees(this_arg radians) { return this_type(construct_tag{}, degrees(radians.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type cos(this_arg angle) { return this_type(construct_tag{}, cos(angle.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type tan(this_arg angle) { return this_type(construct_tag{}, tan(angle.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type sin(this_arg angle) { return this_type(construct_tag{}, sin(angle.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type asin(this_arg x) { return this_type(construct_tag{}, asin(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type acos(this_arg x) { return this_type(construct_tag{}, acos(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type atan(this_arg y_over_x) { return this_type(construct_tag{}, atan(y_over_x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type atan(this_arg y, this_arg x) { return this_type(construct_tag{}, atan(y.at<Index>(), x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type sinh(this_arg x) { return this_type(construct_tag{}, sinh(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type cosh(this_arg x) { return this_type(construct_tag{}, cosh(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type tanh(this_arg x) { return this_type(construct_tag{}, tanh(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type asinh(this_arg x) { return this_type(construct_tag{}, asinh(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type acosh(this_arg x) { return this_type(construct_tag{}, acosh(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type atanh(this_arg x) { return this_type(construct_tag{}, atanh(x.at<Index>())...); }
 
             // 8.2
 
-            CXXSWIZZLE_FORCE_INLINE friend this_type pow(this_arg x, this_arg y) { return pow(x.data, y.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type exp(this_arg x) { return exp(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type log(this_arg x) { return log(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type exp2(this_arg x) { return exp2(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type log2(this_arg x) { return log2(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type sqrt(this_arg x) { return sqrt(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type inversesqrt(this_arg x) { return inversesqrt(x.data); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type pow(this_arg x, this_arg y) { return this_type(construct_tag{}, pow(x.at<Index>(), y.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type exp(this_arg x) { return this_type(construct_tag{}, exp(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type log(this_arg x) { return this_type(construct_tag{}, log(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type exp2(this_arg x) { return this_type(construct_tag{}, exp2(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type log2(this_arg x) { return this_type(construct_tag{}, log2(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type sqrt(this_arg x) { return this_type(construct_tag{}, sqrt(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type inversesqrt(this_arg x) { return this_type(construct_tag{}, inversesqrt(x.at<Index>())...); }
 
             // 8.3
 
-            CXXSWIZZLE_FORCE_INLINE friend this_type abs(this_arg x) { return abs(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type sign(this_arg x) { return sign(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type floor(this_arg x) { return floor(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type trunc(this_arg x) { return trunc(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type round(this_arg x) { return round(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type roundEven(this_arg x) { return roundEven(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type ceil(this_arg x) { return ceil(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type fract(this_arg x) { return fract(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type mod(this_arg x, this_arg y) { return mod(x.data, y.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type modf(this_arg x, this_type& i) { return modf(x.data, i.data); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type abs(this_arg x) { return this_type(construct_tag{}, abs(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type sign(this_arg x) { return this_type(construct_tag{}, sign(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type floor(this_arg x) { return this_type(construct_tag{}, floor(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type trunc(this_arg x) { return this_type(construct_tag{}, trunc(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type round(this_arg x) { return this_type(construct_tag{}, round(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type roundEven(this_arg x) { return this_type(construct_tag{}, roundEven(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type ceil(this_arg x) { return this_type(construct_tag{}, ceil(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type fract(this_arg x) { return this_type(construct_tag{}, fract(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type mod(this_arg x, this_arg y) { return this_type(construct_tag{}, mod(x.at<Index>(), y.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type modf(this_arg x, this_type& i) { return this_type(construct_tag{}, modf(x.at<Index>(), i.at<Index>())...); }
 
-            CXXSWIZZLE_FORCE_INLINE friend this_type min(this_arg x, this_arg y) { return min(x.data, y.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type max(this_arg x, this_arg y) { return max(x.data, y.data); }
-            //CXXSWIZZLE_FORCE_INLINE friend this_type clamp(this_arg x, this_arg minVal, this_arg maxVal) { return clamp(x.data, minVal.data, maxVal.data); }
-            //CXXSWIZZLE_FORCE_INLINE friend this_type mix(this_arg x, this_arg y, this_arg a) { return mix(x.data, y.data, a.data); }
-            //CXXSWIZZLE_FORCE_INLINE friend this_type mix(this_arg x, this_arg y, const bool_type& a) { return mix(x.data, y.data, a.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type step(this_arg edge, this_arg x) { return step(edge.data, x.data); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type min(this_arg x, this_arg y) { return this_type(construct_tag{}, min(x.at<Index>(), y.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type max(this_arg x, this_arg y) { return this_type(construct_tag{}, max(x.at<Index>(), y.at<Index>())...); }
+            //CXXSWIZZLE_FORCE_INLINE friend this_type clamp(this_arg x, this_arg minVal, this_arg maxVal) { return clamp(x.at<Index>(), minVal.at<Index>(), maxVal.at<Index>()); }
+            //CXXSWIZZLE_FORCE_INLINE friend this_type mix(this_arg x, this_arg y, this_arg a) { return mix(x.at<Index>(), y.at<Index>(), a.at<Index>()); }
+            //CXXSWIZZLE_FORCE_INLINE friend this_type mix(this_arg x, this_arg y, const bool_type& a) { return mix(x.at<Index>(), y.at<Index>(), a.at<Index>()); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type step(this_arg edge, this_arg x) { return this_type(construct_tag{}, step(edge.at<Index>(), x.at<Index>())...); }
             CXXSWIZZLE_FORCE_INLINE friend this_type smoothstep(this_arg edge0, this_arg edge1, this_arg x) { return smoothstep_helper(edge0, edge1, x); }
 
-            CXXSWIZZLE_FORCE_INLINE friend bool_type isnan(this_arg x) { return isnan(x.data); }
-            CXXSWIZZLE_FORCE_INLINE friend bool_type isinf(this_arg x) { return isinf(x.data); }
+            CXXSWIZZLE_FORCE_INLINE friend bool_type isnan(this_arg x) { return this_type(construct_tag{}, isnan(x.at<Index>())...); }
+            CXXSWIZZLE_FORCE_INLINE friend bool_type isinf(this_arg x) { return this_type(construct_tag{}, isinf(x.at<Index>())...); }
 
             //genIType floatBitsToInt(genType value)
             //genUType floatBitsToUint(genType value)
@@ -306,8 +414,8 @@ namespace swizzle
             CXXSWIZZLE_FORCE_INLINE friend this_type length(this_arg x) { return x; }
             CXXSWIZZLE_FORCE_INLINE friend this_type distance(this_arg p0, this_arg p1) { return abs(p0 - p1); }
             CXXSWIZZLE_FORCE_INLINE friend this_type dot(this_arg x, this_arg y) { return x * y; }
-            CXXSWIZZLE_FORCE_INLINE friend this_type normalize(this_arg x) { return step(this_type(0.0f), x) * 2.0f - 1.0f; }
-            CXXSWIZZLE_FORCE_INLINE friend this_type faceforward(this_arg N, this_arg I, this_arg Nref) { return (step(this_type(0.0f), dot(Nref, I)) * (-2.0f) + 1.0f) * N; }
+            CXXSWIZZLE_FORCE_INLINE friend this_type normalize(this_arg x) { return step(this_type(construct_tag{}, 0.0f), x) * 2.0f - 1.0f; }
+            CXXSWIZZLE_FORCE_INLINE friend this_type faceforward(this_arg N, this_arg I, this_arg Nref) { return (step(this_type(construct_tag{}, 0.0f), dot(Nref, I)) * (-2.0f) + 1.0f) * N; }
             CXXSWIZZLE_FORCE_INLINE friend this_type reflect(this_arg N, this_arg I) { return (I - 2.0f * dot(I, N) * N); }
             CXXSWIZZLE_FORCE_INLINE friend this_type refract(this_arg I, this_arg N, this_arg eta)
             {
@@ -317,8 +425,8 @@ namespace swizzle
             }
 
             // 8.8
-            CXXSWIZZLE_FORCE_INLINE friend this_type dFdx(this_arg p) { return dFdx(p.data); }
-            CXXSWIZZLE_FORCE_INLINE friend this_type dFdy(this_arg p) { return dFdy(p.data); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type dFdx(this_arg p) { return dFdx(p.at<Index>()); }
+            CXXSWIZZLE_FORCE_INLINE friend this_type dFdy(this_arg p) { return dFdy(p.at<Index>()); }
             CXXSWIZZLE_FORCE_INLINE friend this_type fwidth(this_arg p)
             {
                 return abs(dFdx(p)) + abs(dFdy(p));
@@ -332,5 +440,5 @@ namespace swizzle
             }
 
         };
-    }
+    /*}*/
 }

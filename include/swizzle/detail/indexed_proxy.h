@@ -99,6 +99,11 @@ namespace swizzle
                 return operator=(decay() / std::forward<T>(o));
             }
 
+            inline vector_type operator-() const
+            {
+                return -decay();
+            }
+
         private:
             template <size_t... VectorIndices>
             indexed_proxy& assign_impl(const vector_type& vec, std::index_sequence<VectorIndices...>)
