@@ -2,55 +2,65 @@
 // Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 #pragma once
 
+// define CXXSWIZZLE_WRITE_MASK_SCOPE_SINGLETHREADED if you want faster write_mask_scope.
+// but unsafe to use in a multithreaded scenario
+
 namespace swizzle
 {
     namespace detail
     {
-        struct mask_invert_tag {};
-
-        template <typename MaskType, typename RawMaskType, size_t StackSize>
-        struct mask_pusher
+        template <typename MaskType, size_t StackSize>
+        struct write_mask_scope
         {
+            struct invert_tag {};
             using mask_type = MaskType;
-            using raw_mask_type = RawMaskType;
 
             struct storage_type
             {
-                raw_mask_type masks[StackSize];
-                raw_mask_type single_masks[StackSize];
+                mask_type masks[StackSize];
+                mask_type single_masks[StackSize];
                 size_t mask_index;
+
+                storage_type()
+                {
+                    masks[0] = mask_type(true);
+                    mask_index = 0;
+                }
             };
 
+#if CXXSWIZZLE_WRITE_MASK_SCOPE_SINGLETHREADED
+            static storage_type storage;
+#else
             static thread_local storage_type storage;
-
-            static void init_for_thread()
-            {
-                storage.masks[0] = static_cast<raw_mask_type>(mask_type(true));
-                storage.mask_index = 0;
-            }
+#endif  
 
             template <typename T>
-            static mask_pusher push(T&& condition)
+            static write_mask_scope push(T && condition)
             {
                 return{ static_cast<mask_type>(condition) };
             }
 
-            static mask_pusher push(mask_invert_tag)
+            static write_mask_scope push(bool condition)
             {
-                return{ !static_cast<const mask_type&>(storage.single_masks[storage.mask_index]) };
+                return{ static_cast<mask_type>(condition) };
             }
 
-            inline mask_pusher(const mask_type& mask)
+            static write_mask_scope push(invert_tag)
+            {
+                return{ !storage.single_masks[storage.mask_index] };
+            }
+
+            inline write_mask_scope(const mask_type& mask)
             {
                 // save the mask for later negation in "else"
-                storage.single_masks[storage.mask_index] = static_cast<raw_mask_type>(mask);
+                storage.single_masks[storage.mask_index] = mask;
 
                 // compute and store the new mask
-                auto newMask = mask & static_cast<mask_type>(storage.masks[storage.mask_index]);
-                storage.masks[++storage.mask_index] = static_cast<raw_mask_type>(newMask);
+                auto newMask = storage.mask_index == 0 ? mask : mask & storage.masks[storage.mask_index];
+                storage.masks[++storage.mask_index] = newMask;
             }
 
-            inline ~mask_pusher()
+            inline ~write_mask_scope()
             {
                 // pop!
                 --storage.mask_index;
@@ -58,24 +68,39 @@ namespace swizzle
 
             inline operator bool() const
             {
-                // let the mask type decide what it means by being "true"; for VC this means
-                // at least one value being set IIRC
-                return static_cast<bool>(static_cast<mask_type>(storage.masks[storage.mask_index]));
+                // let the mask type decide what it means by being "true"
+                return simd_to_bool(storage.masks[storage.mask_index]);
             }
-
         };
 
         template <typename MaskPusher>
-        struct masked_assign_policy
+        struct write_mask_with_branch_assign_policy
         {
             template<typename T>
-            static void assign(T& target, const T& value)
+            static inline void assign(T& target, const T& value)
             {
                 if (MaskPusher::storage.mask_index == 0)
                     target = value;
                 else
-                    target(MaskPusher::storage.masks[MaskPusher::storage.mask_index]) = value;
+                    target((typename T::MaskType)MaskPusher::storage.masks[MaskPusher::storage.mask_index]) = value;
             }
         };
+
+        template <typename MaskPusher>
+        struct write_mask_assign_policy
+        {
+            template<typename T>
+            static inline void assign(T& target, const T& value)
+            {
+                target((typename T::MaskType)MaskPusher::storage.masks[MaskPusher::storage.mask_index]) = value;
+            }
+        };
+
+#if CXXSWIZZLE_WRITE_MASK_SCOPE_SINGLETHREADED
+#define CXXSWIZZLE_WRITE_MASK_SCOPE_STORAGE(type) type::storage_type type::storage
+#else
+#define CXXSWIZZLE_WRITE_MASK_SCOPE_STORAGE(type) thread_local type::storage_type type::storage
+#endif  
+
     }
 }

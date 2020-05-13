@@ -12,6 +12,9 @@
 typedef float batch_float_t;
 typedef float raw_batch_float_t;
 typedef uint32_t raw_batch_uint32_t;
+using batch_int_t = int32_t;
+using batch_uint_t = uint32_t;
+using batch_bool_t = bool;
 
 const size_t batch_scalar_count = 1;
 const size_t batch_float_align = std::alignment_of<raw_batch_float_t>::value;

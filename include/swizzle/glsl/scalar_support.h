@@ -180,12 +180,20 @@ namespace swizzle
         {
             *b = *reinterpret_cast<float*>(&a);
         }
+
+        inline float dFdx(float x)
+        {
+            return 0.0f;
+        }
+
+        inline float dFdy(float x)
+        {
+            return 0.0f;
+        }
+
+        inline float fwidth(float x)
+        {
+            return 0.0f;
+        }
     }
-}
-
-namespace std
-{
-	
-
-    
 }

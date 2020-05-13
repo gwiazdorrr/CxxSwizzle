@@ -17,11 +17,38 @@ file(GLOB shaders RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE
 source_group("" FILES main.cpp use_scalar.h use_simd.h use_simd_masked.h )
 source_group("shaders" FILES ${shaders})
 
-add_executable (sample_scalar main.cpp use_scalar.h ${shaders})
-target_include_directories(sample_scalar PRIVATE ${CxxSwizzle_SOURCE_DIR}/include)
-target_link_libraries(sample_scalar PRIVATE SDL2::Main)
-set_target_properties(sample_scalar PROPERTIES COMPILE_FLAGS "-DUSE_SCALAR")
 
+
+
+macro(create_sample name defines header)
+
+	add_executable (${name} main.cpp ${header} ${shaders})
+	target_include_directories(${name} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include)
+	target_link_libraries(${name} PRIVATE SDL2::Main)
+
+	set_target_properties(${name} PROPERTIES CXX_STANDARD 17)
+	set_target_properties(${name} PROPERTIES CXX_STANDARD_REQUIRED ON)
+
+	if(MSVC)
+        set_target_properties(${name} PROPERTIES COMPILE_FLAGS "${defines} /Gv")
+    else()
+        set_target_properties(${name} PROPERTIES COMPILE_FLAGS "${defines}")
+    endif()
+
+
+endmacro()
+
+macro(create_simd_project name defines)
+
+	create_sample(${name} ${defines} "use_simd.h")
+    
+    target_link_libraries(${name} PRIVATE ${Vc_LIBRARIES})
+    target_include_directories(${name} PRIVATE ${Vc_INCLUDE_DIR})
+    add_dependencies(${name} Vc)
+
+endmacro()
+
+create_sample(sample_scalar "-DUSE_SCALAR" "use_scalar.h")
 
 set (BUILD_SIMD_SAMPLE True CACHE BOOL "BUILD_SIMD_SAMPLE")
 if (BUILD_SIMD_SAMPLE)
@@ -37,18 +64,7 @@ if (BUILD_SIMD_SAMPLE)
     set (Vc_LIBRARIES ${VC_INSTALL}/lib/Vc.lib)
     set (Vc_INCLUDE_DIR ${VC_INSTALL}/include)
 
-    add_executable(sample_simd main.cpp use_simd.h ${shaders})
-    target_include_directories(sample_simd PRIVATE ${CxxSwizzle_SOURCE_DIR}/include)
-    target_link_libraries(sample_simd PRIVATE SDL2::Main)
-    
-    target_link_libraries(sample_simd PRIVATE ${Vc_LIBRARIES})
-    target_include_directories(sample_simd PRIVATE ${Vc_INCLUDE_DIR})
-    add_dependencies(sample_simd Vc)
+	create_simd_project(sample_simd "-DSAMPLE_USE_SIMD_VC")
+    create_simd_project(sample_simd_masked "-DSAMPLE_USE_SIMD_VC -DSAMPLE_USE_SIMD_MASKING")
 
-    if(MSVC)
-        set_target_properties(sample_simd PROPERTIES COMPILE_FLAGS "-DUSE_SIMD /Gv")
-    else()
-        set_target_properties(sample_simd PROPERTIES COMPILE_FLAGS "-DUSE_SIMD")
-    endif()
-    
 endif()

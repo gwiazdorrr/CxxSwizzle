@@ -490,7 +490,6 @@ namespace swizzle
                 return mask * (eta * I - (eta * call_dot(N, I) + sqrt(k)) * N);
             }
 
-
             // 8.6
             static bool_vector_type call_lessThan(number_vector_arg x, number_vector_arg y)
             {
@@ -529,6 +528,20 @@ namespace swizzle
             static this_type call_not(bool_vector_arg x)
             {
                 return this_type(!x.at(Index)...);
+            }
+
+            // 8.8
+            static this_type call_dFdx(float_vector_arg x)
+            {
+                return this_type(dFdx(x.at(Index))...);
+            }
+            static this_type call_dFdy(float_vector_arg x)
+            {
+                return this_type(dFdy(x.at(Index))...);
+            }
+            static this_type call_fwidth(float_vector_arg x)
+            {
+                return this_type(fwidth(x.at(Index))...);
             }
 
             // operators

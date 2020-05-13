@@ -1,7 +1,7 @@
 // CxxSwizzle
 // Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
-#if defined(USE_SIMD)
+#if defined(SAMPLE_USE_SIMD_VC)
 #include "use_simd.h"
 #else 
 #include "use_scalar.h"
@@ -10,8 +10,7 @@
 #include <swizzle/glsl/vector_base.h>
 #include <swizzle/glsl/matrix.h>
 #include <swizzle/glsl/texture_functions.h>
-
-
+#include <swizzle/detail/simd_mask.h>
 
 typedef swizzle::glsl::vector< batch_float_t, 2 > vec2;
 typedef swizzle::glsl::vector< batch_float_t, 3 > vec3;
@@ -25,6 +24,34 @@ typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 2, 2> m
 typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 3, 3> mat3;
 typedef swizzle::glsl::matrix< swizzle::glsl::vector, vec4::scalar_type, 4, 4> mat4;
 
+
+
+
+
+
+//template <typename ValueType, ValueType Value, ValueType... Values>
+//std::integer_sequence<ValueType, Values..., Value> append_integer_sequence_resolver(std::integer_sequence<ValueType, Values...>)
+//{
+//    return {};
+//}
+//
+//template <typename SequenceType, typename ValueType, ValueType Value>
+//using append_integer_sequence = decltype(append_integer_sequence_resolver<ValueType, Value>(std::declval<SequenceType>()));
+//
+//template <typename SequenceType, size_t Value>
+//using append_index_sequence = append_integer_sequence<SequenceType, size_t, Value>;
+//
+//
+//
+//
+//
+//
+//typedef std::make_index_sequence<10> ta;
+//typedef append_index_sequence<ta, 66> tb;
+//typedef take_n<5, 1, 2, 3, 4, 5, 6, 7> tc;
+//static_assert(tb::size() == 11, "aaa");
+//static_assert(tb::size() == 11, "aaa");
+//static_assert(tc::size() == 5, "aaa");
 
 //! A really, really simplistic sampler using SDLImage
 struct SDL_Surface;
@@ -94,7 +121,22 @@ namespace glsl_sandbox
     #define main operator()
     #define mainImage operator()
     #define float batch_float_t   
-    #define bool bool_type
+    #define int batch_int_t
+    #define uint batch_uint_t
+    #define bool batch_bool_t
+
+#ifdef SIMD_IF
+    #define if(x) SIMD_IF(x)
+#endif
+#ifdef SIMD_ELSE
+    #define else SIMD_ELSE
+#endif
+#ifdef SIMD_WHILE
+    #define while(x) SIMD_WHILE(x)
+#endif
+#ifdef SIMD_CONDITION
+    #define condition(x) SIMD_CONDITION(x)
+#endif
     
     #pragma warning(push)
     #pragma warning(disable: 4244) // disable return implicit conversion warning
@@ -126,11 +168,26 @@ namespace glsl_sandbox
     #pragma warning(pop)
     #undef bool
     #undef float
+    #undef int
+    #undef uint
     #undef main
     #undef in
     #undef out
     #undef inout
     #undef uniform
+
+#ifdef if
+    #undef if
+#endif
+#ifdef else
+    #undef else
+#endif
+#ifdef while
+    #undef while
+#endif
+#ifdef condition
+    #undef condition
+#endif
 }
 
 // these headers, especially SDL.h & time.h set up names that are in conflict with sandbox'es;
@@ -199,7 +256,6 @@ static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface*
     using ::swizzle::detail::static_for;
 
 
-
 	// if there are more than 1 scalars in a vector, work on two rows with half width at the same time
     raw_batch_float_t x_offsets;
 	raw_batch_float_t y_offsets;
@@ -243,6 +299,7 @@ static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface*
         int height_start = 0;
         int height_end = bmp->h;
 #endif
+
         glsl_sandbox::fragment_shader shader;
         static_cast<glsl_sandbox::fragment_shader_uniforms&>(shader) = uniforms;
 
@@ -285,9 +342,9 @@ static void render(glsl_sandbox::fragment_shader_uniforms uniforms, SDL_Surface*
                         auto p = ptr + row * bmp->pitch;
                         for (int col = 0; col < bmp->w - x; ++col)
                         {
-                            *p++ = static_cast<uint8_t>(pr[col]);
-                            *p++ = static_cast<uint8_t>(pg[col]);
-                            *p++ = static_cast<uint8_t>(pb[col]);
+                            //*p++ = static_cast<uint8_t>(pr[col]);
+                            //*p++ = static_cast<uint8_t>(pg[col]);
+                            //*p++ = static_cast<uint8_t>(pb[col]);
                         }
                     }
                 }
@@ -345,8 +402,8 @@ int main(int argc, char* argv[])
 
     // get initial resolution
     swizzle::glsl::vector<int, 2> initial_resolution;
-    initial_resolution.x = 128;
-    initial_resolution.y = 128;
+    initial_resolution.x = 512;
+    initial_resolution.y = 512;
     if (argc == 2)
     {
         std::stringstream s;
@@ -416,7 +473,6 @@ int main(int argc, char* argv[])
             glsl_sandbox::fragment_shader_uniforms uniforms;
 
             abort_render_token = false;
-
             auto s = target_surface.get();
             uniforms.iTime = time;
             uniforms.iResolution = vec2(static_cast<float>(s->w), static_cast<float>(s->h));
@@ -609,8 +665,8 @@ vec4 sampler2D::sample( const vec2& coord )
     }
 
     // OGL uses left-bottom corner as origin...
-    uv.y = 1 - uv.y;
-
+    uv.y = 1.0 - uv.y;
+    
     if ( !m_image )
     {
         // checkers

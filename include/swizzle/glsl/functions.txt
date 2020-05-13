@@ -1,129 +1,148 @@
 // functions
 // 8.1
 
-genType radians(genType degrees)
-genType degrees(genType radians)
-genType cos(genType angle)
-genType tan(genType angle)
-genType sin(genType angle)
-genType asin(genType x)
-genType acos(genType x)
-genType atan(genType y_over_x)
-genType atan(genType y, genType x)
-genType sinh(genType x)
-genType cosh(genType x)
-genType tanh(genType x)
-genType asinh(genType x)
-genType acosh(genType x)
-genType atanh(genType x)
+
+#if FLOAT
+F(radians, genType_ret)(genType_arg degrees)         F_IMPL1(radians, genType_ret, degrees)
+F(degrees, genType_ret)(genType_arg radians)         F_IMPL1(degrees, genType_ret, radians)
+F(cos, genType_ret)(genType_arg angle)               F_IMPL1(cos, genType_ret, angle)
+F(tan, genType_ret)(genType_arg angle)               F_IMPL1(tan, genType_ret, angle)
+F(sin, genType_ret)(genType_arg angle)               F_IMPL1(sin, genType_ret, angle)
+F(asin, genType_ret)(genType_arg x)                  F_IMPL1(asin, genType_ret, x)
+F(acos, genType_ret)(genType_arg x)                  F_IMPL1(acos, genType_ret, x)
+F(atan, genType_ret)(genType_arg y_over_x)           F_IMPL1(atan, genType_ret, y_over_x)
+F(atan, genType_ret)(genType_arg y, genType_arg x)   F_IMPL2(atan, genType_ret, y, x)
+F(sinh, genType_ret)(genType_arg x)                  F_IMPL1(sinh, genType_ret, x)
+F(cosh, genType_ret)(genType_arg x)                  F_IMPL1(cosh, genType_ret, x)
+F(tanh, genType_ret)(genType_arg x)                  F_IMPL1(tanh, genType_ret, x)
+F(asinh, genType_ret)(genType_arg x)                 F_IMPL1(asinh, genType_ret, x)
+F(acosh, genType_ret)(genType_arg x)                 F_IMPL1(acosh, genType_ret, x)
+F(atanh, genType_ret)(genType_arg x)                 F_IMPL1(atanh, genType_ret, x)
+#endif
 
 // 8.2
 
-genType pow(genType x, genType y)
-genType exp(genType x)
-genType log(genType x)
-genType exp2(genType x)
-genType log2(genType x)
-genType sqrt(genType x)
-genType inversesqrt(genType x)
-
+#if FLOAT
+F(pow, genType_ret)(genType_arg x, genType_arg y)    F_IMPL2(pow, genType_ret, x, y)
+F(exp, genType_ret)(genType_arg x)                   F_IMPL1(exp, genType_ret, x)
+F(log, genType_ret)(genType_arg x)                   F_IMPL1(log, genType_ret, x)
+F(exp2, genType_ret)(genType_arg x)                  F_IMPL1(exp2, genType_ret, x)
+F(log2, genType_ret)(genType_arg x)                  F_IMPL1(log2, genType_ret, x)
+F(sqrt, genType_ret)(genType_arg x)                  F_IMPL1(sqrt, genType_ret, x)
+F(inversesqrt, genType_ret)(genType_arg x)           F_IMPL1(inversesqrt, genType_ret, x)
+#endif
 // 8.3
 
-genType abs(genType_arg x)
-genType sign(genType_arg x)
-genType floor(genType x)
-genType trunc(genType x)
-genType round(genType x)
-genType roundEven(genType x)
-genType ceil(genType x)
-genType fract(genType x)
-genType mod(genType x, float y)
-genType mod(genType x, genType y)
-genType modf(genType x, out_genType i)
+#if FLOAT
+F(abs, genType_ret)(genType_arg x)                  F_IMPL1(abs, genType_ret, x)
+F(sign, genType_ret)(genType_arg x)                 F_IMPL1(sign, genType_ret, x)
+F(floor, genType_ret)(genType_arg x)                F_IMPL1(floor, genType_ret, x)
+F(trunc, genType_ret)(genType_arg x)                F_IMPL1(trunc, genType_ret, x)
+F(round, genType_ret)(genType_arg x)                F_IMPL1(round, genType_ret, x)
+F(roundEven, genType_ret)(genType_arg x)            F_IMPL1(roundEven, genType_ret, x)
+F(ceil, genType_ret)(genType_arg x)                 F_IMPL1(ceil, genType_ret, x)
+F(fract, genType_ret)(genType_arg x)                F_IMPL1(fract, genType_ret, x)
+F(mod, genType_ret)(genType_arg x, genType_arg y)   F_IMPL2(mod, genType_ret, x, y)
+F(modf, genType_ret)(genType_arg x, out_genType i)  F_IMPL2(modf, genType_ret, x, i)
 
-genType min(genType x, genType y)
-genType min(genType x, float y)
-genIType min(genIType x, genIType y)
-genIType min(genIType x, int y)
-genUType min(genUType x, genUType y)
-genUType min(genUType x, uint y)
+F(min, genType_ret)(genType_arg x, genType_arg y)                                F_IMPL2(min, genType_ret, x, y)
+F(max, genType_ret)(genType_arg x, genType_arg y)                                F_IMPL2(max, genType_ret, x, y)
+F(clamp, genType_ret)(genType_arg x, genType_arg minVal, genType_arg maxVal)     F_IMPL3(clamp, genType_ret, x, minVal, maxVal)
+F(mix, genType_ret)(genType_arg x, genType_arg y, genType_arg a)                 F_IMPL3(mix, genType_ret, x, y, a)
+F(step, genType_ret)(genType_arg edge, genType_arg x)                            F_IMPL2(step, genType_ret, edge, x)
+F(smoothstep, genType_ret)(genType_arg edge0, genType_arg edge1, genType_arg x)  F_IMPL3(smoothstep, genType_ret, edge0, edge1, x)
+F(mix, genType_ret)(genType_arg x, genType_arg y, genBType_arg a)                F_IMPL3(mix, genType_ret, x, y, a)
+F(isnan, genBType_ret)(genType_arg x)                                            F_IMPL1(isnan, genBType_ret, x)
+F(isinf, genBType_ret)(genType_arg x)                                            F_IMPL1(isinf, genBType_ret, x)
 
-genType max(genType x, genType y)
-genType max(genType x, float y)
-genIType max(genIType x, genIType y)
-genIType max(genIType x, int y)
-genUType max(genUType x, genUType y)
-genUType max(genUType x, uint y)
+F(floatBitsToInt, genIType_ret)(genType_arg value)                               F_IMPL1(floatBitsToInt, genIType_ret, value)
+F(floatBitsToUint, genUType_ret)(genType_arg value)                              F_IMPL1(floatBitsToUint, genUType_ret, value)
 
-genType clamp(genType x, genType minVal, genType maxVal)
-genType clamp(genType x, float minVal, float maxVal)
-genIType clamp(genIType x, genIType minVal, genIType maxVal)
-genIType clamp(genIType x, int minVal, int maxVal)
-genUType clamp(genUType x, genUType minVal, genUType maxVal)
-genUType clamp(genUType x, uint minVal, uint maxVal)
+#if VECTOR
+F(mod, genType_ret)(genType_arg x, float_arg y)                                  F_IMPL2(mod, genType_ret, x, y)
+F(min, genType_ret)(genType_arg x, float_arg y)                                  F_IMPL2(min, genType_ret, x, y)
+F(max, genType_ret)(genType_arg x, float_arg y)                                  F_IMPL2(max, genType_ret, x, y)
+F(clamp, genType_ret)(genType_arg x, float_arg minVal, float_arg maxVal)         F_IMPL3(clamp, genType_ret, x, minVal, maxVal)
+F(mix, genType_ret)(genType_arg x, genType_arg y, float_arg a)                   F_IMPL3(mix, genType_ret, x, y, a)
+F(step, genType_ret)(float_arg edge, genType_arg x)                              F_IMPL2(step, genType_ret, edge, x)
+F(smoothstep, genType_ret)(float_arg edge0, float_arg edge1, genType_arg x)      F_IMPL3(smoothstep, genType_ret, edge0, edge1, x)
+#endif
+#endif
 
-genType mix(genType x, genType y, genType a)
-genType mix(genType x, genType y, float a)
+#if INT
+F(min, genIType_ret)(genIType_arg x, genIType_arg y)                             F_IMPL2(min, genIType_ret, x, y)
+F(max, genIType_ret)(genIType_arg x, genIType_arg y)                             F_IMPL2(max, genIType_ret, x, y)
+F(clamp, genIType_ret)(genIType_arg x, genIType_arg minVal, genIType_arg maxVal) F_IMPL3(clamp, genIType_ret, x, minVal, maxVal)
+F(intBitsToFloat, genType_ret)(genIType_arg value)                               F_IMPL1(intBitsToFloat, genType_ret, value)
+#if VECTOR
+F(min, genIType_ret)(genIType_arg x, int_arg y)                                  F_IMPL2(min, genIType_ret, x, y)
+F(max, genIType_ret)(genIType_arg x, int_arg y)                                  F_IMPL2(max, genIType_ret, x, y)
+F(clamp, genIType_ret)(genIType_arg x, int_arg minVal, int_arg maxVal)           F_IMPL3(clamp, genIType_ret, x, minVal, maxVal)
+#endif
+#endif
 
-genType mix(genType x, genType y, genBType a)
-
-genType step(genType edge, genType x)
-genType step(float edge, genType x)
-
-genType smoothstep(genType edge0, genType edge1, genType x)
-genType smoothstep(float edge0, float edge1, genType x)
-
-genBType isnan(genType x)
-genBType isinf(genType x)
-
-genIType floatBitsToInt(genType value)
-genUType floatBitsToUint(genType value)
-genType intBitsToFloat(genIType value)
-genType uintBitsToFloat(genUType value)
+#if UNIT
+F(min, genUType_ret)(genUType_arg x, genUType_arg y)                             F_IMPL2(min, genUType_ret, x, y)
+F(max, genUType_ret)(genUType_arg x, genUType_arg y)                             F_IMPL2(max, genUType_ret, x, y)
+F(clamp, genUType_ret)(genUType_arg x, genUType_arg minVal, genUType_arg maxVal) F_IMPL3(clamp, genUType_ret, x, minVal, maxVal)
+F(uintBitsToFloat, genType_ret)(genUType_arg value)                              F_IMPL1(uintBitsToFloat, genType_ret, value)
+#if VECTOR
+F(min, genUType_ret)(genUType_arg x, uint_arg y)                                 F_IMPL2(min, genUType_ret, x, y)
+F(max, genUType_ret)(genUType_arg x, uint_arg y)                                 F_IMPL2(max, genUType_ret, x, y)
+F(clamp, genUType_ret)(genUType_arg x, uint_arg minVal, uint_arg maxVal)         F_IMPL3(clamp, genUType_ret, x, minVal, maxVal)
+#endif
+#endif
 
 
 // 8.4
-float length(genType x)
-float distance(genType p0, genType p1)
-float dot(genType x, genType y)
-vec3 cross(vec3 x, vec3 y)
-genType normalize(genType x)
-genType faceforward(genType N, genType I, genType Nref)
-genType reflect(genType N, genType I)
-genType refract(genType N, genType I, float Nref)
-
+#if FLOAT
+F(length, float_arg)(genType_arg x)                                              F_IMPL1(length, float_arg, x)
+F(distance, float_arg)(genType_arg p0, genType_arg p1)                           F_IMPL2(distance, float_arg, p0, p1)
+F(dot, float_arg)(genType_arg x, genType_arg y)                                  F_IMPL2(dot, float_arg, x, y)
+#if SIZE == 3
+F(cross, genType_ret)(genType_arg x, genType_arg y)                              F_IMPL2(cross, genType_ret, x, y)
+#endif
+F(normalize, genType_ret)(genType_arg x)                                         F_IMPL1(normalize, genType_ret, x)
+F(faceforward, genType_ret)(genType_arg N, genType_arg I, genType_arg Nref)      F_IMPL3(faceforward, genType_ret, N, I, Nref)
+F(reflect, genType_ret)(genType_arg N, genType_arg I)                            F_IMPL2(reflect, genType_ret, N, I)
+F(refract, genType_ret)(genType_arg N, genType_arg I, float_arg Nref)            F_IMPL3(refract, genType_ret, N, I, Nref)
+#endif
 
 
 // 8.6
-bvec lessThan(vec x, vec y)
-bvec lessThan(ivec x, ivec y)
-bvec lessThan(uvec x, uvec y)
+#if SIZE > 1
+F(lessThan, bvec)(vec x, vec y)              F_IMPL2(lessThan, bvec, x, y)
+F(lessThan, bvec)(ivec x, ivec y)            F_IMPL2(lessThan, bvec, x, y)
+F(lessThan, bvec)(uvec x, uvec y)            F_IMPL2(lessThan, bvec, x, y)
 
-bvec lessThanEqual(vec x, vec y)
-bvec lessThanEqual(ivec x, ivec y)
-bvec lessThanEqual(uvec x, uvec y)
+F(lessThanEqual, bvec)(vec x, vec y)         F_IMPL2(lessThanEqual, bvec, x, y)
+F(lessThanEqual, bvec)(ivec x, ivec y)       F_IMPL2(lessThanEqual, bvec, x, y)
+F(lessThanEqual, bvec)(uvec x, uvec y)       F_IMPL2(lessThanEqual, bvec, x, y)
 
-bvec greaterThan(vec x, vec y)
-bvec greaterThan(ivec x, ivec y)
-bvec greaterThan(uvec x, uvec y)
+F(greaterThan, bvec)(vec x, vec y)           F_IMPL2(greaterThan, bvec, x, y)
+F(greaterThan, bvec)(ivec x, ivec y)         F_IMPL2(greaterThan, bvec, x, y)
+F(greaterThan, bvec)(uvec x, uvec y)         F_IMPL2(greaterThan, bvec, x, y)
 
-bvec greaterThanEqual(vec x, vec y)
-bvec greaterThanEqual(ivec x, ivec y)
-bvec greaterThanEqual(uvec x, uvec y)
+F(greaterThanEqual, bvec)(vec x, vec y)      F_IMPL2(greaterThanEqual, bvec, x, y)
+F(greaterThanEqual, bvec)(ivec x, ivec y)    F_IMPL2(greaterThanEqual, bvec, x, y)
+F(greaterThanEqual, bvec)(uvec x, uvec y)    F_IMPL2(greaterThanEqual, bvec, x, y)
 
-bvec equal(vec x, vec y)
-bvec equal(ivec x, ivec y)
-bvec equal(uvec x, uvec y)
+F(equal, bvec)(vec x, vec y)                 F_IMPL2(equal, bvec, x, y)
+F(equal, bvec)(ivec x, ivec y)               F_IMPL2(equal, bvec, x, y)
+F(equal, bvec)(uvec x, uvec y)               F_IMPL2(equal, bvec, x, y)
 
-bvec notEqual(vec x, vec y)
-bvec notEqual(ivec x, ivec y)
-bvec notEqual(uvec x, uvec y)
+F(notEqual, bvec)(vec x, vec y)              F_IMPL2(notEqual, bvec, x, y)
+F(notEqual, bvec)(ivec x, ivec y)            F_IMPL2(notEqual, bvec, x, y)
+F(notEqual, bvec)(uvec x, uvec y)            F_IMPL2(notEqual, bvec, x, y)
 
-bool any(bvec x)
-bool all(bvec x)
-bool not(bvec x)
+F(any, bool)(bvec x)                         F_IMPL1(any, bool, x)
+F(all, bool)(bvec x)                         F_IMPL1(all, bool, x)
+F(not, bool)(bvec x)                         F_IMPL1(not, bool, x)
+#endif
 
 // 8.8
-genType dFdx(genType p)
-genType dFdy(genType p)
-genType fwidth(genType p)
+#if FLOAT
+F(dFdx, genType_ret)(genType_arg p)          F_IMPL1(dFdx, genType_ret, p)
+F(dFdy, genType_ret)(genType_arg p)          F_IMPL1(dFdy, genType_ret, p)
+F(fwidth, genType_ret)(genType_arg p)        F_IMPL1(fwidth, genType_ret, p)
+#endif

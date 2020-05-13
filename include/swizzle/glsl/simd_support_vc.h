@@ -9,79 +9,116 @@
 #include <swizzle/detail/primitive_wrapper.h>
 #include <swizzle/glsl/vector_helper.h>
 #include <swizzle/detail/fwd.h>
+#include <swizzle/detail/simd_mask.h>
 
 namespace swizzle
 {
     namespace detail
     {
-//#ifdef VC_UNCONDITIONAL_AVX2_INTRINSICS
-//        typedef ::Vc_VERSIONED_NAMESPACE::float_v::VectorType::Base raw_simd_type;
-//#else
-        typedef ::Vc::float_v raw_simd_type;
-//#endif
+        template <typename AssignPolicy = default_assign_policy>
+        using vc_bool = bool_adapter<::Vc::float_m, AssignPolicy>;
 
-        //! ::Vc::float_v has a tiny bit different semantics than what we need,
-        //! so let's wrap it.
-        using vc_bool = bool_wrapper<::Vc::float_m>;
-        using vc_float = detail::floating_point_wrapper < ::Vc::float_v, ::Vc::float_v::EntryType, vc_bool, nothing >;
+        template <typename AssignPolicy = default_assign_policy>
+        using vc_int = int_adapter<::Vc::int32_v, vc_bool<AssignPolicy>, AssignPolicy>;
+
+        template <typename AssignPolicy = default_assign_policy>
+        using vc_uint = uint_adapter<::Vc::uint32_v, vc_bool<AssignPolicy>, AssignPolicy>;
+
+        template <typename AssignPolicy = default_assign_policy>
+        using vc_float = float_adapter<::Vc::float_v, vc_bool<AssignPolicy>, AssignPolicy>;
         
-        template <>
-        struct get_vector_type_impl< vc_float >
+        // conversions for adapters to work
+
+        inline ::Vc::float_v simd_bool_to_simd_float(::Vc::float_m value)
         {
-            typedef ::swizzle::glsl::vector<vc_float, 1> type;
-        };
-
-        //template <>
-        //struct get_vector_type_impl< raw_simd_type >
-        //{
-        //    typedef ::swizzle::glsl::vector<vc_float, 1> type;
-        //};
-
-
-        template <>
-        struct get_vector_type_impl< vc_bool >
-        {
-            typedef ::swizzle::glsl::vector<vc_bool, 1> type;
-        };
-
-
-        void convert(const vc_bool& b, vc_float& a)
-        {
-            ::Vc::float_m mask = static_cast<::Vc::float_m>(b);
-            ::Vc::float_v result(::Vc::Zero);
-            result(mask) = 1.0f;
-            a = result;
+            Vc::float_v result(Vc::Zero);
+            result(value) = 1.0f;
+            return result;
         }
 
-        template <size_t Size>
-        struct vector_build_info<vc_float, Size> : vector_build_info_base<vc_float, Size, std::array<raw_simd_type, Size>, vc_bool>
-        {};
-
-        template <size_t Size>
-        struct vector_build_info<vc_bool, Size> : vector_build_info_base<vc_bool, Size, std::array<::Vc::float_m, Size>, vc_bool>
-        {};
-
-        //! CxxSwizzle needs to know which vector to create if it needs to
-
-        //template <>
-        //struct get_vector_type_impl< ::Vc::float_m >
-        //{
-        //    typedef ::swizzle::glsl::vector<vc_bool, 1> type;
-        //};
-
-        template <>
-        constexpr bool is_scalar_floating_point_v<vc_float> = true;
-
-
-        template <>
-        constexpr bool is_scalar_bool_v<vc_bool> = true;
-
-        //! If there's no decay function defined just return same object -- if it is a scalar.
-        inline typename vc_bool decay(vc_bool t)
+        inline ::Vc::int32_m bool_to_simd(bool value)
         {
-            return t;
+            return ::Vc::int32_m(value);
         }
 
+        inline ::Vc::int32_v int_to_simd(int value)
+        {
+            return value;
+        }
+
+        inline ::Vc::uint32_v uint_to_simd(unsigned value)
+        {
+            return value;
+        }
+
+        inline ::Vc::float_v float_to_simd(float value)
+        {
+            return value;
+        }
+
+        inline bool simd_to_bool(::Vc::int32_m value)
+        {
+            return value.isNotEmpty();
+        }
+
+        inline bool simd_to_bool(::Vc::float_m value)
+        {
+            return value.isNotEmpty();
+        }
+
+        // meta for cxx swizzle magic
+
+        template <typename AssignPolicy>
+        struct get_vector_type_impl< vc_float<AssignPolicy> >
+        {
+            typedef ::swizzle::glsl::vector<vc_float<AssignPolicy>, 1> type;
+        };
+
+        template <typename AssignPolicy>
+        struct get_vector_type_impl< vc_int<AssignPolicy> >
+        {
+            typedef ::swizzle::glsl::vector<vc_int<AssignPolicy>, 1> type;
+        };
+
+        template <typename AssignPolicy>
+        struct get_vector_type_impl< vc_uint<AssignPolicy> >
+        {
+            typedef ::swizzle::glsl::vector<vc_uint<AssignPolicy>, 1> type;
+        };
+
+        template <typename AssignPolicy>
+        struct get_vector_type_impl< vc_bool<AssignPolicy> >
+        {
+            typedef ::swizzle::glsl::vector<vc_bool<AssignPolicy>, 1> type;
+        };
+
+        template <size_t Size, typename AssignPolicy>
+        struct vector_build_info<vc_float<AssignPolicy>, Size> : vector_build_info_base<vc_float<AssignPolicy>, Size, std::array<::Vc::float_v, Size>, vc_bool<AssignPolicy>>
+        {};
+
+        template <size_t Size, typename AssignPolicy>
+        struct vector_build_info<vc_int<AssignPolicy>, Size> : vector_build_info_base<vc_int<AssignPolicy>, Size, std::array<::Vc::int32_v, Size>, vc_bool<AssignPolicy>>
+        {};
+
+        template <size_t Size, typename AssignPolicy>
+        struct vector_build_info<vc_uint<AssignPolicy>, Size> : vector_build_info_base<vc_uint<AssignPolicy>, Size, std::array<::Vc::uint32_v, Size>, vc_bool<AssignPolicy>>
+        {};
+
+        template <size_t Size, typename AssignPolicy>
+        struct vector_build_info<vc_bool<AssignPolicy>, Size> : vector_build_info_base<vc_bool<AssignPolicy>, Size, std::array<::Vc::float_m, Size>, vc_bool<AssignPolicy>>
+        {};
+
+        template <typename AssignPolicy>
+        constexpr bool is_scalar_floating_point_v<vc_float<AssignPolicy>> = true;
+
+        template <typename AssignPolicy>
+        constexpr bool is_scalar_integral_v<vc_int<AssignPolicy>> = true;
+
+        template <typename AssignPolicy>
+        constexpr bool is_scalar_integral_v<vc_uint<AssignPolicy>> = true;
+
+        template <typename AssignPolicy>
+        constexpr bool is_scalar_bool_v<vc_bool<AssignPolicy>> = true;
     }
 }
 
@@ -128,7 +165,7 @@ namespace Vc_VERSIONED_NAMESPACE
     template <typename T>
     inline Vector<T> mod(const Vector<T>& x, const Vector<T>& y)
     {
-        return rsqrt(x);
+        return x - y * floor(x / y);
     }
 
     template <typename T>
