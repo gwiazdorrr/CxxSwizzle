@@ -2,47 +2,48 @@
 // Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 #pragma once
 
-#include <swizzle/glsl/vector.h>
-#include <swizzle/glsl/matrix.h>
-#include <swizzle/glsl/vector_functions.h>
-#include <swizzle/glsl/scalar_support.h>
+#include <swizzle/vector.hpp>
+#include <swizzle/matrix.hpp>
+#include <swizzle/setup_scalar.hpp>
+#include <swizzle/inout_wrapper.hpp>
+#include <swizzle/define_vector_functions.hpp>
 
-typedef swizzle::glsl::vector< float, 1 > vec1;
-typedef swizzle::glsl::vector< float, 2 > vec2;
-typedef swizzle::glsl::vector< float, 3 > vec3;
-typedef swizzle::glsl::vector< float, 4 > vec4;
+typedef swizzle::vector< float, 1 > vec1;
+typedef swizzle::vector< float, 2 > vec2;
+typedef swizzle::vector< float, 3 > vec3;
+typedef swizzle::vector< float, 4 > vec4;
 
-typedef swizzle::glsl::vector< double, 2 > dvec2;
-typedef swizzle::glsl::vector< double, 3 > dvec3;
-typedef swizzle::glsl::vector< double, 4 > dvec4;
+typedef swizzle::vector< double, 2 > dvec2;
+typedef swizzle::vector< double, 3 > dvec3;
+typedef swizzle::vector< double, 4 > dvec4;
 
-typedef swizzle::glsl::vector< bool, 2 > bvec2;
-typedef swizzle::glsl::vector< bool, 3 > bvec3;
-typedef swizzle::glsl::vector< bool, 4 > bvec4;
+typedef swizzle::vector< bool, 2 > bvec2;
+typedef swizzle::vector< bool, 3 > bvec3;
+typedef swizzle::vector< bool, 4 > bvec4;
 
-typedef swizzle::glsl::vector< int, 2 > ivec2;
-typedef swizzle::glsl::vector< int, 3 > ivec3;
-typedef swizzle::glsl::vector< int, 4 > ivec4;
+typedef swizzle::vector< int, 2 > ivec2;
+typedef swizzle::vector< int, 3 > ivec3;
+typedef swizzle::vector< int, 4 > ivec4;
 
 
-typedef swizzle::glsl::matrix< swizzle::glsl::vector, float, 2, 2> mat2;
-typedef swizzle::glsl::matrix< swizzle::glsl::vector, float, 3, 3> mat3;
-typedef swizzle::glsl::matrix< swizzle::glsl::vector, float, 4, 4> mat4;
+typedef swizzle::matrix< float, 2, 2> mat2;
+typedef swizzle::matrix< float, 3, 3> mat3;
+typedef swizzle::matrix< float, 4, 4> mat4;
 
 typedef mat2 mat2x2;
 typedef mat3 mat3x3;
 typedef mat4 mat4x4;
 
-typedef swizzle::glsl::matrix< swizzle::glsl::vector, float, 3, 2> mat3x2;
-typedef swizzle::glsl::matrix< swizzle::glsl::vector, float, 4, 2> mat4x2;
-typedef swizzle::glsl::matrix< swizzle::glsl::vector, float, 2, 3> mat2x3;
-typedef swizzle::glsl::matrix< swizzle::glsl::vector, float, 3, 4> mat3x4;
+typedef swizzle::matrix<float, 3, 2> mat3x2;
+typedef swizzle::matrix<float, 4, 2> mat4x2;
+typedef swizzle::matrix<float, 2, 3> mat2x3;
+typedef swizzle::matrix<float, 3, 4> mat3x4;
 
-typedef swizzle::glsl::matrix< swizzle::glsl::vector, double, 2, 2> dmat2;
-typedef swizzle::glsl::matrix< swizzle::glsl::vector, double, 3, 3> dmat3;
-typedef swizzle::glsl::matrix< swizzle::glsl::vector, double, 4, 4> dmat4;
+typedef swizzle::matrix<double, 2, 2> dmat2;
+typedef swizzle::matrix<double, 3, 3> dmat3;
+typedef swizzle::matrix<double, 4, 4> dmat4;
 
-typedef swizzle::glsl::matrix< swizzle::glsl::vector, double, 2, 4> dmat2x4;
+typedef swizzle::matrix<double, 2, 4> dmat2x4;
 
 
 #include <array>

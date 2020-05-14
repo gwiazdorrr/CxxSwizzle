@@ -9,13 +9,13 @@
 
 namespace
 {
-    void foo(swizzle::detail::vector_inout_wrapper<vec2> a)
+    void foo(swizzle::inout_wrapper<vec2> a)
     {}
 
-    void foo(swizzle::detail::vector_inout_wrapper<vec3> a)
+    void foo(swizzle::inout_wrapper<vec3> a)
     {}
 
-    void foo(swizzle::detail::vector_inout_wrapper<vec4> a)
+    void foo(swizzle::inout_wrapper<vec4> a)
     {}
 }
 

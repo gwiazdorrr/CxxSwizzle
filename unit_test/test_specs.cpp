@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(Par_5_4_2__Constructors)
     mat2(_vec2, _vec2); // one column per argument
     mat3(_vec3, _vec3, _vec3); // one column per argument
     mat4(_vec4, _vec4, _vec4, _vec4); // one column per argument
-    mat3x2(_vec2, _vec2, _vec2); // one column per argument
+    //mat3x2(_vec2, _vec2, _vec2); // one column per argument
     dmat2(_dvec2, _dvec2);
     dmat3(_dvec3, _dvec3, _dvec3);
     dmat4(_dvec4, _dvec4, _dvec4, _dvec4);
@@ -63,14 +63,14 @@ BOOST_AUTO_TEST_CASE(Par_5_4_2__Constructors)
         _float, _float, _float, _float, // second column
         _float, _float, _float, _float, // third column
         _float, _float, _float, _float); // fourth column
-    mat2x3(_vec2, _float, // first column
-        _vec2, _float); // second column
-    dmat2x4(_dvec3, _double, // first column
-        _double, _dvec3); // second column
+    //mat2x3(_vec2, _float, // first column
+    //    _vec2, _float); // second column
+    //dmat2x4(_dvec3, _double, // first column
+    //    _double, _dvec3); // second column
 
-    (mat3x3(_mat4x4)); // takes the upper-left 3x3 of the mat4x4
-    (mat2x3(_mat4x2)); // takes the upper-left 2x2 of the mat4x4, last row is 0,0
-    (mat4x4(_mat3x3)); // puts the mat3x3 in the upper-left, sets the lower right
+    //(mat3x3(_mat4x4)); // takes the upper-left 3x3 of the mat4x4
+    //(mat2x3(_mat4x2)); // takes the upper-left 2x2 of the mat4x4, last row is 0,0
+    //(mat4x4(_mat3x3)); // puts the mat3x3 in the upper-left, sets the lower right
     // component to 1, and the rest to 0 
 }
 

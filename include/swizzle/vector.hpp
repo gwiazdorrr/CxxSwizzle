@@ -65,6 +65,10 @@ namespace swizzle
         using number_vector_arg_cond = detail::only_if <(num_of_components > 1), number_vector_arg>;
         using float_vector_arg_cond = detail::only_if <(num_of_components > 1), float_vector_arg>;
 
+        //!
+        typedef detail::indexed_vector_iterator<const this_type> const_iterator;
+        //!
+        typedef detail::indexed_vector_iterator<this_type> iterator;
 
         //! Decays the vector. For Size==1 this is going to return a scalar, for all other sizes - same vector
         inline decay_type decay() const
@@ -75,7 +79,7 @@ namespace swizzle
         //! Default constructor.
         inline vector_()
         {
-            //data = { };
+            data = { };
         }
 
         //! Copy constructor
@@ -118,6 +122,12 @@ namespace swizzle
         inline explicit vector_(detail::only_if<num_of_components != 1 && scalar_is_floating_point, double, __LINE__> s)
         {
             ((at_rvalue(Index) = scalar_type(s)), ...);
+        }
+
+        template <class LikelyOtherScalarType, size_t... MoreIndex>
+        inline explicit vector_(const vector_<LikelyOtherScalarType, Index..., MoreIndex...>& t0)
+        {
+            compose<0>(t0);
         }
 
         template <class LikelyOtherScalarType>
@@ -402,6 +412,12 @@ namespace swizzle
         {
             return this_type(modf(x.at(Index), &i.at(Index))...);
         }
+        static this_type call_modf(detail::only_if<num_of_components == 1, float_vector_arg> x, float& i)
+        {
+            // TODO: batch detection
+            return this_type(modf(x.at(Index), &i)...);
+        }
+
         static this_type call_min(number_vector_arg x, number_vector_arg y)
         {
             return this_type(min(x.at(Index), y.at(Index))...);
@@ -455,11 +471,10 @@ namespace swizzle
             return this_type(step(edge, x.at(Index))...);
         }
 
-        static this_type call_smoothstep(float_vector_arg edge0, float_scalar_arg edge1, float_vector_arg x)
+        static this_type call_smoothstep(float_vector_arg_cond edge0, float_vector_arg_cond edge1, float_vector_arg x)
         {
             return this_type(smoothstep_helper(edge0.at(Index), edge1.at(Index), x.at(Index))...);
         }
-
         static this_type call_smoothstep(float_scalar_arg edge0, float_scalar_arg edge1, float_vector_arg x)
         {
             return this_type(smoothstep_helper(edge0, edge1, x.at(Index))...);
@@ -682,6 +697,27 @@ namespace swizzle
 
         // STL COMPABILITY (not needed, but useful for testing)
     public:
+
+        const_iterator begin() const
+        {
+            return detail::make_indexed_vector_iterator(*this);
+        }
+        //! \return Immutable iterator.
+        const_iterator end() const
+        {
+            return detail::make_indexed_vector_iterator(*this, num_of_components);
+        }
+        //! \return Mutable iterator.
+        iterator begin()
+        {
+            return detail::make_indexed_vector_iterator(*this);
+        }
+        //! \return Mutable iterator.
+        iterator end()
+        {
+            return detail::make_indexed_vector_iterator(*this, num_of_components);
+        }
+
 
         //! Iterates over the vector, firing Func for each index
         template <class Func>
