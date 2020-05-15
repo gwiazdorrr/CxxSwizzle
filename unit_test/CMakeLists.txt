@@ -1,7 +1,7 @@
 # CxxSwizzle
 # Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
-find_package(Boost 1.73 REQUIRED COMPONENTS unit_test_framework)
+find_package(Boost 1.73 COMPONENTS unit_test_framework)
 
 if(Boost_FOUND)
 
