@@ -118,6 +118,7 @@ if (BUILD_SIMD_SAMPLE)
       GIT_REPOSITORY    https://github.com/VcDevel/Vc
       GIT_TAG           1.4
       CMAKE_ARGS        -DCMAKE_INSTALL_PREFIX:PATH=${VC_INSTALL} -DBUILD_TESTING=OFF ${propagate_build_type}
+	  BUILD_BYPRODUCTS  ${VC_INSTALL}/lib/Vc.lib
     )
 
     set (Vc_LIBRARIES ${VC_INSTALL}/lib/Vc.lib)

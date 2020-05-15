@@ -167,7 +167,7 @@ namespace swizzle
 
         bool operator==(const matrix_type& o) const
         {
-            return ((column(Columns) == other.column(Columns)) && ...);
+            return ((column(Columns) == o.column(Columns)) && ...);
         }
 
         bool operator!=(const matrix_type& o) const
