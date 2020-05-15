@@ -16,15 +16,15 @@ jobs:
           - os: windows-latest
             triplet: x64-windows
             vcpkgCommitId: '0591528cbfde14ccfd3900c3fb19aba382c05349'
-            vcpkgPackages: 'sdl'
+            vcpkgPackages: 'sdl2 sdl2-image'
           - os: ubuntu-latest
             triplet: x64-linux
             vcpkgCommitId: '0591528cbfde14ccfd3900c3fb19aba382c05349'
-            vcpkgPackages: 'sdl'
+            vcpkgPackages: 'sdl2 sdl2-image'
           - os: macos-latest
             triplet: x64-osx
             vcpkgCommitId: '0591528cbfde14ccfd3900c3fb19aba382c05349'
-            vcpkgPackages: 'sdl'
+            vcpkgPackages: 'sdl2 sdl2-image'
 
     steps:
       - uses: actions/checkout@v1
