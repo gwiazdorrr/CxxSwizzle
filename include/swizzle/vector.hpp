@@ -20,6 +20,7 @@ namespace swizzle
     {
     public:
         using base_type = detail::vector_base_type<ScalarType, sizeof...(Index)>;
+        using base_type::data;
 
         using this_type = vector_;
         using this_type_arg = const this_type&;
