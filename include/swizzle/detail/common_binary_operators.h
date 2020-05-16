@@ -16,9 +16,6 @@ namespace swizzle
         template <typename VectorType, typename ScalarType, typename VectorArgType = const VectorType&, typename ScalarArgType = const ScalarType&>
         struct common_binary_operators
         {
-            typedef VectorArgType VectorArgType;
-            typedef ScalarArgType ScalarArgType;
-
             friend VectorType operator+(VectorArgType v, ScalarArgType s)
             {
                 return VectorType(v) += s;
