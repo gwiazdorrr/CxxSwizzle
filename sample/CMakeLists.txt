@@ -51,7 +51,7 @@ macro(create_sample_internal prefix defines header useVcLib)
 
 
 		configure_file("config.hpp.in" "${generated_config_path}")
-		set(CMAKE_CONFIGURABLE_FILE_CONTENT "#include \"${shader}\"")
+		set(CMAKE_CONFIGURABLE_FILE_CONTENT "#include \"${CMAKE_CURRENT_SOURCE_DIR}/${shader}\"")
 		configure_file("${CMAKE_ROOT}/Modules/CMakeConfigurableFile.in" "${generated_shader_path}" @ONLY)
 		unset(CMAKE_CONFIGURABLE_FILE_CONTENT)
 
