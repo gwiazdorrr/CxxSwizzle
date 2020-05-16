@@ -4,38 +4,38 @@ using namespace swizzle;
 
 #include <swizzle/define_vector_functions.hpp>
 
+// add custom types that are likely to be passed as out/inout here
+struct Ray;
+struct ray;
+
+namespace inout
+{
+    using ray = ray&;
+    using Ray = Ray&;
+
+    // proxies are needed for vectors, as they need to work with swizzles
+    using vec2 = swizzle::inout_wrapper<vec2>;
+    using vec3 = swizzle::inout_wrapper<vec3>;
+    using vec4 = swizzle::inout_wrapper<vec4>;
+    using ivec2 = swizzle::inout_wrapper<ivec2>;
+    using ivec3 = swizzle::inout_wrapper<ivec3>;
+    using ivec4 = swizzle::inout_wrapper<ivec4>;
+    using uvec2 = swizzle::inout_wrapper<uvec2>;
+    using uvec3 = swizzle::inout_wrapper<uvec3>;
+    using uvec4 = swizzle::inout_wrapper<uvec4>;
+    using bvec2 = swizzle::inout_wrapper<bvec2>;
+    using bvec3 = swizzle::inout_wrapper<bvec3>;
+    using bvec4 = swizzle::inout_wrapper<bvec4>;
+
+    // regular types don't need proxies
+    using float_type = float_type&;
+    using int_type = int_type&;
+    using uint_type = uint_type&;
+    using bool_type = bool_type&;
+}
+
 struct _cxxswizzle_fragment_shader : shadertoy::shader_inputs
 {
-    // add custom types that are likely to be passed as out/inout here
-    struct Ray;
-    struct ray;
-
-    struct inout
-    {
-        using ray = ray & ;
-        using Ray = Ray & ;
-
-        // proxies are needed for vectors, as they need to work with swizzles
-        using vec2 = swizzle::inout_wrapper<vec2>;
-        using vec3 = swizzle::inout_wrapper<vec3>;
-        using vec4 = swizzle::inout_wrapper<vec4>;
-        using ivec2 = swizzle::inout_wrapper<ivec2>;
-        using ivec3 = swizzle::inout_wrapper<ivec3>;
-        using ivec4 = swizzle::inout_wrapper<ivec4>;
-        using uvec2 = swizzle::inout_wrapper<uvec2>;
-        using uvec3 = swizzle::inout_wrapper<uvec3>;
-        using uvec4 = swizzle::inout_wrapper<uvec4>;
-        using bvec2 = swizzle::inout_wrapper<bvec2>;
-        using bvec3 = swizzle::inout_wrapper<bvec3>;
-        using bvec4 = swizzle::inout_wrapper<bvec4>;
-
-        // regular types don't need proxies
-        using float_type = float_type & ;
-        using int_type = int_type & ;
-        using uint_type = uint_type & ;
-        using bool_type = bool_type & ;
-    };
-
     vec2 gl_FragCoord;
     vec4 gl_FragColor;
 
