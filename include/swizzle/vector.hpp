@@ -229,10 +229,10 @@ namespace swizzle
         void construct(detail::nothing)
         {}
 
-        template <size_t Index, typename SomeScalarType>
+        template <size_t Index_, typename SomeScalarType>
         void compose(SomeScalarType&& scalar, std::enable_if_t<std::is_constructible_v<scalar_type, SomeScalarType>>* = nullptr)
         {
-            at_rvalue(Index) = scalar_type(std::forward<SomeScalarType>(scalar));
+            at_rvalue(Index_) = scalar_type(std::forward<SomeScalarType>(scalar));
         }
 
         ////! Puts scalar at given position. Used only during construction.
@@ -256,11 +256,11 @@ namespace swizzle
         //    compose<Index>(scalar_type(v));
         //}
 
-        template <size_t Index, typename OtherScalarType, size_t... OtherIndex>
+        template <size_t Index_, typename OtherScalarType, size_t... OtherIndex>
         void compose(const vector_<OtherScalarType, OtherIndex...>& v)
         {
-            const size_t limit = sizeof...(OtherIndex) > num_of_components - Index ? (num_of_components - Index) : sizeof...(OtherIndex);
-            compose_impl<Index>(v, detail::take_n<limit, OtherIndex...> {});
+            const size_t limit = sizeof...(OtherIndex) > num_of_components - Index_ ? (num_of_components - Index_) : sizeof...(OtherIndex);
+            compose_impl<Index_>(v, detail::take_n<limit, OtherIndex...> {});
         }
 
         template <size_t Offset, typename DataTypeB, size_t... DataIndex>
