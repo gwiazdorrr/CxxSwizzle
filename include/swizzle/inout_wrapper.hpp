@@ -20,7 +20,7 @@ namespace swizzle
         inout_wrapper(vector_type& value)
             : vector_type(value)
         {
-            cleanup = [&value](this_type& v) -> void 
+            this->cleanup = [&value](this_type& v) -> void 
             { 
                 value = v; 
             };
@@ -31,7 +31,7 @@ namespace swizzle
             std::enable_if_t<sizeof...(Index) == vector_type::num_of_components && std::is_same_v<typename SomeVectorType::scalar_type, typename vector_type::scalar_type>, bool> = false)
             : vector_type(value.decay())
         {
-            cleanup = [&value](this_type& v) -> void 
+            this->cleanup = [&value](this_type& v) -> void
             { 
                 value = v; 
             };
@@ -40,7 +40,7 @@ namespace swizzle
         inout_wrapper(inout_wrapper& value)
             : vector_type(value)
         {
-            cleanup = [&value](this_type& v) -> void 
+            this->cleanup = [&value](this_type& v) -> void
             { 
                 value = v;
             };
