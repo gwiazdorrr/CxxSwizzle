@@ -10,7 +10,6 @@
 #include <swizzle/sampler2D.hpp>
 #include <swizzle/detail/simd_mask.h>
 #include <swizzle/inout_wrapper.hpp>
-#include <conio.h>
 #include <swizzle/detail/batch_write_mask.hpp>
 
 namespace shadertoy
