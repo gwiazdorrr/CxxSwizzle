@@ -485,7 +485,7 @@ namespace swizzle
         {
             return bool_vector_type(isnan(x.at(Index))...);
         }
-        static bool_vector_type call_isinf(float_vector_arg p1)
+        static bool_vector_type call_isinf(float_vector_arg x)
         {
             return bool_vector_type(isinf(x.at(Index))...);
         }
