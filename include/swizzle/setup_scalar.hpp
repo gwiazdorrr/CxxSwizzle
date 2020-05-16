@@ -15,12 +15,12 @@ namespace swizzle
     using uint_type = uint32_t;
     using bool_type = bool;
 
-    struct partial_derivatives_dont_work_for_scalars
-    {};
+    //struct partial_derivatives_dont_work_for_scalars
+    //{};
 
-    float dFdx(partial_derivatives_dont_work_for_scalars);
-    float dFdy(partial_derivatives_dont_work_for_scalars);
-    float fwidth(partial_derivatives_dont_work_for_scalars);
+    inline float dFdx(float) { return 0; };
+    inline float dFdy(float) { return 0; };
+    inline float fwidth(float) { return 0; };
 
     // aux functions
 
