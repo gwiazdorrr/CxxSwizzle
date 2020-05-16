@@ -148,17 +148,16 @@ namespace swizzle
         template <class Head, class... T>
         using last_t = typename last<Head, T...>::type;
 
-        template <size_t Count, size_t... Left, size_t RightFirst, size_t... Right>
-        constexpr auto take_n_resolver(std::index_sequence<Left...> left, std::index_sequence<RightFirst, Right...>)
+
+        template <size_t... Values, size_t... Indices>
+        auto take_n_resolver(std::index_sequence<Indices...>)
         {
-            if constexpr (Count == 1)
-                return std::index_sequence<Left..., RightFirst> {};
-            else 
-                return take_n_resolver<Count - 1>(std::index_sequence<Left..., RightFirst>{}, std::index_sequence<Right...>{});
+            constexpr size_t values[] = { Values... };
+            return std::index_sequence<values[Indices]...>();
         }
 
         template <size_t Count, size_t... Values>
-        using take_n = decltype(take_n_resolver<Count>(std::index_sequence<>{}, std::index_sequence<Values...>{}));
+        using take_n = decltype(take_n_resolver<Values...>(std::make_index_sequence<Count>()));
 
         template <bool Condition, typename T, int Line = 0>
         using only_if = std::conditional_t<Condition, T, detail::operation_not_available_t<T, Line> >;
