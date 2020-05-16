@@ -126,17 +126,17 @@ namespace swizzle
             {
                 using namespace swizzle::detail;
 
-                batch_traits<int32_type>::aligned_storage_type istorage;
+                typename batch_traits<int32_type>::aligned_storage_type istorage;
                 auto ibuffer = reinterpret_cast<int32_t*>(&istorage);
                 {
                     int32_type index = (coord.y * data->pitch + coord.x) * data->bytes_per_pixel;
                     store_aligned(index, ibuffer);
                 }
 
-                batch_traits<float_type>::aligned_storage_type rstorage;
-                batch_traits<float_type>::aligned_storage_type gstorage;
-                batch_traits<float_type>::aligned_storage_type bstorage;
-                batch_traits<float_type>::aligned_storage_type astorage;
+                typename batch_traits<float_type>::aligned_storage_type rstorage;
+                typename batch_traits<float_type>::aligned_storage_type gstorage;
+                typename batch_traits<float_type>::aligned_storage_type bstorage;
+                typename batch_traits<float_type>::aligned_storage_type astorage;
 
                 auto rbuffer = reinterpret_cast<float*>(&rstorage);
                 auto gbuffer = reinterpret_cast<float*>(&gstorage);
