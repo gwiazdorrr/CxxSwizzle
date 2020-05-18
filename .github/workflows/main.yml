@@ -53,6 +53,10 @@ jobs:
         run: |
           sudo apt update
           sudo apt install ninja-build
+      - name: (macOS) Install homebrew dependencies
+        if: runner.os == 'macOS'
+        run: |
+          brew install ninja
       - name: Run CMake+Ninja without triplet
         uses: lukka/run-cmake@v2
         id: runcmake
