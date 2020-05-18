@@ -56,7 +56,7 @@ namespace swizzle
         template <typename OtherBatchType, typename OtherPrimitiveType>
         CXXSWIZZLE_FORCE_INLINE explicit batch_base(const batch_base<OtherBatchType, OtherPrimitiveType, Index...>& other)
         {
-            ((at<Index>() = batch_cast<primitive_type>(other.at<Index>())), ...);
+            ((at<Index>() = batch_cast<primitive_type>(other.template at<Index>())), ...);
         }
 
         template <typename... Types>
@@ -149,27 +149,34 @@ namespace swizzle
     template <typename DataType, size_t... Index>
     struct bool_batch : batch_base<DataType, bool, Index...>
     {
-        using batch_base::batch_base;
+        using base_type = batch_base<DataType, bool, Index...>;
+        using base_type::batch_base;
         using this_type = bool_batch;
         using this_arg = const this_type&;
-        using primitive_type = typename batch_base::primitive_type;
+        using primitive_type = typename base_type::primitive_type;
 
         bool_batch(bool b) : bool_batch(batch_scalar_cast(b)) {}
 
-        CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other) &
+        CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)&
         {
             assign(other);
             return *this;
         }
 
-        CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other) &&
+        CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)&&
         {
             assign_fast(other);
             return *this;
         }
 
-        // for CxxSwizzle ADL-magic
+        // needed to avoid template as qualifier
+        template <size_t Index_>
+        CXXSWIZZLE_FORCE_INLINE const typename base_type::data_type& at() const
+        {
+            return base_type::template at<Index_>();
+        }
 
+        // for CxxSwizzle ADL-magic
         CXXSWIZZLE_FORCE_INLINE this_type decay() const
         {
             return *this;
@@ -190,14 +197,23 @@ namespace swizzle
     template <typename DataType, typename BoolType, size_t... Index>
     struct int_batch : batch_base<DataType, int, Index...>
     {
-        using batch_base::batch_base;
+        using base_type = batch_base<DataType, int, Index...>;
+        using base_type::batch_base;
         using this_type = int_batch;
         using this_arg = const this_type&;
-        using primitive_type = typename batch_base::primitive_type;
+        using primitive_type = typename base_type::primitive_type;
         using bool_type = bool_batch<BoolType, Index...>;
 
         explicit int_batch(double value) : int_batch(static_cast<int>(value)) {}
 
+        // needed to avoid template as qualifier
+        template <size_t Index_>
+        CXXSWIZZLE_FORCE_INLINE const typename base_type::data_type& at() const
+        {
+            return base_type::template at<Index_>();
+        }
+
+        // for CxxSwizzle ADL-magic
         CXXSWIZZLE_FORCE_INLINE this_type decay() const
         {
             return *this;
@@ -223,14 +239,21 @@ namespace swizzle
     template <typename DataType, typename BoolType, size_t... Index>
     struct uint_batch : batch_base<DataType, uint32_t, Index...>
     {
-        using batch_base::batch_base;
+        using base_type = batch_base<DataType, uint32_t, Index...>;
+        using base_type::batch_base;
         using this_type = uint_batch;
         using this_arg = const this_type&;
-        using primitive_type = typename batch_base::primitive_type;
+        using primitive_type = typename base_type::primitive_type;
         using bool_type = bool_batch<BoolType, Index...>;
 
-        // for CxxSwizzle ADL-magic
+        // needed to avoid template as qualifier
+        template <size_t Index_>
+        CXXSWIZZLE_FORCE_INLINE const typename base_type::data_type& at() const
+        {
+            return base_type::template at<Index_>();
+        }
 
+        // for CxxSwizzle ADL-magic
         CXXSWIZZLE_FORCE_INLINE this_type decay() const
         {
             return *this;
@@ -256,20 +279,27 @@ namespace swizzle
     template <typename DataType, typename BoolType, size_t... Index>
     struct float_batch : batch_base<DataType, float, Index...>
     {
-        using batch_base::batch_base;
+        using base_type = batch_base<DataType, float, Index...>;
+        using base_type::batch_base;
         using this_type = float_batch;
         using this_arg = const this_type&;
-        using primitive_type = typename batch_base::primitive_type;
+        using primitive_type = typename base_type::primitive_type;
         using bool_type = bool_batch<BoolType, Index...>;
 
 
         CXXSWIZZLE_FORCE_INLINE float_batch(double value) : float_batch(batch_scalar_cast(static_cast<float>(value))) {}
-        CXXSWIZZLE_FORCE_INLINE float_batch(const bool_type& value) : batch_base(value) {}
+        CXXSWIZZLE_FORCE_INLINE float_batch(const bool_type& value) : base_type(value) {}
         CXXSWIZZLE_FORCE_INLINE explicit float_batch(int32_t value) : float_batch(static_cast<float>(value)) {}
         CXXSWIZZLE_FORCE_INLINE explicit float_batch(uint32_t value) : float_batch(static_cast<float>(value)) {}
 
-        // for CxxSwizzle ADL-magic
+        // needed to avoid template as qualifier
+        template <size_t Index_>
+        CXXSWIZZLE_FORCE_INLINE const typename base_type::data_type& at() const
+        {
+            return base_type::template at<Index_>();
+        }
 
+        // for CxxSwizzle ADL-magic
         CXXSWIZZLE_FORCE_INLINE this_type decay() const
         {
             return *this;
@@ -321,7 +351,7 @@ namespace swizzle
 
         CXXSWIZZLE_FORCE_INLINE friend this_type min(this_arg x, this_arg y) { return this_type(construct_tag{}, min(x.at<Index>(), y.at<Index>())...); }
         CXXSWIZZLE_FORCE_INLINE friend this_type max(this_arg x, this_arg y) { return this_type(construct_tag{}, max(x.at<Index>(), y.at<Index>())...); }
-        CXXSWIZZLE_FORCE_INLINE friend this_type mix(this_arg x, this_arg y, const bool_type& a) { return this_type(construct_tag{}, mix(x.at<Index>(), y.at<Index>(), a.at<Index>())...); }
+        CXXSWIZZLE_FORCE_INLINE friend this_type mix(this_arg x, this_arg y, const bool_type& a) { return this_type(construct_tag{}, mix(x.at<Index>(), y.at<Index>(), a.template at<Index>())...); }
         CXXSWIZZLE_FORCE_INLINE friend this_type step(this_arg edge, this_arg x) { return this_type(construct_tag{}, step(edge.at<Index>(), x.at<Index>())...); }
         CXXSWIZZLE_FORCE_INLINE friend this_type smoothstep(this_arg edge0, this_arg edge1, this_arg x) { return smoothstep_helper(edge0, edge1, x); }
 

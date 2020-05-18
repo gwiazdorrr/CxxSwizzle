@@ -1,36 +1,36 @@
 // unary
 
-CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other) &
+CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)&
 {
-    assign(other);
+    this->assign(other);
     return *this;
 }
 
-CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other) &&
+CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)&&
 {
-    assign_fast(other);
+    this->assign_fast(other);
     return *this;
 }
 
-CXXSWIZZLE_FORCE_INLINE this_type operator-() const 
-{ 
-    return this_type(construct_tag{}, -at<Index>()...); 
+CXXSWIZZLE_FORCE_INLINE this_type operator-() const
+{
+    return this_type(construct_tag{}, -at<Index>()...);
 }
-CXXSWIZZLE_FORCE_INLINE this_type& operator+=(this_arg other) & {  return (assign_at<Index>(at<Index>() + other.at<Index>()), ..., *this); }
-CXXSWIZZLE_FORCE_INLINE this_type& operator-=(this_arg other) & {  return (assign_at<Index>(at<Index>() - other.at<Index>()), ..., *this); }
-CXXSWIZZLE_FORCE_INLINE this_type& operator*=(this_arg other) & {  return (assign_at<Index>(at<Index>() * other.at<Index>()), ..., *this); }
-CXXSWIZZLE_FORCE_INLINE this_type& operator/=(this_arg other) & {  return (assign_at<Index>(at<Index>() / other.at<Index>()), ..., *this); }
+CXXSWIZZLE_FORCE_INLINE this_type& operator+=(this_arg other)& { return (this->template assign_at<Index>(at<Index>() + other.at<Index>()), ..., *this); }
+CXXSWIZZLE_FORCE_INLINE this_type& operator-=(this_arg other)& { return (this->template assign_at<Index>(at<Index>() - other.at<Index>()), ..., *this); }
+CXXSWIZZLE_FORCE_INLINE this_type& operator*=(this_arg other)& { return (this->template assign_at<Index>(at<Index>() * other.at<Index>()), ..., *this); }
+CXXSWIZZLE_FORCE_INLINE this_type& operator/=(this_arg other)& { return (this->template assign_at<Index>(at<Index>() / other.at<Index>()), ..., *this); }
 
-CXXSWIZZLE_FORCE_INLINE this_type&& operator+=(this_arg other) && { return (assign_at_fast<Index>(at<Index>() + other.at<Index>()), ..., std::move(*this)); } 
-CXXSWIZZLE_FORCE_INLINE this_type&& operator-=(this_arg other) && { return (assign_at_fast<Index>(at<Index>() - other.at<Index>()), ..., std::move(*this)); }
-CXXSWIZZLE_FORCE_INLINE this_type&& operator*=(this_arg other) && { return (assign_at_fast<Index>(at<Index>() * other.at<Index>()), ..., std::move(*this)); }
-CXXSWIZZLE_FORCE_INLINE this_type&& operator/=(this_arg other) && { return (assign_at_fast<Index>(at<Index>() / other.at<Index>()), ..., std::move(*this)); }
+CXXSWIZZLE_FORCE_INLINE this_type&& operator+=(this_arg other)&& { return (this->template assign_at_fast<Index>(at<Index>() + other.at<Index>()), ..., std::move(*this)); }
+CXXSWIZZLE_FORCE_INLINE this_type&& operator-=(this_arg other)&& { return (this->template assign_at_fast<Index>(at<Index>() - other.at<Index>()), ..., std::move(*this)); }
+CXXSWIZZLE_FORCE_INLINE this_type&& operator*=(this_arg other)&& { return (this->template assign_at_fast<Index>(at<Index>() * other.at<Index>()), ..., std::move(*this)); }
+CXXSWIZZLE_FORCE_INLINE this_type&& operator/=(this_arg other)&& { return (this->template assign_at_fast<Index>(at<Index>() / other.at<Index>()), ..., std::move(*this)); }
 
 
 CXXSWIZZLE_FORCE_INLINE this_type& operator++()
 {
     const auto one = batch_scalar_cast(primitive_type(1));
-    return (assign_at<Index>(at<Index>() + one), ..., *this);
+    return (this->template assign_at<Index>(at<Index>() + one), ..., *this);
 }
 
 CXXSWIZZLE_FORCE_INLINE this_type operator++(int)
@@ -43,7 +43,7 @@ CXXSWIZZLE_FORCE_INLINE this_type operator++(int)
 CXXSWIZZLE_FORCE_INLINE this_type& operator--()
 {
     const auto one = batch_scalar_cast(primitive_type(1));
-    return (assign_at<Index>(at<Index>() - one), ..., *this);
+    return (this->template assign_at<Index>(at<Index>() - one), ..., *this);
 }
 
 CXXSWIZZLE_FORCE_INLINE this_type operator--(int)
@@ -61,27 +61,27 @@ CXXSWIZZLE_FORCE_INLINE friend this_type operator*(this_arg a, this_arg b) { ret
 CXXSWIZZLE_FORCE_INLINE friend this_type operator/(this_arg a, this_arg b) { return this_type(construct_tag{}, a.at<Index>() / b.at<Index>()...); }
 CXXSWIZZLE_FORCE_INLINE friend this_type operator%(this_arg a, this_arg b) { return this_type(construct_tag{}, a.at<Index>() % b.at<Index>()...); }
 
-CXXSWIZZLE_FORCE_INLINE friend this_type operator+(this_arg a, primitive_type _b) { auto b = data_type(_b); return this_type(construct_tag{}, a.at<Index>() + b...); }
-CXXSWIZZLE_FORCE_INLINE friend this_type operator-(this_arg a, primitive_type _b) { auto b = data_type(_b); return this_type(construct_tag{}, a.at<Index>() - b...); }
-CXXSWIZZLE_FORCE_INLINE friend this_type operator*(this_arg a, primitive_type _b) { auto b = data_type(_b); return this_type(construct_tag{}, a.at<Index>() * b...); }
-CXXSWIZZLE_FORCE_INLINE friend this_type operator/(this_arg a, primitive_type _b) { auto b = data_type(_b); return this_type(construct_tag{}, a.at<Index>() / b...); }
-CXXSWIZZLE_FORCE_INLINE friend this_type operator%(this_arg a, primitive_type _b) { auto b = data_type(_b); return this_type(construct_tag{}, a.at<Index>() % b...); }
+CXXSWIZZLE_FORCE_INLINE friend this_type operator+(this_arg a, primitive_type _b) { auto b = typename base_type::data_type(_b); return this_type(construct_tag{}, a.at<Index>() + b...); }
+CXXSWIZZLE_FORCE_INLINE friend this_type operator-(this_arg a, primitive_type _b) { auto b = typename base_type::data_type(_b); return this_type(construct_tag{}, a.at<Index>() - b...); }
+CXXSWIZZLE_FORCE_INLINE friend this_type operator*(this_arg a, primitive_type _b) { auto b = typename base_type::data_type(_b); return this_type(construct_tag{}, a.at<Index>() * b...); }
+CXXSWIZZLE_FORCE_INLINE friend this_type operator/(this_arg a, primitive_type _b) { auto b = typename base_type::data_type(_b); return this_type(construct_tag{}, a.at<Index>() / b...); }
+CXXSWIZZLE_FORCE_INLINE friend this_type operator%(this_arg a, primitive_type _b) { auto b = typename base_type::data_type(_b); return this_type(construct_tag{}, a.at<Index>() % b...); }
 
 CXXSWIZZLE_FORCE_INLINE friend this_type operator+(primitive_type _a, this_arg b) { return b + _a; }
-CXXSWIZZLE_FORCE_INLINE friend this_type operator-(primitive_type _a, this_arg b) { auto a = data_type(_a); return this_type(construct_tag{}, a - b.at<Index>()...); }
+CXXSWIZZLE_FORCE_INLINE friend this_type operator-(primitive_type _a, this_arg b) { auto a = typename base_type::data_type(_a); return this_type(construct_tag{}, a - b.at<Index>()...); }
 CXXSWIZZLE_FORCE_INLINE friend this_type operator*(primitive_type _a, this_arg b) { return b * _a; }
-CXXSWIZZLE_FORCE_INLINE friend this_type operator/(primitive_type _a, this_arg b) { auto a = data_type(_a); return this_type(construct_tag{}, a / b.at<Index>()...); }
-CXXSWIZZLE_FORCE_INLINE friend this_type operator%(primitive_type _a, this_arg b) { auto a = data_type(_a); return this_type(construct_tag{}, a % b.at<Index>()...); }
+CXXSWIZZLE_FORCE_INLINE friend this_type operator/(primitive_type _a, this_arg b) { auto a = typename base_type::data_type(_a); return this_type(construct_tag{}, a / b.at<Index>()...); }
+CXXSWIZZLE_FORCE_INLINE friend this_type operator%(primitive_type _a, this_arg b) { auto a = typename base_type::data_type(_a); return this_type(construct_tag{}, a % b.at<Index>()...); }
 
 
-CXXSWIZZLE_FORCE_INLINE friend this_type operator&(this_arg a, this_arg b)  { return this_type(construct_tag{}, a.at<Index>() & b.at<Index>()...); }
+CXXSWIZZLE_FORCE_INLINE friend this_type operator&(this_arg a, this_arg b) { return this_type(construct_tag{}, a.at<Index>() & b.at<Index>()...); }
 
 CXXSWIZZLE_FORCE_INLINE friend this_type operator>>(this_arg a, this_arg b) { return this_type(construct_tag{}, a.at<Index>() >> b.at<Index>()...); }
 CXXSWIZZLE_FORCE_INLINE friend this_type operator<<(this_arg a, this_arg b) { return this_type(construct_tag{}, a.at<Index>() << b.at<Index>()...); }
 
-CXXSWIZZLE_FORCE_INLINE friend bool_type operator>(this_arg a, this_arg b)  { return bool_type(construct_tag{}, static_cast<bool_type::data_type>(a.at<Index>() > b.at<Index>())...); }
-CXXSWIZZLE_FORCE_INLINE friend bool_type operator>=(this_arg a, this_arg b) { return bool_type(construct_tag{}, static_cast<bool_type::data_type>(a.at<Index>() >= b.at<Index>())...); }
-CXXSWIZZLE_FORCE_INLINE friend bool_type operator<(this_arg a, this_arg b)  { return bool_type(construct_tag{}, static_cast<bool_type::data_type>(a.at<Index>() < b.at<Index>())...); }
-CXXSWIZZLE_FORCE_INLINE friend bool_type operator<=(this_arg a, this_arg b) { return bool_type(construct_tag{}, static_cast<bool_type::data_type>(a.at<Index>() <= b.at<Index>())...); }
-CXXSWIZZLE_FORCE_INLINE friend bool_type operator==(this_arg a, this_arg b) { return bool_type(construct_tag{}, static_cast<bool_type::data_type>(a.at<Index>() == b.at<Index>())...); }
-CXXSWIZZLE_FORCE_INLINE friend bool_type operator!=(this_arg a, this_arg b) { return bool_type(construct_tag{}, static_cast<bool_type::data_type>(a.at<Index>() != b.at<Index>())...); }
+CXXSWIZZLE_FORCE_INLINE friend bool_type operator>(this_arg a, this_arg b) { return bool_type(construct_tag{}, static_cast<typename bool_type::data_type>(a.at<Index>() > b.at<Index>())...); }
+CXXSWIZZLE_FORCE_INLINE friend bool_type operator>=(this_arg a, this_arg b) { return bool_type(construct_tag{}, static_cast<typename bool_type::data_type>(a.at<Index>() >= b.at<Index>())...); }
+CXXSWIZZLE_FORCE_INLINE friend bool_type operator<(this_arg a, this_arg b) { return bool_type(construct_tag{}, static_cast<typename bool_type::data_type>(a.at<Index>() < b.at<Index>())...); }
+CXXSWIZZLE_FORCE_INLINE friend bool_type operator<=(this_arg a, this_arg b) { return bool_type(construct_tag{}, static_cast<typename bool_type::data_type>(a.at<Index>() <= b.at<Index>())...); }
+CXXSWIZZLE_FORCE_INLINE friend bool_type operator==(this_arg a, this_arg b) { return bool_type(construct_tag{}, static_cast<typename bool_type::data_type>(a.at<Index>() == b.at<Index>())...); }
+CXXSWIZZLE_FORCE_INLINE friend bool_type operator!=(this_arg a, this_arg b) { return bool_type(construct_tag{}, static_cast<typename bool_type::data_type>(a.at<Index>() != b.at<Index>())...); }
