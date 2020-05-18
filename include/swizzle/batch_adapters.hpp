@@ -159,13 +159,13 @@ namespace swizzle
 
         CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)&
         {
-            assign(other);
+            this->assign(other);
             return *this;
         }
 
         CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)&&
         {
-            assign_fast(other);
+            this->assign_fast(other);
             return *this;
         }
 
