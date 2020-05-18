@@ -150,7 +150,7 @@ namespace swizzle
     struct bool_batch : batch_base<DataType, bool, Index...>
     {
         using base_type = batch_base<DataType, bool, Index...>;
-        using base_type::batch_base;
+        using batch_base<DataType, bool, Index...>::batch_base;
         using this_type = bool_batch;
         using this_arg = const this_type&;
         using primitive_type = typename base_type::primitive_type;
@@ -198,7 +198,7 @@ namespace swizzle
     struct int_batch : batch_base<DataType, int, Index...>
     {
         using base_type = batch_base<DataType, int, Index...>;
-        using base_type::batch_base;
+        using batch_base<DataType, int, Index...>::batch_base;
         using this_type = int_batch;
         using this_arg = const this_type&;
         using primitive_type = typename base_type::primitive_type;
@@ -230,7 +230,7 @@ namespace swizzle
 
 
         template <typename OtherBatchType, typename OtherPrimitiveType, typename... OtherTypes>
-        CXXSWIZZLE_FORCE_INLINE friend void masked_read(const this_type& mask, batch_base<OtherBatchType, OtherPrimitiveType, Index...>& result, OtherTypes&&... others)
+        CXXSWIZZLE_FORCE_INLINE friend void masked_read(const this_type& mask, ::swizzle::batch_base<OtherBatchType, OtherPrimitiveType, Index...>& result, OtherTypes&&... others)
         {
             batch_masked_read(mask.storage, result.storage, others.storage...);
         }
@@ -240,7 +240,7 @@ namespace swizzle
     struct uint_batch : batch_base<DataType, uint32_t, Index...>
     {
         using base_type = batch_base<DataType, uint32_t, Index...>;
-        using base_type::batch_base;
+        using batch_base<DataType, uint32_t, Index...>::batch_base;
         using this_type = uint_batch;
         using this_arg = const this_type&;
         using primitive_type = typename base_type::primitive_type;
@@ -269,7 +269,7 @@ namespace swizzle
         CXXSWIZZLE_FORCE_INLINE friend this_type max(this_arg x, this_arg y) { return this_type(construct_tag{}, max(x.at<Index>(), y.at<Index>())...); }
 
         template <typename OtherBatchType, typename OtherPrimitiveType, typename... OtherTypes>
-        CXXSWIZZLE_FORCE_INLINE friend void masked_read(const this_type& mask, batch_base<OtherBatchType, OtherPrimitiveType, Index...>& result, OtherTypes&&... others)
+        CXXSWIZZLE_FORCE_INLINE friend void masked_read(const this_type& mask, ::swizzle::batch_base<OtherBatchType, OtherPrimitiveType, Index...>& result, OtherTypes&&... others)
         {
             batch_masked_read(mask.storage, result.storage, others.storage...);
         }
@@ -280,7 +280,7 @@ namespace swizzle
     struct float_batch : batch_base<DataType, float, Index...>
     {
         using base_type = batch_base<DataType, float, Index...>;
-        using base_type::batch_base;
+        using batch_base<DataType, float, Index...>::batch_base;
         using this_type = float_batch;
         using this_arg = const this_type&;
         using primitive_type = typename base_type::primitive_type;
