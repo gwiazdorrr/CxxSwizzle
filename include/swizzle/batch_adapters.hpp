@@ -40,7 +40,7 @@ namespace swizzle
             : storage(storage)
         {}
 
-        CXXSWIZZLE_FORCE_INLINE batch_base(const typename data_type& d)
+        CXXSWIZZLE_FORCE_INLINE batch_base(const data_type& d)
         {
             ((at<Index>() = d), ...);
         }
@@ -76,25 +76,25 @@ namespace swizzle
             target.store_aligned_internal(ptr);
         }
 
-        template <size_t Index, size_t Size = size>
+        template <size_t Index_, size_t Size = size>
         CXXSWIZZLE_FORCE_INLINE std::enable_if_t< (Size > 1), data_type>& at()
         {
-            return storage[Index];
+            return storage[Index_];
         }
 
-        template <size_t Index, size_t Size = size>
+        template <size_t Index_, size_t Size = size>
         CXXSWIZZLE_FORCE_INLINE std::enable_if_t< (Size == 1), data_type>& at()
         {
             return storage;
         }
 
-        template <size_t Index, size_t Size = size>
+        template <size_t Index_, size_t Size = size>
         CXXSWIZZLE_FORCE_INLINE const std::enable_if_t< (Size > 1), data_type>& at() const
         {
-            return storage[Index];
+            return storage[Index_];
         }
 
-        template <size_t Index, size_t Size = size>
+        template <size_t Index_, size_t Size = size>
         CXXSWIZZLE_FORCE_INLINE const std::enable_if_t< (Size == 1), data_type>& at() const
         {
             return storage;
@@ -110,27 +110,27 @@ namespace swizzle
             ((at<Index>() = other.at<Index>()), ...);
         }
 
-        template <size_t Index>
+        template <size_t Index_>
         CXXSWIZZLE_FORCE_INLINE void assign_at(const data_type& other)
         {
-            batch_assign_policy<DataType>::assign(at<Index>(), other);
+            batch_assign_policy<DataType>::assign(at<Index_>(), other);
         }
 
-        template <size_t Index>
+        template <size_t Index_>
         CXXSWIZZLE_FORCE_INLINE void assign_at_fast(const data_type& other)
         {
-            at<Index>() = other;
+            at<Index_>() = other;
         }
 
     private:
-        template <size_t Index, typename... Types>
+        template <size_t Index_, typename... Types>
         CXXSWIZZLE_FORCE_INLINE void construct(const data_type& first, Types&& ... others)
         {
-            at<Index>() = first;
-            construct<Index + 1>(std::forward<Types>(others)...);
+            at<Index_>() = first;
+            construct<Index_ + 1>(std::forward<Types>(others)...);
         }
 
-        template <size_t Index>
+        template <size_t Index_>
         CXXSWIZZLE_FORCE_INLINE void construct()
         {}
 
