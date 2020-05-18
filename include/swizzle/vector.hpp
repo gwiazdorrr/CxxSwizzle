@@ -125,8 +125,8 @@ namespace swizzle
             ((at_rvalue(Index) = scalar_type(s)), ...);
         }
 
-        template <class LikelyOtherScalarType, size_t... MoreIndex>
-        inline explicit vector_(const vector_<LikelyOtherScalarType, Index..., MoreIndex...>& t0)
+        template <class LikelyOtherScalarType, size_t MoreIndexStart, size_t... MoreIndex>
+        inline explicit vector_(const vector_<LikelyOtherScalarType, Index..., MoreIndexStart, MoreIndex...>& t0)
         {
             compose<0>(t0);
         }
