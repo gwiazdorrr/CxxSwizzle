@@ -6,59 +6,9 @@
 #include <Vc/vector.h>
 #include <Vc/global.h>
 #include <type_traits>
-#include <swizzle/batch_adapters.hpp>
-#include <swizzle/detail/fwd.hpp>
-#include <swizzle/detail/simd_mask.h>
-#include <swizzle/detail/vector_traits.h>
-#include <swizzle/detail/batch_write_mask.hpp>
 
 namespace swizzle
 {
-    using float_type = float_batch<::Vc::float_v, ::Vc::float_m, 0>;
-    using int_type   = int_batch<::Vc::int32_v, ::Vc::float_m, 0>;
-    using uint_type  = uint_batch<::Vc::uint32_v, ::Vc::float_m, 0>;
-    using bool_type  = bool_batch<::Vc::float_m, 0>;
-
-    // batch types traits definitions
-    namespace detail
-    {
-        template <>
-        struct batch_traits<float_type> : batch_traits_builder<
-            ::Vc::float_v,
-            float,
-            ::Vc::VectorAlignment, ::Vc::float_v::Size, float_type::size,
-            bool_type,
-            false, false, true>
-        {};
-
-        template <>
-        struct batch_traits<int_type> : batch_traits_builder<
-            ::Vc::int32_v,
-            int32_t,
-            ::Vc::VectorAlignment, ::Vc::int32_v::Size, int_type::size,
-            bool_type,
-            false, true, false>
-        {};
-
-        template <>
-        struct batch_traits<uint_type> : batch_traits_builder<
-            ::Vc::uint32_v,
-            uint32_t,
-            ::Vc::VectorAlignment, ::Vc::uint32_v::Size, uint_type::size,
-            bool_type,
-            false, true, false>
-        {};
-
-        template <>
-        struct batch_traits<bool_type> : batch_traits_builder<
-            ::Vc::float_m,
-            bool,
-            ::Vc::VectorAlignment, ::Vc::float_m::Size, bool_type::size,
-            bool_type,
-            true, false, false>
-        {};
-    }
-
     // free functions needed for wrappers to work
 
     template <typename T>
@@ -258,6 +208,61 @@ namespace Vc_VERSIONED_NAMESPACE
         float_v low = Mem::shuffle<X2, X3, Y2, Y3>(data, data);
 #endif
         return high - low;
+    }
+}
+
+
+#include <swizzle/batch_adapters.hpp>
+#include <swizzle/detail/fwd.hpp>
+#include <swizzle/detail/simd_mask.h>
+#include <swizzle/detail/vector_traits.h>
+#include <swizzle/detail/batch_write_mask.hpp>
+
+namespace swizzle
+{
+    using float_type = float_batch<::Vc::float_v, ::Vc::float_m, 0>;
+    using int_type = int_batch<::Vc::int32_v, ::Vc::float_m, 0>;
+    using uint_type = uint_batch<::Vc::uint32_v, ::Vc::float_m, 0>;
+    using bool_type = bool_batch<::Vc::float_m, 0>;
+
+    // batch types traits definitions
+    namespace detail
+    {
+        template <>
+        struct batch_traits<float_type> : batch_traits_builder<
+            ::Vc::float_v,
+            float,
+            ::Vc::VectorAlignment, ::Vc::float_v::Size, float_type::size,
+            bool_type,
+            false, false, true>
+        {};
+
+        template <>
+        struct batch_traits<int_type> : batch_traits_builder<
+            ::Vc::int32_v,
+            int32_t,
+            ::Vc::VectorAlignment, ::Vc::int32_v::Size, int_type::size,
+            bool_type,
+            false, true, false>
+        {};
+
+        template <>
+        struct batch_traits<uint_type> : batch_traits_builder<
+            ::Vc::uint32_v,
+            uint32_t,
+            ::Vc::VectorAlignment, ::Vc::uint32_v::Size, uint_type::size,
+            bool_type,
+            false, true, false>
+        {};
+
+        template <>
+        struct batch_traits<bool_type> : batch_traits_builder<
+            ::Vc::float_m,
+            bool,
+            ::Vc::VectorAlignment, ::Vc::float_m::Size, bool_type::size,
+            bool_type,
+            true, false, false>
+        {};
     }
 }
 
