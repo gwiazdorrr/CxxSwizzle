@@ -1,0 +1,19 @@
+#cmakedefine SAMPLE_HAS_MAIN
+#cmakedefine SAMPLE_HAS_BUFFER_A
+#cmakedefine SAMPLE_HAS_BUFFER_B
+#cmakedefine SAMPLE_HAS_BUFFER_C
+
+#cmakedefine SAMPLE_CHANNEL0_PATH "@SAMPLE_CHANNEL0_PATH@"
+#cmakedefine SAMPLE_CHANNEL1_PATH "@SAMPLE_CHANNEL1_PATH@"
+#cmakedefine SAMPLE_CHANNEL2_PATH "@SAMPLE_CHANNEL2_PATH@"
+#cmakedefine SAMPLE_CHANNEL3_PATH "@SAMPLE_CHANNEL3_PATH@"
+
+#define CXXSWIZZLE_inout_wrapper_ENABLED
+
+#cmakedefine SAMPLE_SDL2IMAGE_FOUND
+
+#ifdef SAMPLE_USE_SIMD_VC
+#include <swizzle/setup_simd_vc.hpp>
+#else 
+#include <swizzle/setup_scalar.hpp>
+#endif

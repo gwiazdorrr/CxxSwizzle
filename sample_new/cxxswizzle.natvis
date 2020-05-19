@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="swizzle::vector_&lt;*&gt;">
+    <DisplayString Condition="num_of_components == 1" Optional="true">{x}</DisplayString>
+    <DisplayString Condition="num_of_components == 2" Optional="true">{x}, {y}</DisplayString>
+    <DisplayString Condition="num_of_components == 3" Optional="true">{x}, {y}, {z}</DisplayString>
+    <DisplayString Condition="num_of_components == 4" Optional="true">{x}, {y}, {z}, {w}</DisplayString>
+    <DisplayString>{data}</DisplayString>
+    <Expand>
+      <Item Name="x">x</Item>
+      <Item Name="y" Optional="true">y</Item>
+      <Item Name="z" Optional="true">z</Item>
+      <Item Name="w" Optional="true">w</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="swizzle::batch_base&lt;*&gt;">
+    <DisplayString>{storage}</DisplayString>
+  </Type>
+
+  <Type Name="Vc_1::Vector&lt;float,*&gt;">
+    <DisplayString Optional="true">({d.data.m128_f32[0]}, {d.data.m128_f32[1]}, {d.data.m128_f32[2]}, {d.data.m128_f32[3]})</DisplayString>
+    <DisplayString Optional="true">({d.data.m256_f32[0]}, {d.data.m256_f32[1]}, {d.data.m256_f32[2]}, {d.data.m256_f32[3]}, {d.data.m256_f32[4]}, {d.data.m256_f32[5]}, {d.data.m256_f32[6]}, {d.data.m256_f32[7]})</DisplayString>
+  </Type>
+
+  <Type Name="Vc_1::Vector&lt;int,*&gt;">
+    <DisplayString Optional="true">({d.data.m128i_i32[0]}, {d.data.m128i_i32[1]}, {d.data.m128i_i32[2]}, {d.data.m128i_i32[3]})</DisplayString>
+    <DisplayString Optional="true">({d.data.m256i_i32[0]}, {d.data.m256i_i32[1]}, {d.data.m256i_i32[2]}, {d.data.m256i_i32[3]}, {d.data.m256i_i32[4]}, {d.data.m256i_i32[5]}, {d.data.m256i_i32[6]}, {d.data.m256i_i32[7]})</DisplayString>
+  </Type>
+
+  <Type Name="Vc_1::Vector&lt;unsigned int,*&gt;">
+    <DisplayString Optional="true">({d.data.m128i_u32[0]}, {d.data.m128i_u32[1]}, {d.data.m128i_u32[2]}, {d.data.m128i_u32[3]})</DisplayString>
+    <DisplayString Optional="true">({d.data.m256i_u32[0]}, {d.data.m256i_u32[1]}, {d.data.m256i_u32[2]}, {d.data.m256i_u32[3]}, {d.data.m256i_u32[4]}, {d.data.m256i_u32[5]}, {d.data.m256i_u32[6]}, {d.data.m256i_u32[7]})</DisplayString>
+  </Type>
+
+
+  <Type Name="Vc_1::Mask&lt;*&gt;">
+    <DisplayString Optional="true">({d.data.m128_i32[0]}, {d.data.m128_i32[1]}, {d.data.m128_i32[2]}, {d.data.m128_i32[3]})</DisplayString>
+    <DisplayString Optional="true">({d.data.m256_i32[0]}, {d.data.m256_i32[1]}, {d.data.m256_i32[2]}, {d.data.m256_i32[3]}, {d.data.m256_i32[4]}, {d.data.m256_i32[5]}, {d.data.m256_i32[6]}, {d.data.m256_i32[7]})</DisplayString>
+  </Type>
+
+</AutoVisualizer>
