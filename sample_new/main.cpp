@@ -315,6 +315,7 @@ void print_help()
     printf("-t <time>                   set initial time & pause\n");
     printf("-h                          show this message\n");
     printf("-sN <path>                  set texture for sampler N\n");
+    printf("-s{a|b|c|d}N <path>         set texture for sampler N for buffer a, b, c or d\n");
 }
 
 int print_args_error()
@@ -360,20 +361,28 @@ int main(int argc, char* argv[])
     float time_scale = 1.0f;
 
     static_assert(::shadertoy::num_samplers >= 4);
-    naive_sampler_data textures[::shadertoy::num_samplers];
+    naive_sampler_data textures[::shadertoy::num_samplers * (::shadertoy::num_buffers + 1)];
 
-#ifdef SAMPLE_CHANNEL0_PATH
-    textures[0].path = SAMPLE_CHANNEL0_PATH;
-#endif
-#ifdef SAMPLE_CHANNEL1_PATH
-    textures[1].path = SAMPLE_CHANNEL1_PATH;
-#endif
-#ifdef SAMPLE_CHANNEL2_PATH
-    textures[2].path = SAMPLE_CHANNEL2_PATH;
-#endif
-#ifdef SAMPLE_CHANNEL3_PATH
-    textures[3].path = SAMPLE_CHANNEL3_PATH;
-#endif
+    textures[ 0 + 0].path = SAMPLE_CHANNEL0_PATH;
+    textures[ 0 + 1].path = SAMPLE_CHANNEL1_PATH;
+    textures[ 0 + 2].path = SAMPLE_CHANNEL2_PATH;
+    textures[ 0 + 3].path = SAMPLE_CHANNEL3_PATH;
+    textures[ 4 + 0].path = SAMPLE_BUFFER_A_CHANNEL0_PATH;
+    textures[ 4 + 1].path = SAMPLE_BUFFER_A_CHANNEL1_PATH;
+    textures[ 4 + 2].path = SAMPLE_BUFFER_A_CHANNEL2_PATH;
+    textures[ 4 + 3].path = SAMPLE_BUFFER_A_CHANNEL3_PATH;
+    textures[ 8 + 0].path = SAMPLE_BUFFER_B_CHANNEL0_PATH;
+    textures[ 8 + 1].path = SAMPLE_BUFFER_B_CHANNEL1_PATH;
+    textures[ 8 + 2].path = SAMPLE_BUFFER_B_CHANNEL2_PATH;
+    textures[ 8 + 3].path = SAMPLE_BUFFER_B_CHANNEL3_PATH;
+    textures[12 + 0].path = SAMPLE_BUFFER_C_CHANNEL0_PATH;
+    textures[12 + 1].path = SAMPLE_BUFFER_C_CHANNEL1_PATH;
+    textures[12 + 2].path = SAMPLE_BUFFER_C_CHANNEL2_PATH;
+    textures[12 + 3].path = SAMPLE_BUFFER_C_CHANNEL3_PATH;
+    textures[16 + 0].path = SAMPLE_BUFFER_D_CHANNEL0_PATH;
+    textures[16 + 1].path = SAMPLE_BUFFER_D_CHANNEL1_PATH;
+    textures[16 + 2].path = SAMPLE_BUFFER_D_CHANNEL2_PATH;
+    textures[16 + 3].path = SAMPLE_BUFFER_D_CHANNEL3_PATH;
 
     for (int i = 1; i < argc; ++i)
     {
@@ -410,6 +419,30 @@ int main(int argc, char* argv[])
                 return print_args_error();
             }
         }
+        else if (!strncmp(arg, "-s", 2)) 
+        {
+            char channel = arg[2];
+            int sampler_index_base = 0;
+            int expected_length = 3;
+
+            if (channel == 'a' || channel == 'b' || channel == 'c' || channel == 'd') 
+            {
+                static_assert(::shadertoy::num_buffers == 4);
+                sampler_index_base = (channel - 'a' + 1) * 4;
+                channel = arg[3];
+                expected_length = 4;
+            }
+
+            if (channel >= '0' && channel <= '3' && i + 1 < argc && strlen(arg) == expected_length)
+            {
+                static_assert(::shadertoy::num_samplers == 4);
+                textures[sampler_index_base + channel - '0'].path = argv[++i];
+            }
+            else
+            {
+                print_args_error();
+            }
+        }
         else if (!strcmp(arg, "-s0") || !strcmp(arg, "-s1") || !strcmp(arg, "-s2") || !strcmp(arg, "-s3"))
         {
             static_assert(::shadertoy::num_samplers == 4);
@@ -433,8 +466,11 @@ int main(int argc, char* argv[])
     // load up textures
     for (auto& texture : textures)
     {
-        if (!texture.path)
+        if (!texture.path || strlen(texture.path) == 0)
+        {
+            texture.path = nullptr;
             continue;
+        }
         load_texture(texture, texture.path);
     }
 
@@ -456,12 +492,17 @@ int main(int argc, char* argv[])
     printf("\n");
     printf("--- Textures: ---\n");
     
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < size(textures); ++i)
     {
-        printf("iChannel%d: %s\n", i, textures[i].path);
+        if (textures[i].path)
+        {
+            printf("iChannel%d: %s\n", i, textures[i].path);
+        }
     }
     printf("\n");
 
+    for (int i = 0; i < STATS_LINES; ++i)
+        printf("\n");
 
     // initial setup
     SDL_SetMainReady();
@@ -471,9 +512,11 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    
+
     try 
     { 
-        printf(VT100_DOWN(STATS_LINES));
+        //printf(VT100_DOWN(STATS_LINES));
 
         auto window = make_unique_with_deleter<SDL_Window>(SDL_CreateWindow("CxxSwizzle sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
             resolution.x, resolution.y, SDL_WINDOW_RESIZABLE), SDL_DestroyWindow);
