@@ -126,7 +126,7 @@ static render_stats render(pixel_func func, shader_inputs uniforms, SDL_Surface*
     p_min_aligned.x = (p_min.x / columns_per_batch) * columns_per_batch;
     p_min_aligned.y = (p_min.y / rows_per_batch) * rows_per_batch;
 
-#if !defined(_DEBUG) && SAMPLE_OMP_ENABLED
+#if SAMPLE_OMP_ENABLED
 #pragma omp parallel 
     {
         // each thread needs to have at least rows_per_batch rows to process; also, we don't want even number of rows
@@ -485,19 +485,19 @@ int main(int argc, char* argv[])
         {
             texture.path = nullptr;
         }
-        else if (stricmp(texture.path, "BufA")) 
+        else if (!stricmp(texture.path, "BufA")) 
         {
             texture.buffer_index = 0;
         }
-        else if (stricmp(texture.path, "BufB"))
+        else if (!stricmp(texture.path, "BufB"))
         {
             texture.buffer_index = 1;
         }
-        else if (stricmp(texture.path, "BufC"))
+        else if (!stricmp(texture.path, "BufC"))
         {
             texture.buffer_index = 2;
         }
-        else if (stricmp(texture.path, "BufD"))
+        else if (!stricmp(texture.path, "BufD"))
         {
             texture.buffer_index = 3;
         }
@@ -605,27 +605,24 @@ int main(int argc, char* argv[])
 
         std::atomic_bool abort_render_token = false;
 
-        textures[0].buffer_index = 0;
-        textures[4].buffer_index = 0;
-        
         auto render_all = [&target_surface, &buffer_surfaces, &textures, &num_frames](shader_inputs inputs, SDL_Rect viewport, const std::atomic_bool& cancel) -> auto
         {
             int buffer_surface_index = 1 - (num_frames & 1);
 #ifdef SAMPLE_HAS_BUFA
             set_textures(inputs, &textures[4]);
-            render(shadertoy::buffer_a, inputs, buffer_surfaces[0][buffer_surface_index].get(), viewport, cancel);
+            render(shadertoy::bufA, inputs, buffer_surfaces[0][buffer_surface_index].get(), viewport, cancel);
 #endif
 #ifdef SAMPLE_HAS_BUFB
             set_textures(inputs, &textures[8]);
-            render(shadertoy::buffer_b, inputs, buffer_surfaces[1][buffer_surface_index].get(), viewport, cancel);
+            render(shadertoy::bufB, inputs, buffer_surfaces[1][buffer_surface_index].get(), viewport, cancel);
 #endif
 #ifdef SAMPLE_HAS_BUFC
             set_textures(inputs, &textures[12]);
-            render(shadertoy::buffer_c, inputs, buffer_surfaces[2][buffer_surface_index].get(), viewport, cancel);
+            render(shadertoy::bufC, inputs, buffer_surfaces[2][buffer_surface_index].get(), viewport, cancel);
 #endif
 #ifdef SAMPLE_HAS_BUFD
             set_textures(inputs, &textures[16]);
-            render(shadertoy::buffer_d, inputs, buffer_surfaces[3][buffer_surface_index].get(), viewport, cancel);
+            render(shadertoy::bufD, inputs, buffer_surfaces[3][buffer_surface_index].get(), viewport, cancel);
 #endif
 
             // https://www.shadertoy.com/view/WdVXWy

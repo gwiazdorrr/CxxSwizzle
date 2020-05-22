@@ -30,4 +30,8 @@ namespace shadertoy
     };
 
     swizzle::vec4 image(const shader_inputs& input, swizzle::vec2 fragCoord);
+    swizzle::vec4 bufA(const shader_inputs& input, swizzle::vec2 fragCoord);
+    swizzle::vec4 bufB(const shader_inputs& input, swizzle::vec2 fragCoord);
+    swizzle::vec4 bufC(const shader_inputs& input, swizzle::vec2 fragCoord);
+    swizzle::vec4 bufD(const shader_inputs& input, swizzle::vec2 fragCoord);
 }
