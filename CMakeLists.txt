@@ -9,7 +9,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS On)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/sdl2)
 
-add_subdirectory(sample)
+# add_subdirectory(sample)
+add_subdirectory(sample_new)
 add_subdirectory(unit_test)
 
 # get all the shaders

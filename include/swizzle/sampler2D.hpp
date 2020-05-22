@@ -19,7 +19,6 @@ namespace swizzle
             mirror_repeat
         };
 
-        const char* path = nullptr;
         wrap_modes wrap_mode = repeat;
 
         unsigned width = 256;

@@ -41,40 +41,31 @@ static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 #include <omp.h>
 #endif
 
-//! A handy way of creating (and checking) unique_ptrs of SDL objects
-template <class T>
-std::unique_ptr< T, std::function<void (T*)> > make_unique_with_deleter(T* value, std::function<void (T*)> deleter)
+struct sdl_deleter 
 {
-    if (!value)
+    void operator()(SDL_Surface* ptr)
     {
-        throw std::runtime_error("Null pointer");
+        SDL_FreeSurface(ptr);
     }
-    return std::unique_ptr<T, decltype(deleter)>(value, deleter);
-}
+    void operator()(SDL_Window* ptr)
+    {
+        SDL_DestroyWindow(ptr);
+    }
+    void operator()(SDL_Texture* ptr)
+    {
+        SDL_DestroyTexture(ptr);
+    }
+    void operator()(SDL_Renderer* ptr)
+    {
+        SDL_DestroyRenderer(ptr);
+    }
+};
 
-//! As above, but allows null initialisation
-template <class T>
-std::unique_ptr< T, std::function<void (T*)> > make_unique_with_deleter(std::function<void (T*)> deleter)
-{
-    return std::unique_ptr<T, decltype(deleter)>(nullptr, deleter);
-}
+using surface_ptr = std::unique_ptr<SDL_Surface, sdl_deleter>;
+using window_ptr = std::unique_ptr<SDL_Window, sdl_deleter>;
+using texture_ptr = std::unique_ptr<SDL_Texture, sdl_deleter>;
+using renderer_ptr = std::unique_ptr<SDL_Renderer, sdl_deleter>;
 
-//void debug_print(swizzle::float_type vec)
-//{
-//    using namespace swizzle;
-//    using namespace swizzle::detail;
-//
-//    batch_traits<swizzle::float_type>::aligned_storage_type storage;
-//    float* p = reinterpret_cast<float*>(&storage);
-//
-//    store_aligned(vec, p);
-//
-//    for (int i = 0; i < batch_traits<vec4::scalar_type>::size; ++i)
-//    {
-//        std::cout << p[i] << " ";
-//    }
-//    std::cout << "\n";
-//}
 
 struct render_stats
 {
@@ -83,7 +74,15 @@ struct render_stats
     int num_threads;
 };
 
-static render_stats render(shader_inputs uniforms, SDL_Surface* bmp, SDL_Rect viewport, const std::atomic_bool& cancelled)
+struct sampler_data : swizzle::naive_sampler_data 
+{
+    const char* path = nullptr;
+    int buffer_index = -1;
+};
+
+using pixel_func = swizzle::vec4(*)(const shader_inputs& input, swizzle::vec2 fragCoord);
+
+static render_stats render(pixel_func func, shader_inputs uniforms, SDL_Surface* bmp, SDL_Rect viewport, const std::atomic_bool& cancelled)
 {
     swizzle::vector<int, 2> p_min(std::max(0, std::min(bmp->w, viewport.x)), std::max(0, std::min(bmp->h, viewport.y)));
     auto p_max = p_min;
@@ -181,7 +180,7 @@ static render_stats render(shader_inputs uniforms, SDL_Surface* bmp, SDL_Rect vi
             int x;
             for (x = p_min_aligned.x; x < p_max.x; x += columns_per_batch)
             {
-                auto color = shadertoy::image(uniforms, vec2(static_cast<float>(x) + x_offsets, frag_coord_y));
+                auto color = func(uniforms, vec2(static_cast<float>(x) + x_offsets, frag_coord_y));
                 color *= 255.0f + 0.5f;
 
                 store_aligned(static_cast<swizzle::uint_type>(color.r), pr);
@@ -240,8 +239,17 @@ static render_stats render(shader_inputs uniforms, SDL_Surface* bmp, SDL_Rect vi
     return render_stats { std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - render_begin), num_pixels, num_threads };
 }
 
-
-
+void set_textures(shader_inputs& inputs, const sampler_data ptr[4])
+{
+    inputs.iChannel0.data = ptr;
+    inputs.iChannel1.data = ptr + 1;
+    inputs.iChannel2.data = ptr + 2;
+    inputs.iChannel3.data = ptr + 3;
+    for (int i = 0; i < 4; ++i)
+    {
+        inputs.iChannelResolution[i] = vec3(ptr[i].width, ptr[i].height, 0.0f);
+    }
+}
 
 #define STR1(x) #x
 #define STR2(x) STR1(x)
@@ -253,6 +261,34 @@ static render_stats render(shader_inputs uniforms, SDL_Surface* bmp, SDL_Rect vi
 const double seconds_to_micro = 1000000.0;
 const double micro_to_seconds = 1 / seconds_to_micro;
 
+void from_surface(swizzle::naive_sampler_data& sampler, const SDL_Surface* surface)
+{
+    sampler.bytes = reinterpret_cast<uint8_t*>(surface->pixels);
+    sampler.width = surface->w;
+    sampler.height = surface->h;
+    sampler.pitch = surface->w;
+    sampler.bytes_per_pixel = surface->format->BytesPerPixel;
+
+    sampler.rshift = surface->format->Rshift;
+    sampler.gshift = surface->format->Gshift;
+    sampler.bshift = surface->format->Bshift;
+    sampler.ashift = surface->format->Ashift;
+
+    if (surface->format->format == SDL_PIXELFORMAT_INDEX8)
+    {
+        sampler.rmask = 0xFF;
+        sampler.gmask = 0xFF;
+        sampler.bmask = 0xFF;
+        sampler.amask = 0;
+    }
+    else
+    {
+        sampler.rmask = surface->format->Rmask;
+        sampler.gmask = surface->format->Gmask;
+        sampler.bmask = surface->format->Bmask;
+        sampler.amask = surface->format->Amask;
+    }
+}
 
 bool load_texture(swizzle::naive_sampler_data& sampler, const char* name)
 {
@@ -265,32 +301,7 @@ bool load_texture(swizzle::naive_sampler_data& sampler, const char* name)
     }
     else
     {
-        sampler.bytes = reinterpret_cast<uint8_t*>(img->pixels);
-        sampler.width = img->w;
-        sampler.height = img->h;
-        sampler.pitch = img->w;
-        sampler.bytes_per_pixel = img->format->BytesPerPixel;
-
-        sampler.rshift = img->format->Rshift;
-        sampler.gshift = img->format->Gshift;
-        sampler.bshift = img->format->Bshift;
-        sampler.ashift = img->format->Ashift;
-
-        if (img->format->format == SDL_PIXELFORMAT_INDEX8)
-        {
-            sampler.rmask = 0xFF;
-            sampler.gmask = 0xFF;
-            sampler.bmask = 0xFF;
-            sampler.amask = 0;
-        }
-        else
-        {
-            sampler.rmask = img->format->Rmask;
-            sampler.gmask = img->format->Gmask;
-            sampler.bmask = img->format->Bmask;
-            sampler.amask = img->format->Amask;
-        }
-
+        from_surface(sampler, img);
         return true;
     }
 #else
@@ -298,6 +309,9 @@ bool load_texture(swizzle::naive_sampler_data& sampler, const char* name)
     return false;
 #endif
 }
+
+
+
 
 template <typename T>
 bool from_string(const char* str, T& value)
@@ -341,6 +355,7 @@ SDL_Rect fix_rect(SDL_Rect rect)
 }
 
 
+
 int main(int argc, char* argv[])
 {
     using namespace std;
@@ -361,28 +376,28 @@ int main(int argc, char* argv[])
     float time_scale = 1.0f;
 
     static_assert(::shadertoy::num_samplers >= 4);
-    naive_sampler_data textures[::shadertoy::num_samplers * (::shadertoy::num_buffers + 1)];
+    sampler_data textures[::shadertoy::num_samplers * (::shadertoy::num_buffers + 1)];
 
-    textures[ 0 + 0].path = SAMPLE_CHANNEL0_PATH;
-    textures[ 0 + 1].path = SAMPLE_CHANNEL1_PATH;
-    textures[ 0 + 2].path = SAMPLE_CHANNEL2_PATH;
-    textures[ 0 + 3].path = SAMPLE_CHANNEL3_PATH;
-    textures[ 4 + 0].path = SAMPLE_BUFFER_A_CHANNEL0_PATH;
-    textures[ 4 + 1].path = SAMPLE_BUFFER_A_CHANNEL1_PATH;
-    textures[ 4 + 2].path = SAMPLE_BUFFER_A_CHANNEL2_PATH;
-    textures[ 4 + 3].path = SAMPLE_BUFFER_A_CHANNEL3_PATH;
-    textures[ 8 + 0].path = SAMPLE_BUFFER_B_CHANNEL0_PATH;
-    textures[ 8 + 1].path = SAMPLE_BUFFER_B_CHANNEL1_PATH;
-    textures[ 8 + 2].path = SAMPLE_BUFFER_B_CHANNEL2_PATH;
-    textures[ 8 + 3].path = SAMPLE_BUFFER_B_CHANNEL3_PATH;
-    textures[12 + 0].path = SAMPLE_BUFFER_C_CHANNEL0_PATH;
-    textures[12 + 1].path = SAMPLE_BUFFER_C_CHANNEL1_PATH;
-    textures[12 + 2].path = SAMPLE_BUFFER_C_CHANNEL2_PATH;
-    textures[12 + 3].path = SAMPLE_BUFFER_C_CHANNEL3_PATH;
-    textures[16 + 0].path = SAMPLE_BUFFER_D_CHANNEL0_PATH;
-    textures[16 + 1].path = SAMPLE_BUFFER_D_CHANNEL1_PATH;
-    textures[16 + 2].path = SAMPLE_BUFFER_D_CHANNEL2_PATH;
-    textures[16 + 3].path = SAMPLE_BUFFER_D_CHANNEL3_PATH;
+    textures[ 0 + 0].path = SAMPLE_ICHANNEL0_PATH;
+    textures[ 0 + 1].path = SAMPLE_ICHANNEL1_PATH;
+    textures[ 0 + 2].path = SAMPLE_ICHANNEL2_PATH;
+    textures[ 0 + 3].path = SAMPLE_ICHANNEL3_PATH;
+    textures[ 4 + 0].path = SAMPLE_BUFA_ICHANNEL0_PATH;
+    textures[ 4 + 1].path = SAMPLE_BUFA_ICHANNEL1_PATH;
+    textures[ 4 + 2].path = SAMPLE_BUFA_ICHANNEL2_PATH;
+    textures[ 4 + 3].path = SAMPLE_BUFA_ICHANNEL3_PATH;
+    textures[ 8 + 0].path = SAMPLE_BUFB_ICHANNEL0_PATH;
+    textures[ 8 + 1].path = SAMPLE_BUFB_ICHANNEL1_PATH;
+    textures[ 8 + 2].path = SAMPLE_BUFB_ICHANNEL2_PATH;
+    textures[ 8 + 3].path = SAMPLE_BUFB_ICHANNEL3_PATH;
+    textures[12 + 0].path = SAMPLE_BUFC_ICHANNEL0_PATH;
+    textures[12 + 1].path = SAMPLE_BUFC_ICHANNEL1_PATH;
+    textures[12 + 2].path = SAMPLE_BUFC_ICHANNEL2_PATH;
+    textures[12 + 3].path = SAMPLE_BUFC_ICHANNEL3_PATH;
+    textures[16 + 0].path = SAMPLE_BUFD_ICHANNEL0_PATH;
+    textures[16 + 1].path = SAMPLE_BUFD_ICHANNEL1_PATH;
+    textures[16 + 2].path = SAMPLE_BUFD_ICHANNEL2_PATH;
+    textures[16 + 3].path = SAMPLE_BUFD_ICHANNEL3_PATH;
 
     for (int i = 1; i < argc; ++i)
     {
@@ -469,9 +484,27 @@ int main(int argc, char* argv[])
         if (!texture.path || strlen(texture.path) == 0)
         {
             texture.path = nullptr;
-            continue;
         }
-        load_texture(texture, texture.path);
+        else if (stricmp(texture.path, "BufA")) 
+        {
+            texture.buffer_index = 0;
+        }
+        else if (stricmp(texture.path, "BufB"))
+        {
+            texture.buffer_index = 1;
+        }
+        else if (stricmp(texture.path, "BufC"))
+        {
+            texture.buffer_index = 2;
+        }
+        else if (stricmp(texture.path, "BufD"))
+        {
+            texture.buffer_index = 3;
+        }
+        else
+        {
+            load_texture(texture, texture.path);
+        }
     }
 
     if (viewport.w == 0 || viewport.h == 0)
@@ -516,18 +549,31 @@ int main(int argc, char* argv[])
 
     try 
     { 
-        //printf(VT100_DOWN(STATS_LINES));
-
-        auto window = make_unique_with_deleter<SDL_Window>(SDL_CreateWindow("CxxSwizzle sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-            resolution.x, resolution.y, SDL_WINDOW_RESIZABLE), SDL_DestroyWindow);
-        auto renderer = make_unique_with_deleter<SDL_Renderer>(SDL_CreateRenderer(window.get(), -1, 0), SDL_DestroyRenderer);
-        auto target_surface = make_unique_with_deleter<SDL_Surface>(SDL_FreeSurface);
-        auto target_texture = make_unique_with_deleter<SDL_Texture>(SDL_DestroyTexture);
+        window_ptr window(SDL_CreateWindow("CxxSwizzle sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, resolution.x, resolution.y, SDL_WINDOW_RESIZABLE));
+        renderer_ptr renderer(SDL_CreateRenderer(window.get(), -1, 0));
+        surface_ptr target_surface;
+        texture_ptr target_texture;
+        surface_ptr buffer_surfaces[4][2];
 
         // a function used to resize the target_surface
-        auto resize_or_create_surface = [&](int w, int h) -> void
+        auto resize_or_create_surfaces = [&](int w, int h) -> void
         {
-            target_surface.reset( SDL_CreateRGBSurface(0, w, h, 24, 0x000000ff, 0x0000ff00, 0x00ff0000, 0 ) );
+            auto create_matching_surface = [=]()-> auto { return SDL_CreateRGBSurface(0, w, h, 24, 0x000000ff, 0x0000ff00, 0x00ff0000, 0); };
+
+#ifdef SAMPLE_HAS_BUFA
+            buffer_surfaces[0][0].reset(create_matching_surface()); buffer_surfaces[0][1].reset(create_matching_surface());
+#endif
+#ifdef SAMPLE_HAS_BUFB
+            buffer_surfaces[1][0].reset(create_matching_surface()); buffer_surfaces[1][1].reset(create_matching_surface());
+#endif
+#ifdef SAMPLE_HAS_BUFC
+            buffer_surfaces[2][0].reset(create_matching_surface()); buffer_surfaces[2][1].reset(create_matching_surface());
+#endif
+#ifdef SAMPLE_HAS_BUFD
+            buffer_surfaces[3][0].reset(create_matching_surface()); buffer_surfaces[3][1].reset(create_matching_surface());
+#endif
+
+            target_surface.reset(create_matching_surface());
             if ( !target_surface )
             {
                 throw std::runtime_error("Unable to create target_surface");
@@ -541,7 +587,7 @@ int main(int argc, char* argv[])
             resolution.y = h;
         };
 
-        resize_or_create_surface(resolution.x, resolution.y);
+        resize_or_create_surfaces(resolution.x, resolution.y);
         
         int num_frames = 0;
         float current_frame_timestamp = 0.0f;
@@ -559,9 +605,52 @@ int main(int argc, char* argv[])
 
         std::atomic_bool abort_render_token = false;
 
-        auto renderAsync = [&]() -> std::future<render_stats>
+        textures[0].buffer_index = 0;
+        textures[4].buffer_index = 0;
+        
+        auto render_all = [&target_surface, &buffer_surfaces, &textures, &num_frames](shader_inputs inputs, SDL_Rect viewport, const std::atomic_bool& cancel) -> auto
+        {
+            int buffer_surface_index = 1 - (num_frames & 1);
+#ifdef SAMPLE_HAS_BUFA
+            set_textures(inputs, &textures[4]);
+            render(shadertoy::buffer_a, inputs, buffer_surfaces[0][buffer_surface_index].get(), viewport, cancel);
+#endif
+#ifdef SAMPLE_HAS_BUFB
+            set_textures(inputs, &textures[8]);
+            render(shadertoy::buffer_b, inputs, buffer_surfaces[1][buffer_surface_index].get(), viewport, cancel);
+#endif
+#ifdef SAMPLE_HAS_BUFC
+            set_textures(inputs, &textures[12]);
+            render(shadertoy::buffer_c, inputs, buffer_surfaces[2][buffer_surface_index].get(), viewport, cancel);
+#endif
+#ifdef SAMPLE_HAS_BUFD
+            set_textures(inputs, &textures[16]);
+            render(shadertoy::buffer_d, inputs, buffer_surfaces[3][buffer_surface_index].get(), viewport, cancel);
+#endif
+
+            // https://www.shadertoy.com/view/WdVXWy
+
+            set_textures(inputs, &textures[0]);
+            return render(shadertoy::image, inputs, target_surface.get(), viewport, cancel);
+        };
+
+
+        auto render_async = [&]() -> std::future<render_stats>
         {
             abort_render_token = false;
+            
+            {
+                int buffer_surface_index = num_frames & 1;
+                // sort out buffer textures
+                for (auto& data : textures)
+                {
+                    if (data.buffer_index >= 0)
+                    {
+                        from_surface(data, buffer_surfaces[data.buffer_index][buffer_surface_index].get());
+                    }
+                }
+            }
+
             auto s = target_surface.get();
 
             shader_inputs inputs = {};
@@ -573,21 +662,10 @@ int main(int argc, char* argv[])
             inputs.iMouse.z = mouse_pressed ? 1.0f : 0.0f;
             inputs.iMouse.w = 0.0f;
 
-            inputs.iChannel0.data = &textures[0];
-            inputs.iChannel1.data = &textures[1];
-            inputs.iChannel2.data = &textures[2];
-            inputs.iChannel3.data = &textures[3];
-            
-            for (int i = 0; i < 4; ++i)
-            {
-                inputs.iChannelResolution[i] = vec3(textures[i].width, textures[i].height, 0.0f);
-            }
-            
-
-            return std::async(render, inputs, s, viewport, std::ref(abort_render_token));
+            return std::async(render_all, inputs, viewport, std::ref(abort_render_token));
         };
 
-        std::future<render_stats> render_task = renderAsync();
+        std::future<render_stats> render_task = render_async();
         
         SDL_Rect mouse_rect = {};
 
@@ -725,11 +803,11 @@ int main(int argc, char* argv[])
                     int w, h;
                     SDL_GetWindowSize(window.get(), &w, &h);
 
-                    resize_or_create_surface(w, h);
+                    resize_or_create_surfaces(w, h);
                     pending_resize = false;
 
                     current_frame_timestamp = time;
-                    render_task = renderAsync();
+                    render_task = render_async();
                 }
             }
             else
@@ -778,7 +856,7 @@ int main(int argc, char* argv[])
                     }
 
                     current_frame_timestamp = time;
-                    render_task = renderAsync();
+                    render_task = render_async();
                 }
             }
             
