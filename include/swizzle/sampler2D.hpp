@@ -88,6 +88,10 @@ namespace swizzle
             return sampler.sample(uv.xy);
         }
 
+        inline friend ivec2 textureSize(const this_type& sampler, int)
+        {
+            return { sampler.data->width, sampler.data->height };
+        }
     private:
         vec4 sample(const vec2& coord) const
         {
