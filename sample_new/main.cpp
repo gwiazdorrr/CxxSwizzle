@@ -369,7 +369,7 @@ int main(int argc, char* argv[])
     }
 #endif
 
-    swizzle::vector<int, 2> resolution(512, 512);
+    swizzle::vector<int, 2> resolution(512, 288);
     SDL_Rect viewport = { 0, 0, 0, 0 };
     float time = 0.0f;
     float time_scale = 1.0f;
