@@ -377,26 +377,26 @@ int main(int argc, char* argv[])
     static_assert(::shadertoy::num_samplers >= 4);
     sampler_data textures[::shadertoy::num_samplers * (::shadertoy::num_buffers + 1)];
 
-    textures[ 0 + 0].path = SAMPLE_ICHANNEL0_PATH;
-    textures[ 0 + 1].path = SAMPLE_ICHANNEL1_PATH;
-    textures[ 0 + 2].path = SAMPLE_ICHANNEL2_PATH;
-    textures[ 0 + 3].path = SAMPLE_ICHANNEL3_PATH;
-    textures[ 4 + 0].path = SAMPLE_BUFA_ICHANNEL0_PATH;
-    textures[ 4 + 1].path = SAMPLE_BUFA_ICHANNEL1_PATH;
-    textures[ 4 + 2].path = SAMPLE_BUFA_ICHANNEL2_PATH;
-    textures[ 4 + 3].path = SAMPLE_BUFA_ICHANNEL3_PATH;
-    textures[ 8 + 0].path = SAMPLE_BUFB_ICHANNEL0_PATH;
-    textures[ 8 + 1].path = SAMPLE_BUFB_ICHANNEL1_PATH;
-    textures[ 8 + 2].path = SAMPLE_BUFB_ICHANNEL2_PATH;
-    textures[ 8 + 3].path = SAMPLE_BUFB_ICHANNEL3_PATH;
-    textures[12 + 0].path = SAMPLE_BUFC_ICHANNEL0_PATH;
-    textures[12 + 1].path = SAMPLE_BUFC_ICHANNEL1_PATH;
-    textures[12 + 2].path = SAMPLE_BUFC_ICHANNEL2_PATH;
-    textures[12 + 3].path = SAMPLE_BUFC_ICHANNEL3_PATH;
-    textures[16 + 0].path = SAMPLE_BUFD_ICHANNEL0_PATH;
-    textures[16 + 1].path = SAMPLE_BUFD_ICHANNEL1_PATH;
-    textures[16 + 2].path = SAMPLE_BUFD_ICHANNEL2_PATH;
-    textures[16 + 3].path = SAMPLE_BUFD_ICHANNEL3_PATH;
+    textures[ 0 + 0].path = SAMPLE_ICHANNEL_0_PATH;
+    textures[ 0 + 1].path = SAMPLE_ICHANNEL_1_PATH;
+    textures[ 0 + 2].path = SAMPLE_ICHANNEL_2_PATH;
+    textures[ 0 + 3].path = SAMPLE_ICHANNEL_3_PATH;
+    textures[ 4 + 0].path = SAMPLE_BUFFER_A_ICHANNEL_0_PATH;
+    textures[ 4 + 1].path = SAMPLE_BUFFER_A_ICHANNEL_1_PATH;
+    textures[ 4 + 2].path = SAMPLE_BUFFER_A_ICHANNEL_2_PATH;
+    textures[ 4 + 3].path = SAMPLE_BUFFER_A_ICHANNEL_3_PATH;
+    textures[ 8 + 0].path = SAMPLE_BUFFER_B_ICHANNEL_0_PATH;
+    textures[ 8 + 1].path = SAMPLE_BUFFER_B_ICHANNEL_1_PATH;
+    textures[ 8 + 2].path = SAMPLE_BUFFER_B_ICHANNEL_2_PATH;
+    textures[ 8 + 3].path = SAMPLE_BUFFER_B_ICHANNEL_3_PATH;
+    textures[12 + 0].path = SAMPLE_BUFFER_C_ICHANNEL_0_PATH;
+    textures[12 + 1].path = SAMPLE_BUFFER_C_ICHANNEL_1_PATH;
+    textures[12 + 2].path = SAMPLE_BUFFER_C_ICHANNEL_2_PATH;
+    textures[12 + 3].path = SAMPLE_BUFFER_C_ICHANNEL_3_PATH;
+    textures[16 + 0].path = SAMPLE_BUFFER_D_ICHANNEL_0_PATH;
+    textures[16 + 1].path = SAMPLE_BUFFER_D_ICHANNEL_1_PATH;
+    textures[16 + 2].path = SAMPLE_BUFFER_D_ICHANNEL_2_PATH;
+    textures[16 + 3].path = SAMPLE_BUFFER_D_ICHANNEL_3_PATH;
 
     for (int i = 1; i < argc; ++i)
     {
@@ -484,19 +484,19 @@ int main(int argc, char* argv[])
         {
             texture.path = nullptr;
         }
-        else if (!stricmp(texture.path, "BufA")) 
+        else if (!stricmp(texture.path, "buffer_a")) 
         {
             texture.buffer_index = 0;
         }
-        else if (!stricmp(texture.path, "BufB"))
+        else if (!stricmp(texture.path, "buffer_b"))
         {
             texture.buffer_index = 1;
         }
-        else if (!stricmp(texture.path, "BufC"))
+        else if (!stricmp(texture.path, "buffer_c"))
         {
             texture.buffer_index = 2;
         }
-        else if (!stricmp(texture.path, "BufD"))
+        else if (!stricmp(texture.path, "buffer_d"))
         {
             texture.buffer_index = 3;
         }
@@ -569,16 +569,16 @@ int main(int argc, char* argv[])
         {
             auto create_matching_surface = [=]()-> auto { return SDL_CreateRGBSurface(0, w, h, 24, 0x000000ff, 0x0000ff00, 0x00ff0000, 0); };
 
-#ifdef SAMPLE_HAS_BUFA
+#ifdef SAMPLE_HAS_BUFFER_A
             buffer_surfaces[0][0].reset(create_matching_surface()); buffer_surfaces[0][1].reset(create_matching_surface());
 #endif
-#ifdef SAMPLE_HAS_BUFB
+#ifdef SAMPLE_HAS_BUFFER_B
             buffer_surfaces[1][0].reset(create_matching_surface()); buffer_surfaces[1][1].reset(create_matching_surface());
 #endif
-#ifdef SAMPLE_HAS_BUFC
+#ifdef SAMPLE_HAS_BUFFER_C
             buffer_surfaces[2][0].reset(create_matching_surface()); buffer_surfaces[2][1].reset(create_matching_surface());
 #endif
-#ifdef SAMPLE_HAS_BUFD
+#ifdef SAMPLE_HAS_BUFFER_D
             buffer_surfaces[3][0].reset(create_matching_surface()); buffer_surfaces[3][1].reset(create_matching_surface());
 #endif
 
@@ -617,25 +617,22 @@ int main(int argc, char* argv[])
         auto render_all = [&target_surface, &buffer_surfaces, &textures, &num_frames](shader_inputs inputs, SDL_Rect viewport, const std::atomic_bool& cancel) -> auto
         {
             int buffer_surface_index = 1 - (num_frames & 1);
-#ifdef SAMPLE_HAS_BUFA
+#ifdef SAMPLE_HAS_BUFFER_A
             set_textures(inputs, &textures[4]);
-            render(shadertoy::bufA, inputs, buffer_surfaces[0][buffer_surface_index].get(), viewport, cancel);
+            render(shadertoy::buffer_a, inputs, buffer_surfaces[0][buffer_surface_index].get(), viewport, cancel);
 #endif
-#ifdef SAMPLE_HAS_BUFB
+#ifdef SAMPLE_HAS_BUFFER_B
             set_textures(inputs, &textures[8]);
-            render(shadertoy::bufB, inputs, buffer_surfaces[1][buffer_surface_index].get(), viewport, cancel);
+            render(shadertoy::buffer_b, inputs, buffer_surfaces[1][buffer_surface_index].get(), viewport, cancel);
 #endif
-#ifdef SAMPLE_HAS_BUFC
+#ifdef SAMPLE_HAS_BUFFER_C
             set_textures(inputs, &textures[12]);
-            render(shadertoy::bufC, inputs, buffer_surfaces[2][buffer_surface_index].get(), viewport, cancel);
+            render(shadertoy::buffer_c, inputs, buffer_surfaces[2][buffer_surface_index].get(), viewport, cancel);
 #endif
-#ifdef SAMPLE_HAS_BUFD
+#ifdef SAMPLE_HAS_BUFFER_D
             set_textures(inputs, &textures[16]);
-            render(shadertoy::bufD, inputs, buffer_surfaces[3][buffer_surface_index].get(), viewport, cancel);
+            render(shadertoy::buffer_d, inputs, buffer_surfaces[3][buffer_surface_index].get(), viewport, cancel);
 #endif
-
-            // https://www.shadertoy.com/view/WdVXWy
-
             set_textures(inputs, &textures[0]);
             return render(shadertoy::image, inputs, target_surface.get(), viewport, cancel);
         };

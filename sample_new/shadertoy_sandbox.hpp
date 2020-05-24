@@ -31,19 +31,19 @@ namespace shadertoy
 
     swizzle::vec4 image(const shader_inputs& input, swizzle::vec2 fragCoord);
 
-#ifdef SAMPLE_HAS_BUFA
-    swizzle::vec4 bufA(const shader_inputs& input, swizzle::vec2 fragCoord);
+#ifdef SAMPLE_HAS_BUFFER_A
+    swizzle::vec4 buffer_a(const shader_inputs& input, swizzle::vec2 fragCoord);
 #endif
 
-#ifdef SAMPLE_HAS_BUFB
-    swizzle::vec4 bufB(const shader_inputs& input, swizzle::vec2 fragCoord);
+#ifdef SAMPLE_HAS_BUFFER_B
+    swizzle::vec4 buffer_b(const shader_inputs& input, swizzle::vec2 fragCoord);
 #endif
 
-#ifdef SAMPLE_HAS_BUFC
-    swizzle::vec4 bufC(const shader_inputs& input, swizzle::vec2 fragCoord);
+#ifdef SAMPLE_HAS_BUFFER_C
+    swizzle::vec4 buffer_c(const shader_inputs& input, swizzle::vec2 fragCoord);
 #endif
 
-#ifdef SAMPLE_HAS_BUFD
-    swizzle::vec4 bufD(const shader_inputs& input, swizzle::vec2 fragCoord);
+#ifdef SAMPLE_HAS_BUFFER_D
+    swizzle::vec4 buffer_d(const shader_inputs& input, swizzle::vec2 fragCoord);
 #endif
 }
