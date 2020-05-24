@@ -98,7 +98,11 @@ struct _cxxswizzle_fragment_shader : shadertoy::shader_inputs
         return clamp(gl_FragColor, vec4(0), vec4(1));
     }
 
+    #cmakedefine FRAG_HAS_COMMON_INCLUDE
+    #ifdef FRAG_HAS_COMMON_INCLUDE
     #include "@FRAG_COMMON_INCLUDE@"
+    #endif
+
     #include "@FRAG_PATH@"
 };
 

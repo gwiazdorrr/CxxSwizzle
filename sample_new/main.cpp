@@ -144,7 +144,6 @@ static render_stats render(pixel_func func, shader_inputs uniforms, SDL_Surface*
         height_per_thread = std::max(rows_per_batch, height_per_thread);
 
 
-
         int height_start = p_min_aligned.y + thread_num * height_per_thread;
         int height_end = height_start + height_per_thread;
 
@@ -266,7 +265,7 @@ void from_surface(swizzle::naive_sampler_data& sampler, const SDL_Surface* surfa
     sampler.bytes = reinterpret_cast<uint8_t*>(surface->pixels);
     sampler.width = surface->w;
     sampler.height = surface->h;
-    sampler.pitch = surface->w;
+    sampler.pitch_bytes = surface->pitch;
     sampler.bytes_per_pixel = surface->format->BytesPerPixel;
 
     sampler.rshift = surface->format->Rshift;
@@ -525,11 +524,21 @@ int main(int argc, char* argv[])
     printf("\n");
     printf("--- Textures: ---\n");
     
-    for (int i = 0; i < size(textures); ++i)
     {
-        if (textures[i].path)
+        const char* channel_prefix[] = 
         {
-            printf("iChannel%d: %s\n", i, textures[i].path);
+            "",
+            "bufA.",
+            "bufB.",
+            "bufC.",
+            "bufD."
+        };
+        for (int i = 0; i < size(textures); ++i)
+        {
+            if (textures[i].path)
+            {
+                printf("%siChannel%d: %s\n", channel_prefix[i / shadertoy::num_samplers], i % shadertoy::num_samplers, textures[i].path);
+            }
         }
     }
     printf("\n");

@@ -71,10 +71,6 @@ if (BUILD_SIMD_SAMPLE)
     set (Vc_INCLUDE_DIR ${VC_INSTALL}/include)
 endif()
 
-
-# TODO iChannelX
-# TODO BufC
-
 get_subdir_list(SAMPLES_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
 
 foreach(SAMPLE_DIR ${SAMPLES_DIRS})
@@ -97,11 +93,13 @@ foreach(SAMPLE_DIR ${SAMPLES_DIRS})
     endforeach()
 
     unset(FRAG_COMMON_INCLUDE)
+    unset(FRAG_HAS_COMMON_INCLUDE)
     foreach(SHADER ${SHADERS})
         get_filename_component(SHADER_NAME_SANITIZED ${SHADER} NAME_WE)
         string(TOLOWER ${SHADER_NAME_SANITIZED} SHADER_NAME_SANITIZED_LOWER)
         if (SHADER_NAME_SANITIZED STREQUAL "common")
             set(FRAG_COMMON_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/${SHADER}")
+            set(FRAG_HAS_COMMON_INCLUDE True)
         endif()
     endforeach()
 
@@ -139,12 +137,15 @@ foreach(SAMPLE_DIR ${SAMPLES_DIRS})
 
     configure_file("config.hpp.in" "${GEN_CONFIG_PATH}")
 
-    # no stupid grouping
-    set(FILES main.cpp ${GEN_SHADERS} shadertoy_sandbox.hpp ${SHADERS} ${GEN_CONFIG_PATH} ${COMPILER_SPECIFIC_FILES})
-    source_group("" FILES ${FILES} )
+    set(CODEGEN_TEMPLATE_FILES "shadertoy_sandbox.cpp.in" "config.hpp.in")
+    set(TARGET_FILES main.cpp ${GEN_SHADERS} shadertoy_sandbox.hpp ${SHADERS} ${GEN_CONFIG_PATH} ${COMPILER_SPECIFIC_FILES} ${CODEGEN_TEMPLATE_FILES})
+    source_group("shaders" FILES ${SHADERS} )
+    source_group("codegen" FILES ${GEN_SHADERS} ${GEN_CONFIG_PATH} )
+    source_group("codegen-templates" FILES ${CODEGEN_TEMPLATE_FILES} )
+    source_group("" FILES main.cpp shadertoy_sandbox.hpp ${COMPILER_SPECIFIC_FILES})
 
     set(SAMPLE_NAME "scalar_${SAMPLE_NAME_SANITIZED}")
-    add_executable(${SAMPLE_NAME} ${FILES})
+    add_executable(${SAMPLE_NAME} ${TARGET_FILES})
     target_include_directories(${SAMPLE_NAME} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include ${GEN_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(${SAMPLE_NAME} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image)
     set_target_properties(${SAMPLE_NAME} PROPERTIES CXX_STANDARD 17)
@@ -152,7 +153,7 @@ foreach(SAMPLE_DIR ${SAMPLES_DIRS})
 
     if (BUILD_SIMD_SAMPLE)
         set(SAMPLE_NAME "simd_${SAMPLE_NAME_SANITIZED}")
-        add_executable(${SAMPLE_NAME} ${FILES})
+        add_executable(${SAMPLE_NAME} ${TARGET_FILES})
         target_include_directories(${SAMPLE_NAME} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include ${GEN_INCLUDE_DIR} ${Vc_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
         target_link_libraries(${SAMPLE_NAME} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image ${Vc_LIBRARIES})
         set_target_properties(${SAMPLE_NAME} PROPERTIES CXX_STANDARD 17)

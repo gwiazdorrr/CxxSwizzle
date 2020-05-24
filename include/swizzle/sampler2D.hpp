@@ -36,7 +36,7 @@ namespace swizzle
 
         uint8_t* bytes = nullptr;
         unsigned bytes_per_pixel = 0;
-        unsigned pitch = 0;
+        unsigned pitch_bytes = 0;
 
         const size_t checkers_size = 16;
     };
@@ -114,8 +114,8 @@ namespace swizzle
             uv.y = 1.0f - uv.y;
 
             ivec2 icoord;
-            icoord.x = min(data->width - 1, static_cast<int32_type>(uv.x * data->width));
-            icoord.y = min(data->height - 1, static_cast<int32_type>(uv.y * data->height));
+            icoord.x = max(0, min(data->width - 1, static_cast<int32_type>(uv.x * data->width)));
+            icoord.y = max(0, min(data->height - 1, static_cast<int32_type>(uv.y * data->height)));
             return fetch(icoord);
         }
 
@@ -132,7 +132,7 @@ namespace swizzle
                 typename batch_traits<int32_type>::aligned_storage_type istorage;
                 auto ibuffer = reinterpret_cast<int32_t*>(&istorage);
                 {
-                    int32_type index = (coord.y * data->pitch + coord.x) * data->bytes_per_pixel;
+                    int32_type index = coord.y * data->pitch_bytes + coord.x * data->bytes_per_pixel;
                     store_aligned(index, ibuffer);
                 }
 
