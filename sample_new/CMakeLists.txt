@@ -1,6 +1,59 @@
 # CxxSwizzle
 # Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
+macro(sanitize_name result name)
+    string(TOLOWER ${name} ${result})
+    string(REPLACE " " "_" ${result} ${${result}})
+    string(REPLACE "&" "and" ${result} ${${result}})
+endmacro()
+
+
+include(JSONParser.cmake)
+set(SHADERTOY_API_KEY "" CACHE STRING "Shadertoy API Key (for shader fetch)")
+set(SHADERTOY_SHADER_TO_FETCH "" CACHE STRING "Download Shader")
+option(SHADERTOY_FETCH "FETCH ME")
+if (SHADERTOY_FETCH)
+    file(DOWNLOAD "https://www.shadertoy.com/api/v1/shaders/${SHADERTOY_SHADER_TO_FETCH}?key=${SHADERTOY_API_KEY}" "${CMAKE_CURRENT_SOURCE_DIR}/test.json")
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/test.json" SHADERTOY_JSON)
+    sbeParseJson(SHADER SHADERTOY_JSON)
+    set(SHADER_NAME ${SHADER.Shader.info.name})
+
+
+    foreach(var ${SHADER})
+        message("${var} = ${${var}}")
+    endforeach()
+
+    # create directory
+    sanitize_name(SHADER_NAME_SANITIZED ${SHADER_NAME})
+    
+    set(SHADER_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_NAME_SANITIZED}")
+    file(MAKE_DIRECTORY ${SHADER_DIRECTORY})
+    file(WRITE "${SHADER_DIRECTORY}/README.md" "https://www.shadertoy.com/view/${SHADERTOY_SHADER_TO_FETCH}" )
+
+    foreach(r ${SHADER.Shader.renderpass})
+        set(RENDERPASS SHADER.Shader.renderpass_${r})
+        sanitize_name(RENDER_PASS_NAME ${${RENDERPASS}.name})
+        file(WRITE "${SHADER_DIRECTORY}/${RENDER_PASS_NAME}.frag" "${${RENDERPASS}.code}")
+
+        set(INPUT_PREFIX "${RENDER_PASS_NAME}_")
+        if(RENDER_PASS_NAME STREQUAL "image")
+            set(INPUT_PREFIX "")
+        endif()
+
+        foreach(i ${${RENDERPASS}.inputs})
+            set(INPUT ${RENDERPASS}.inputs_${i})
+            if (${INPUT}.ctype STREQUAL "texture")
+                get_filename_component(INPUT_EXTENSION ${${INPUT}.src} EXT)
+                file(DOWNLOAD "https://www.shadertoy.com${${INPUT}.src}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}iChannel${${INPUT}.channel}${INPUT_EXTENSION}")
+            endif()
+
+        endforeach()
+
+    endforeach()
+
+    sbeClearJson(SHADER)
+endif()
+
 macro(get_subdir_list result curdir)
     file(GLOB children RELATIVE ${curdir} ${curdir}/*)
     set(dirlist "")
