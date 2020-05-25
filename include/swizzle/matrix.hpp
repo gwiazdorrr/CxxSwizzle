@@ -275,10 +275,10 @@ namespace swizzle
             detail::static_for<CellIdx, c_limit>([&](size_t i) -> void { cell(i % num_rows, i / num_rows) = v[i - CellIdx]; });
         }
 
-        template <size_t CellIdx>
-        void compose(const scalar_type& s)
+        template <size_t CellIdx, typename SomeScalarType>
+        void compose(SomeScalarType&& scalar, std::enable_if_t<std::is_constructible_v<scalar_type, SomeScalarType>>* = nullptr)
         {
-            cell( CellIdx % num_rows, CellIdx / num_rows ) = s;
+            cell(CellIdx % num_rows, CellIdx / num_rows) = scalar_type(std::forward<SomeScalarType>(scalar));
         }
 
     private:
