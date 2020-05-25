@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <swizzle/detail/utils.h>
 #include <swizzle/detail/vector_traits.h>
+#include <swizzle/detail/indexed_proxy_storage.hpp>
 
 namespace swizzle
 {
@@ -16,12 +17,8 @@ namespace swizzle
         //! The type is convertible to the vector. It also forwards all unary arithmetic operators. Binary
         //! operations hopefully fallback to the vector ones.
         template <class VectorType, class DataType, size_t... Indices>
-        class indexed_proxy
+        struct indexed_proxy : indexed_proxy_storage<DataType, std::remove_reference_t<decltype(std::declval<DataType>()[0])>, Indices...>
         {
-            //! The data. Must support subscript operator.
-            DataType data;
-
-        public:
             // Can easily count now since -1 must be continuous
             static const size_t num_of_components = sizeof...(Indices);
             static_assert(num_of_components >= 2, "Must be at least 2 components");
@@ -32,8 +29,6 @@ namespace swizzle
             // Use the traits to define vector and scalar
             typedef VectorType vector_type;
             typedef VectorType decay_type;
-
-        public:
 
             //! Convert proxy into a vector.
             vector_type decay() const
@@ -98,13 +93,13 @@ namespace swizzle
             template <size_t... VectorIndices>
             indexed_proxy& assign_impl(const vector_type& vec, std::index_sequence<VectorIndices...>)
             {
-                return ((data[Indices] = vec.data[VectorIndices]), ..., *this);
+                return ((this->data[Indices] = vec.data[VectorIndices]), ..., *this);
             }
 
             template <size_t... VectorIndices>
             vector_type& decay_impl(vector_type& vec, std::index_sequence<VectorIndices...>) const
             {
-                return ((vec.data[VectorIndices] = data[Indices]), ..., vec);
+                return ((vec.data[VectorIndices] = this->data[Indices]), ..., vec);
             }
         };
 
