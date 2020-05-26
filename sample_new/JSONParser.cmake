@@ -214,8 +214,14 @@ macro(_sbeParseValue prefix)
                 endif()                
                 string(SUBSTRING "${json_string}" ${json_index} 1 json_char)
                 if(NOT "\"" STREQUAL "${json_char}")
-                    # if it is not " then copy also escape character
-                    set(json_char "\\${json_char}")
+                    if ("u" STREQUAL "${json_char}")
+                        # ignore unicode characters for now
+                        math(EXPR json_index "${json_index} + 4")
+                        set(json_char "")
+                    else()
+                        # if it is not " then copy also escape character
+                        set(json_char "\\${json_char}")
+                    endif()
                 endif()
             endif()      
               

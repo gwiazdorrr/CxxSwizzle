@@ -47,6 +47,7 @@ namespace
     #define bool bool_type
     #define lowp
     #define highp
+    #define final final_
     // char is not a type in glsl so can be used freely
     #define char definitely_not_a_char
 

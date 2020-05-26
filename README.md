@@ -108,3 +108,10 @@ This shows up a lot in comments - why use CxxSwizzle and not GLM (http://glm.g-t
 
 Other, "ideological" differences:
 * GLM is code and macro heavy (for what it provides), while CxxSwizzle is compact, clean and mostly template based
+
+
+What's not working
+---------------------------------------------------
+- ternary operator involving swizzles, like `vec2 p = flag ? v.xy : v.xz;`
+- array syntax: `vec3 a[2] = vec3[](vec3(0, 0, 1), vec3(1, 0, 0))`
+- SIMD: array indexing with int (unless an actual int constant)

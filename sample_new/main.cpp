@@ -1,10 +1,6 @@
 // CxxSwizzle
 // Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
-
-
-
-
 #include "shadertoy_sandbox.hpp"
 
 using namespace swizzle;
