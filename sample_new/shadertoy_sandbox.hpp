@@ -29,21 +29,21 @@ namespace shadertoy
         //float_type iSampleRate;       // sound sample rate (i.e., 44100)
     };
 
-    swizzle::vec4 image(const shader_inputs& input, swizzle::vec2 fragCoord);
+    swizzle::vec4 image(const shader_inputs& uniforms, swizzle::vec2 fragCoord, swizzle::vec4 prevFragColor, swizzle::bool_type* discarded);
 
 #ifdef SAMPLE_HAS_BUFFER_A
-    swizzle::vec4 buffer_a(const shader_inputs& input, swizzle::vec2 fragCoord);
+    swizzle::vec4 buffer_a(const shader_inputs& input, swizzle::vec2 fragCoord, swizzle::vec4 prevFragColor, swizzle::bool_type* discarded);
 #endif
 
 #ifdef SAMPLE_HAS_BUFFER_B
-    swizzle::vec4 buffer_b(const shader_inputs& input, swizzle::vec2 fragCoord);
+    swizzle::vec4 buffer_b(const shader_inputs& input, swizzle::vec2 fragCoord, swizzle::vec4 prevFragColor, swizzle::bool_type* discarded);
 #endif
 
 #ifdef SAMPLE_HAS_BUFFER_C
-    swizzle::vec4 buffer_c(const shader_inputs& input, swizzle::vec2 fragCoord);
+    swizzle::vec4 buffer_c(const shader_inputs& input, swizzle::vec2 fragCoord, swizzle::vec4 prevFragColor, swizzle::bool_type* discarded);
 #endif
 
 #ifdef SAMPLE_HAS_BUFFER_D
-    swizzle::vec4 buffer_d(const shader_inputs& input, swizzle::vec2 fragCoord);
+    swizzle::vec4 buffer_d(const shader_inputs& input, swizzle::vec2 fragCoord, swizzle::vec4 prevFragColor, swizzle::bool_type* discarded);
 #endif
 }

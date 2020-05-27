@@ -3,9 +3,18 @@
 cmake_minimum_required(VERSION 3.3)
 cmake_policy(SET CMP0057 NEW)
 
+include(JSONParser.cmake)
+
 macro(sanitize_name result name)
     string(TOLOWER ${name} ${result})
-    string(REGEX REPLACE "[ \(\)&\]\[!:]" "_" result "${result}")
+    string(REPLACE " " "_" ${result} ${${result}})
+    string(REPLACE "&" "and" ${result} ${${result}})
+    string(REPLACE "[" "_" ${result} ${${result}})
+    string(REPLACE "]" "_" ${result} ${${result}})
+    string(REPLACE "!" "_" ${result} ${${result}})
+    string(REPLACE ":" "_" ${result} ${${result}})
+    string(REPLACE "\"" "_" ${result} ${${result}})
+    string(REPLACE "'" "_" ${result} ${${result}})
 endmacro()
 
 macro(create_file path contents msg)
@@ -18,96 +27,107 @@ macro(download_file url path msg)
     file(DOWNLOAD ${url} ${path})
 endmacro()
 
-include(JSONParser.cmake)
+macro(download_shadertoy shader_id api_key)
+    set(SHADERTOY_JSON_PATH "${CMAKE_CURRENT_BINARY_DIR}/${shader_id}.json")
+    set(SHADERTOY_QUERY "https://www.shadertoy.com/api/v1/shaders/${shader_id}?key=${api_key}")
+        
+    download_file(${SHADERTOY_QUERY} ${SHADERTOY_JSON_PATH} "(Shadertoy JSON shader description)")
+
+    message(STATUS "Parsing ${SHADERTOY_JSON_PATH}")
+    file(READ "${SHADERTOY_JSON_PATH}" SHADERTOY_JSON)
+    sbeParseJson(SHADER SHADERTOY_JSON)
+
+    if (SHADER.Error)
+        if (SHADER.Error STREQUAL "Shader not found")
+            message(FATAL_ERROR "Shartoy API returned an error: ${SHADER.Error}.\nThis happens if shader is not published "
+            "as public+api. Anyway, this shader needs to be downloaded manually (see README.md for instructions)")
+        else()
+            message(FATAL_ERROR "Shartoy API returned an error: ${SHADER.Error}.")
+        endif()
+    endif()
+
+    # debug
+    # foreach(var ${SHADER})
+    #     message("${var} = ${${var}}") 
+    # endforeach()
+
+    set(SHADER_NAME ${SHADER.Shader.info.name})
+
+    # create directory
+    sanitize_name(SHADER_NAME_SANITIZED ${SHADER_NAME})
+    
+    set(SHADER_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_NAME_SANITIZED}")
+
+    file(MAKE_DIRECTORY ${SHADER_DIRECTORY})
+    create_file("${SHADER_DIRECTORY}/README.md" "https://www.shadertoy.com/view/${shader_id}" "" )
+
+    foreach(r ${SHADER.Shader.renderpass})
+        set(RENDERPASS SHADER.Shader.renderpass_${r})
+            
+        if (${RENDERPASS}.name)
+            sanitize_name(RENDER_PASS_NAME ${${RENDERPASS}.name})
+        else()
+            # seems this fallback is needed sometimes
+            sanitize_name(RENDER_PASS_NAME ${${RENDERPASS}.type})
+        endif()
+
+        string(REPLACE "buf_" "buffer_" RENDER_PASS_NAME ${RENDER_PASS_NAME})
+
+        message(STATUS "Creating ${SHADER_DIRECTORY}/${RENDER_PASS_NAME}.frag (Shader pass)")
+        file(WRITE "${SHADER_DIRECTORY}/${RENDER_PASS_NAME}.frag" "${${RENDERPASS}.code}")
+            
+        set(INPUT_PREFIX "${RENDER_PASS_NAME}_")
+        if(RENDER_PASS_NAME STREQUAL "image")
+            set(INPUT_PREFIX "")
+        endif()
+
+
+        foreach(i ${${RENDERPASS}.inputs})
+            set(INPUT ${RENDERPASS}.inputs_${i})
+            set(INPUT_INDEX ${${INPUT}.channel})
+            if (${INPUT}.ctype STREQUAL "texture")
+                get_filename_component(INPUT_EXTENSION ${${INPUT}.src} EXT)
+                download_file("https://www.shadertoy.com${${INPUT}.src}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}${INPUT_EXTENSION}" "")
+            elseif(${INPUT}.ctype STREQUAL "buffer")
+                set(TARGET_FILE "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}.txt")
+                if(${INPUT}.src STREQUAL "/media/previz/buffer00.png")
+                    create_file("${TARGET_FILE}" "buffer_a" "(Redirecting to buffer_a)")
+                elseif(${INPUT}.src STREQUAL "/media/previz/buffer01.png")
+                    create_file("${TARGET_FILE}" "buffer_b" "(Redirecting to buffer_b)")
+                elseif(${INPUT}.src STREQUAL "/media/previz/buffer02.png")
+                    create_file("${TARGET_FILE}" "buffer_c" "(Redirecting to buffer_c)")
+                elseif(${INPUT}.src STREQUAL "/media/previz/buffer03.png")
+                    create_file("${TARGET_FILE}" "buffer_d" "(Redirecting to buffer_d)")
+                else()
+                    message(WARNING "Unable to guess buffer index: ${${INPUT}.src} (channel ${INPUT_INDEX})")
+                endif()
+            elseif(${INPUT}.ctype STREQUAL "keyboard")
+                set(TARGET_FILE "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}.txt")
+                create_file("${TARGET_FILE}" "keyboard" "(Redirecting to keyboard)")
+            elseif(${INPUT}.ctype)
+                message(WARNING "Channel type ${${INPUT}.ctype} not supported (channel ${INPUT_INDEX})")
+            endif()
+
+        endforeach()
+
+    endforeach()
+
+    sbeClearJson(SHADER)
+endmacro()
+
 
 set(SHADERTOY_API_KEY "BtntM7" CACHE STRING "Shadertoy API Key (go to https://www.shadertoy.com/howto#q2 for details)")
 mark_as_advanced(SHADERTOY_API_KEY)
 
 set(SHADERTOY_SHADER_ID "" CACHE STRING "Download Shader")
 
+
 option(SHADERTOY_DOWNLOAD_SHADER "Download shader defined with SHADERTOY_SHADER_ID. Shader needs to be public and not unlisted.")
 if (SHADERTOY_DOWNLOAD_SHADER)
     if (NOT SHADERTOY_SHADER_ID)
         message(FATAL_ERROR "SHADERTOY_SHADER_ID needs to be set")
     else()
-        set(SHADERTOY_JSON_PATH "${CMAKE_CURRENT_BINARY_DIR}/${SHADERTOY_SHADER_ID}.json")
-        set(SHADERTOY_QUERY "https://www.shadertoy.com/api/v1/shaders/${SHADERTOY_SHADER_ID}?key=${SHADERTOY_API_KEY}")
-        
-        download_file(${SHADERTOY_QUERY} ${SHADERTOY_JSON_PATH} "(Shadertoy JSON shader description)")
-
-        message(STATUS "Parsing ${SHADERTOY_JSON_PATH}")
-        file(READ "${SHADERTOY_JSON_PATH}" SHADERTOY_JSON)
-        sbeParseJson(SHADER SHADERTOY_JSON)
-
-        if (SHADER.Error)
-            if (SHADER.Error STREQUAL "Shader not found")
-                message(FATAL_ERROR "Shartoy API returned an error: ${SHADER.Error}.\nThis happens if shader is not published "
-                "as public+api. Anyway, this shader needs to be downloaded manually (see README.md for instructions)")
-            else()
-                message(FATAL_ERROR "Shartoy API returned an error: ${SHADER.Error}.")
-            endif()
-        endif()
-
-        # debug
-        # foreach(var ${SHADER})
-        #     message("${var} = ${${var}}") 
-        # endforeach()
-
-        set(SHADER_NAME ${SHADER.Shader.info.name})
-
-        # create directory
-        sanitize_name(SHADER_NAME_SANITIZED ${SHADER_NAME})
-    
-        set(SHADER_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_NAME_SANITIZED}")
-
-        file(MAKE_DIRECTORY ${SHADER_DIRECTORY})
-        create_file("${SHADER_DIRECTORY}/README.md" "https://www.shadertoy.com/view/${SHADERTOY_SHADER_ID}" "" )
-
-        foreach(r ${SHADER.Shader.renderpass})
-            set(RENDERPASS SHADER.Shader.renderpass_${r})
-            sanitize_name(RENDER_PASS_NAME ${${RENDERPASS}.name})
-
-            string(REPLACE "buf_" "buffer_" RENDER_PASS_NAME ${RENDER_PASS_NAME})
-
-            create_file("${SHADER_DIRECTORY}/${RENDER_PASS_NAME}.frag" "${${RENDERPASS}.code}" "(Shader pass)")
-
-            set(INPUT_PREFIX "${RENDER_PASS_NAME}_")
-            if(RENDER_PASS_NAME STREQUAL "image")
-                set(INPUT_PREFIX "")
-            endif()
-
-
-            foreach(i ${${RENDERPASS}.inputs})
-                set(INPUT ${RENDERPASS}.inputs_${i})
-                set(INPUT_INDEX ${${INPUT}.channel})
-                if (${INPUT}.ctype STREQUAL "texture")
-                    get_filename_component(INPUT_EXTENSION ${${INPUT}.src} EXT)
-                    download_file("https://www.shadertoy.com${${INPUT}.src}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}${INPUT_EXTENSION}" "")
-                elseif(${INPUT}.ctype STREQUAL "buffer")
-                    set(TARGET_FILE "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}.txt")
-                    if(${INPUT}.src STREQUAL "/media/previz/buffer00.png")
-                        create_file("${TARGET_FILE}" "buffer_a" "(Redirecting to buffer_a)")
-                    elseif(${INPUT}.src STREQUAL "/media/previz/buffer01.png")
-                        create_file("${TARGET_FILE}" "buffer_b" "(Redirecting to buffer_b)")
-                    elseif(${INPUT}.src STREQUAL "/media/previz/buffer02.png")
-                        create_file("${TARGET_FILE}" "buffer_c" "(Redirecting to buffer_c)")
-                    elseif(${INPUT}.src STREQUAL "/media/previz/buffer03.png")
-                        create_file("${TARGET_FILE}" "buffer_d" "(Redirecting to buffer_d)")
-                    else()
-                        message(WARNING "Unable to guess buffer index: ${${INPUT}.src} (channel ${INPUT_INDEX})")
-                    endif()
-                elseif(${INPUT}.ctype STREQUAL "keyboard")
-                    set(TARGET_FILE "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}.txt")
-                    create_file("${TARGET_FILE}" "keyboard" "(Redirecting to keyboard)")
-                elseif(${INPUT}.ctype)
-                    message(WARNING "Channel type ${${INPUT}.ctype} not supported (channel ${INPUT_INDEX})")
-                endif()
-
-            endforeach()
-
-        endforeach()
-
-        sbeClearJson(SHADER)
+        download_shadertoy(${SHADERTOY_SHADER_ID} ${SHADERTOY_API_KEY})
     endif()
 endif()
 
@@ -182,6 +202,22 @@ if (BUILD_SIMD_SAMPLE)
 endif()
 
 get_subdir_list(SAMPLES_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
+
+set(CUSTOM_STRUCTS Ray;ray CACHE STRING "Download Shader")
+set(FRAG_CUSTOM_STRUCTS_SUPPORT "")
+foreach(STRUCT ${CUSTOM_STRUCTS})
+    set(FRAG_CUSTOM_STRUCTS_SUPPORT "${FRAG_CUSTOM_STRUCTS_SUPPORT}        struct ${STRUCT};\n")
+endforeach()
+set(FRAG_CUSTOM_STRUCTS_SUPPORT     "${FRAG_CUSTOM_STRUCTS_SUPPORT}        struct inout_proxy : builtin_inout_proxy\n")
+set(FRAG_CUSTOM_STRUCTS_SUPPORT     "${FRAG_CUSTOM_STRUCTS_SUPPORT}        {\n")
+foreach(STRUCT ${CUSTOM_STRUCTS})
+    set(FRAG_CUSTOM_STRUCTS_SUPPORT "${FRAG_CUSTOM_STRUCTS_SUPPORT}            using ${STRUCT} = ${STRUCT}&;\n")
+endforeach()
+set(FRAG_CUSTOM_STRUCTS_SUPPORT     "${FRAG_CUSTOM_STRUCTS_SUPPORT}        };\n")
+foreach(STRUCT ${CUSTOM_STRUCTS})
+    set(FRAG_CUSTOM_STRUCTS_SUPPORT "${FRAG_CUSTOM_STRUCTS_SUPPORT}        #define ${STRUCT}(...) ${STRUCT}\{ __VA_ARGS__ \}\n")
+endforeach()
+
 
 foreach(SAMPLE_DIR ${SAMPLES_DIRS})
     message(STATUS "Sample ${SAMPLE_DIR}")

@@ -110,8 +110,32 @@ Other, "ideological" differences:
 * GLM is code and macro heavy (for what it provides), while CxxSwizzle is compact, clean and mostly template based
 
 
-What's not working
+What's not working out of the box
 ---------------------------------------------------
+- constructors for structs: `struct Foo { float x; float y; }; Foo(0.0, 1.0);`
+Workaround: Add `Foo` to `CUSTOM_STRUCTS` CMake list
+
+- `out/inout` argument modifiers for structs: `void foo(out Foo f) {}`
+Workaround: Add `Foo` to `CUSTOM_STRUCTS` CMake list
+
 - ternary operator involving swizzles, like `vec2 p = flag ? v.xy : v.xz;`
-- array syntax: `vec3 a[2] = vec3[](vec3(0, 0, 1), vec3(1, 0, 0))`
+Workaroud: `vec2 p = flag ? (vec2)v.xy : v.xz`;
+
+- array syntax: `int a[2] = int[](0, 1);`
+Workaround: ARRAY(float, a, 0, 1);
+If you intend to move back and forth between CxxSwizzle and Shadertoy, add this to your shader too:
+    #ifndef ARRAY
+    #define ARRAY(name, type, ...) type name[] = type[] ( __VA_ARGS__ )
+    #endif
+
+
+
+
+- function declarations: `void foo();`
+Workaround: Just remove them or:
+    #ifndef CXXSWIZZLE
+    void foo();
+    #endif
+
 - SIMD: array indexing with int (unless an actual int constant)
+Workaround: Hopeless.

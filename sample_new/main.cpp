@@ -76,7 +76,7 @@ struct sampler_data : swizzle::naive_sampler_data
     int buffer_index = -1;
 };
 
-using pixel_func = swizzle::vec4(*)(const shader_inputs& input, swizzle::vec2 fragCoord);
+using pixel_func = swizzle::vec4(*)(const shader_inputs& input, swizzle::vec2 fragCoord, swizzle::vec4 fragColor, bool* discarded);
 
 static render_stats render(pixel_func func, shader_inputs uniforms, SDL_Surface* bmp, SDL_Rect viewport, const std::atomic_bool& cancelled)
 {
@@ -172,10 +172,14 @@ static render_stats render(pixel_func func, shader_inputs uniforms, SDL_Surface*
 
             uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch + p_min_aligned.x * 3;
 
+            
+
             int x;
             for (x = p_min_aligned.x; x < p_max.x; x += columns_per_batch)
             {
-                auto color = func(uniforms, vec2(static_cast<float>(x) + x_offsets, frag_coord_y));
+                swizzle::vec4 previousColor;
+
+                auto color = func(uniforms, vec2(static_cast<float>(x) + x_offsets, frag_coord_y), {}, nullptr);
                 color *= 255.0f + 0.5f;
 
                 store_aligned(static_cast<swizzle::uint_type>(color.r), pr);
@@ -284,7 +288,7 @@ void from_surface(swizzle::naive_sampler_data& sampler, const SDL_Surface* surfa
         sampler.amask = surface->format->Amask;
     }
 }
-
+// TODO: sound
 bool load_texture(swizzle::naive_sampler_data& sampler, const char* name)
 {
 #ifdef SAMPLE_SDL2IMAGE_FOUND
@@ -613,21 +617,24 @@ int main(int argc, char* argv[])
         auto render_all = [&target_surface, &buffer_surfaces, &textures, &num_frames](shader_inputs inputs, SDL_Rect viewport, const std::atomic_bool& cancel) -> auto
         {
             int buffer_surface_index = 1 - (num_frames & 1);
+
+            SDL_Rect full_viewport = { 0, 0, target_surface->w, target_surface->h };
+
 #ifdef SAMPLE_HAS_BUFFER_A
             set_textures(inputs, &textures[4]);
-            render(shadertoy::buffer_a, inputs, buffer_surfaces[0][buffer_surface_index].get(), viewport, cancel);
+            render(shadertoy::buffer_a, inputs, buffer_surfaces[0][buffer_surface_index].get(), full_viewport, cancel);
 #endif
 #ifdef SAMPLE_HAS_BUFFER_B
             set_textures(inputs, &textures[8]);
-            render(shadertoy::buffer_b, inputs, buffer_surfaces[1][buffer_surface_index].get(), viewport, cancel);
+            render(shadertoy::buffer_b, inputs, buffer_surfaces[1][buffer_surface_index].get(), full_viewport, cancel);
 #endif
 #ifdef SAMPLE_HAS_BUFFER_C
             set_textures(inputs, &textures[12]);
-            render(shadertoy::buffer_c, inputs, buffer_surfaces[2][buffer_surface_index].get(), viewport, cancel);
+            render(shadertoy::buffer_c, inputs, buffer_surfaces[2][buffer_surface_index].get(), full_viewport, cancel);
 #endif
 #ifdef SAMPLE_HAS_BUFFER_D
             set_textures(inputs, &textures[16]);
-            render(shadertoy::buffer_d, inputs, buffer_surfaces[3][buffer_surface_index].get(), viewport, cancel);
+            render(shadertoy::buffer_d, inputs, buffer_surfaces[3][buffer_surface_index].get(), full_viewport, cancel);
 #endif
             set_textures(inputs, &textures[0]);
             return render(shadertoy::image, inputs, target_surface.get(), viewport, cancel);
@@ -813,7 +820,7 @@ int main(int argc, char* argv[])
             {
                 if (blit_now || frameReady || is_shift_selecting)
                 {
-                    SDL_UpdateTexture(target_texture.get(), NULL, target_surface->pixels, target_surface->pitch);
+                    SDL_UpdateTexture(target_texture.get(), &viewport, target_surface->pixels, target_surface->pitch);
                     SDL_RenderClear(renderer.get());
                     SDL_RenderCopy(renderer.get(), target_texture.get(), NULL, NULL);
 
