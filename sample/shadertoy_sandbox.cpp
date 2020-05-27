@@ -34,6 +34,58 @@ namespace inout
     using bool_type = bool_type&;
 }
 
+
+#define CXXSWIZZLE_COMBINE1(X,Y) X##Y  // helper macro
+#define CXXSWIZZLE_COMBINE(X,Y) CXXSWIZZLE_COMBINE1(X,Y)
+#define CXXSWIZZLE_TEXTURE_PATH_HINT(i, name) static inline auto CXXSWIZZLE_COMBINE(_cxxswizzle_texture_path, i) = []() { return ::shadertoy::default_texture_paths[i] = name; }();
+
+// change meaning of glsl keywords to match sandbox
+#define uniform extern
+#define in
+#define out inout
+#define inout inout::
+#define float float_type
+#define int  int_type
+#define uint uint_type
+#define bool bool_type
+#define lowp
+#define highp
+// char is not a type in glsl so can be used freely
+#define char definitely_not_a_char
+
+// cmath constants need to be undefined, as sometimes shaders define their own
+#undef M_E       
+#undef M_LOG2E   
+#undef M_LOG10E  
+#undef M_LN2     
+#undef M_LN10    
+#undef M_PI      
+#undef M_PI_2    
+#undef M_PI_4    
+#undef M_1_PI    
+#undef M_2_PI    
+#undef M_2_SQRTPI
+#undef M_SQRT2   
+#undef M_SQRT1_2 
+
+#ifdef CXXSWIZZLE_OVERRIDE_IF
+#define if(x) CXXSWIZZLE_OVERRIDE_IF(x)
+#endif
+#ifdef CXXSWIZZLE_OVERRIDE_ELSE
+#define else CXXSWIZZLE_OVERRIDE_ELSE
+#endif
+#ifdef CXXSWIZZLE_OVERRIDE_WHILE
+#define while(x) CXXSWIZZLE_OVERRIDE_WHILE(x)
+#endif
+#ifdef CXXSWIZZLE_OVERRIDE_CONDITION
+#define condition(x) CXXSWIZZLE_OVERRIDE_CONDITION(x)
+#endif
+
+
+#pragma warning(push)
+#pragma warning(disable: 4244) // disable return implicit conversion warning
+#pragma warning(disable: 4305) // disable truncation warning
+
 struct _cxxswizzle_fragment_shader : shadertoy::shader_inputs
 {
     vec2 gl_FragCoord;
@@ -51,57 +103,6 @@ struct _cxxswizzle_fragment_shader : shadertoy::shader_inputs
 
         return clamp(gl_FragColor, vec4(0), vec4(1));
     }
-
-    #define CXXSWIZZLE_COMBINE1(X,Y) X##Y  // helper macro
-    #define CXXSWIZZLE_COMBINE(X,Y) CXXSWIZZLE_COMBINE1(X,Y)
-    #define CXXSWIZZLE_TEXTURE_PATH_HINT(i, name) static inline auto CXXSWIZZLE_COMBINE(_cxxswizzle_texture_path, i) = []() { return ::shadertoy::default_texture_paths[i] = name; }();
-
-    // change meaning of glsl keywords to match sandbox
-    #define uniform extern
-    #define in
-    #define out inout
-    #define inout inout::
-    #define float float_type
-    #define int  int_type
-    #define uint uint_type
-    #define bool bool_type
-    #define lowp
-    #define highp
-    // char is not a type in glsl so can be used freely
-    #define char definitely_not_a_char
-
-    // cmath constants need to be undefined, as sometimes shaders define their own
-    #undef M_E       
-    #undef M_LOG2E   
-    #undef M_LOG10E  
-    #undef M_LN2     
-    #undef M_LN10    
-    #undef M_PI      
-    #undef M_PI_2    
-    #undef M_PI_4    
-    #undef M_1_PI    
-    #undef M_2_PI    
-    #undef M_2_SQRTPI
-    #undef M_SQRT2   
-    #undef M_SQRT1_2 
-
-    #ifdef CXXSWIZZLE_OVERRIDE_IF
-    #define if(x) CXXSWIZZLE_OVERRIDE_IF(x)
-    #endif
-    #ifdef CXXSWIZZLE_OVERRIDE_ELSE
-    #define else CXXSWIZZLE_OVERRIDE_ELSE
-    #endif
-    #ifdef CXXSWIZZLE_OVERRIDE_WHILE
-    #define while(x) CXXSWIZZLE_OVERRIDE_WHILE(x)
-    #endif
-    #ifdef CXXSWIZZLE_OVERRIDE_CONDITION
-    #define condition(x) CXXSWIZZLE_OVERRIDE_CONDITION(x)
-    #endif
-
-
-    #pragma warning(push)
-    #pragma warning(disable: 4244) // disable return implicit conversion warning
-    #pragma warning(disable: 4305) // disable truncation warning
 
     #include "shader_include.hpp"
 };

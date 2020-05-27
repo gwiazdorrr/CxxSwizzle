@@ -19,7 +19,6 @@ namespace swizzle
             mirror_repeat
         };
 
-        const char* path = nullptr;
         wrap_modes wrap_mode = repeat;
 
         unsigned width = 256;
@@ -37,7 +36,7 @@ namespace swizzle
 
         uint8_t* bytes = nullptr;
         unsigned bytes_per_pixel = 0;
-        unsigned pitch = 0;
+        unsigned pitch_bytes = 0;
 
         const size_t checkers_size = 16;
     };
@@ -89,6 +88,10 @@ namespace swizzle
             return sampler.sample(uv.xy);
         }
 
+        inline friend ivec2 textureSize(const this_type& sampler, int)
+        {
+            return { sampler.data->width, sampler.data->height };
+        }
     private:
         vec4 sample(const vec2& coord) const
         {
@@ -108,11 +111,11 @@ namespace swizzle
             }
 
             // OGL uses left-bottom corner as origin...
-            uv.y = 1.0f - uv.y;
+            //uv.y = 1.0f - uv.y;
 
             ivec2 icoord;
-            icoord.x = min(data->width - 1, static_cast<int32_type>(uv.x * data->width));
-            icoord.y = min(data->height - 1, static_cast<int32_type>(uv.y * data->height));
+            icoord.x = max(0, min(static_cast<int32_type>(data->width - 1), static_cast<int32_type>(uv.x * data->width)));
+            icoord.y = max(0, min(static_cast<int32_type>(data->height - 1), static_cast<int32_type>(uv.y * data->height)));
             return fetch(icoord);
         }
 
@@ -129,7 +132,7 @@ namespace swizzle
                 typename batch_traits<int32_type>::aligned_storage_type istorage;
                 auto ibuffer = reinterpret_cast<int32_t*>(&istorage);
                 {
-                    int32_type index = (coord.y * data->pitch + coord.x) * data->bytes_per_pixel;
+                    int32_type index = (data->height - coord.y) * data->pitch_bytes + coord.x * data->bytes_per_pixel;
                     store_aligned(index, ibuffer);
                 }
 

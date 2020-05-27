@@ -26,9 +26,9 @@ namespace swizzle
             };
         }
 
-        template <typename SomeVectorType, typename SomeDataType, size_t... Index>
-        inout_wrapper(detail::indexed_proxy<SomeVectorType, SomeDataType, Index...>& value,
-            std::enable_if_t<sizeof...(Index) == vector_type::num_of_components && std::is_same_v<typename SomeVectorType::scalar_type, typename vector_type::scalar_type>, bool> = false)
+        template <typename SomeVectorType, typename SomeDataType, typename SomeScalarType, size_t... Index>
+        inout_wrapper(detail::indexed_proxy<SomeVectorType, SomeDataType, SomeScalarType, Index...>& value,
+            std::enable_if_t<sizeof...(Index) == vector_type::num_of_components && std::is_same_v<SomeScalarType, typename vector_type::scalar_type>, bool> = false)
             : vector_type(value.decay())
         {
             this->cleanup = [&value](this_type& v) -> void
@@ -59,8 +59,6 @@ namespace swizzle
             vector_type::operator=(other);
             return *this;
         }
-
-        // TODO: other unary operators likely needed too
     };
 
     namespace detail

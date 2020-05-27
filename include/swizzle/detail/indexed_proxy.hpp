@@ -5,23 +5,21 @@
 #include <type_traits>
 #include <swizzle/detail/utils.h>
 #include <swizzle/detail/vector_traits.h>
+#include <swizzle/detail/indexed_proxy_storage.hpp>
 
 namespace swizzle
 {
     namespace detail
     {
+        // TODO: this comment's rubbish
         //! A VectorType's proxy, using subscript operators to access components of both the vector and the
         //! DataType. x, y, z & w template args define which components of the vector this proxy uses in place
         //! of its, with -1 meaning "don't use".
         //! The type is convertible to the vector. It also forwards all unary arithmetic operators. Binary
         //! operations hopefully fallback to the vector ones.
-        template <class VectorType, class DataType, size_t... Indices>
-        class indexed_proxy
+        template <class VectorType, class DataType, class ScalarType, size_t... Indices>
+        struct indexed_proxy : indexed_proxy_storage<DataType, ScalarType, sizeof...(Indices), Indices...>
         {
-            //! The data. Must support subscript operator.
-            DataType data;
-
-        public:
             // Can easily count now since -1 must be continuous
             static const size_t num_of_components = sizeof...(Indices);
             static_assert(num_of_components >= 2, "Must be at least 2 components");
@@ -32,8 +30,6 @@ namespace swizzle
             // Use the traits to define vector and scalar
             typedef VectorType vector_type;
             typedef VectorType decay_type;
-
-        public:
 
             //! Convert proxy into a vector.
             vector_type decay() const
@@ -55,10 +51,23 @@ namespace swizzle
                 return decay();
             }
 
+            indexed_proxy() = default;
+
+            template <size_t... OtherIndices>
+            indexed_proxy(const indexed_proxy_storage<DataType, ScalarType, sizeof...(Indices), OtherIndices...>& other) {
+                assign_impl(other.data, std::index_sequence<OtherIndices...>{});
+            }
+
             //! Assignment only enabled if proxy is writable -> has unique indexes
             indexed_proxy& operator=(const vector_type& vec)
             {
                 return assign_impl(vec, std::make_index_sequence<num_of_components>{});
+            }
+
+            //! Assignment only enabled if proxy is writable -> has unique indexes
+            template <size_t... OtherIndices>
+            indexed_proxy& operator=(const indexed_proxy_storage<DataType, ScalarType, sizeof...(Indices), OtherIndices...>& other) {
+                return assign_impl(other.data, std::index_sequence<OtherIndices...>{});
             }
 
             //! Forwarding operator. Global non-assignment operators depend on it.
@@ -98,20 +107,27 @@ namespace swizzle
             template <size_t... VectorIndices>
             indexed_proxy& assign_impl(const vector_type& vec, std::index_sequence<VectorIndices...>)
             {
-                return ((data[Indices] = vec.data[VectorIndices]), ..., *this);
+                return ((this->data[Indices] = vec.data[VectorIndices]), ..., *this);
+            }
+
+            template <size_t... VectorIndices>
+            indexed_proxy& assign_impl(const DataType& vec_data, std::index_sequence<VectorIndices...>)
+            {
+                return ((this->data[Indices] = vec_data[VectorIndices]), ..., *this);
             }
 
             template <size_t... VectorIndices>
             vector_type& decay_impl(vector_type& vec, std::index_sequence<VectorIndices...>) const
             {
-                return ((vec.data[VectorIndices] = data[Indices]), ..., vec);
+                return ((vec.data[VectorIndices] = this->data[Indices]), ..., vec);
             }
         };
 
 
+        // TODO: incosnistent
         //! A specialisation for the indexed_proxy, defines TVector as vector type.
-        template <class TVector, class TData, size_t... Indices>
-        struct get_vector_type_impl< indexed_proxy<TVector, TData, Indices...> >
+        template <class TVector, class TData, class ScalarType, size_t... Indices>
+        struct get_vector_type_impl< indexed_proxy<TVector, TData, ScalarType, Indices...> >
         {
             typedef TVector type;
         };
