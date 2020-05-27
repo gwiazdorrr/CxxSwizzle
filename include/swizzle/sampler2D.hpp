@@ -111,7 +111,7 @@ namespace swizzle
             }
 
             // OGL uses left-bottom corner as origin...
-            uv.y = 1.0f - uv.y;
+            //uv.y = 1.0f - uv.y;
 
             ivec2 icoord;
             icoord.x = max(0, min(static_cast<int32_type>(data->width - 1), static_cast<int32_type>(uv.x * data->width)));
@@ -132,7 +132,7 @@ namespace swizzle
                 typename batch_traits<int32_type>::aligned_storage_type istorage;
                 auto ibuffer = reinterpret_cast<int32_t*>(&istorage);
                 {
-                    int32_type index = coord.y * data->pitch_bytes + coord.x * data->bytes_per_pixel;
+                    int32_type index = (data->height - coord.y) * data->pitch_bytes + coord.x * data->bytes_per_pixel;
                     store_aligned(index, ibuffer);
                 }
 

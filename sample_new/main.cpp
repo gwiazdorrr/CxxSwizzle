@@ -820,7 +820,7 @@ int main(int argc, char* argv[])
             {
                 if (blit_now || frameReady || is_shift_selecting)
                 {
-                    SDL_UpdateTexture(target_texture.get(), &viewport, target_surface->pixels, target_surface->pitch);
+                    SDL_UpdateTexture(target_texture.get(), nullptr, target_surface->pixels, target_surface->pitch);
                     SDL_RenderClear(renderer.get());
                     SDL_RenderCopy(renderer.get(), target_texture.get(), NULL, NULL);
 

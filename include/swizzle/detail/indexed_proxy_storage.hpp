@@ -10,12 +10,12 @@ namespace swizzle
 {
     namespace detail
     {
-        template <typename DataType, typename ScalarType, size_t... Indices>
+        template <typename DataType, typename ScalarType, size_t Size, size_t... Indices>
         struct indexed_proxy_storage;
 
 
         template< typename DataType, typename ScalarType>
-        struct indexed_proxy_storage<DataType, ScalarType, 0>
+        struct indexed_proxy_storage<DataType, ScalarType, 1, 0>
         {
             union
             {
@@ -25,7 +25,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I0>
-        struct indexed_proxy_storage<DataType, ScalarType, I0>
+        struct indexed_proxy_storage<DataType, ScalarType, 1, I0>
         {
             union
             {
@@ -35,7 +35,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType>
-        struct indexed_proxy_storage<DataType, ScalarType, 0, 0>
+        struct indexed_proxy_storage<DataType, ScalarType, 2, 0, 0>
         {
             union
             {
@@ -46,7 +46,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I1>
-        struct indexed_proxy_storage<DataType, ScalarType, 0, I1>
+        struct indexed_proxy_storage<DataType, ScalarType, 2, 0, I1>
         {
             union
             {
@@ -57,7 +57,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I0>
-        struct indexed_proxy_storage<DataType, ScalarType, I0, 0>
+        struct indexed_proxy_storage<DataType, ScalarType, 2, I0, 0>
         {
             union
             {
@@ -68,7 +68,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I0, size_t I1>
-        struct indexed_proxy_storage<DataType, ScalarType, I0, I1>
+        struct indexed_proxy_storage<DataType, ScalarType, 2, I0, I1>
         {
             union
             {
@@ -79,7 +79,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType>
-        struct indexed_proxy_storage<DataType, ScalarType, 0, 0, 0>
+        struct indexed_proxy_storage<DataType, ScalarType, 3, 0, 0, 0>
         {
             union
             {
@@ -91,7 +91,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I2>
-        struct indexed_proxy_storage<DataType, ScalarType, 0, 0, I2>
+        struct indexed_proxy_storage<DataType, ScalarType, 3, 0, 0, I2>
         {
             union
             {
@@ -103,7 +103,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I1>
-        struct indexed_proxy_storage<DataType, ScalarType, 0, I1, 0>
+        struct indexed_proxy_storage<DataType, ScalarType, 3, 0, I1, 0>
         {
             union
             {
@@ -115,7 +115,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I1, size_t I2>
-        struct indexed_proxy_storage<DataType, ScalarType, 0, I1, I2>
+        struct indexed_proxy_storage<DataType, ScalarType, 3, 0, I1, I2>
         {
             union
             {
@@ -127,7 +127,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I0>
-        struct indexed_proxy_storage<DataType, ScalarType, I0, 0, 0>
+        struct indexed_proxy_storage<DataType, ScalarType, 3, I0, 0, 0>
         {
             union
             {
@@ -139,7 +139,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I0, size_t I2>
-        struct indexed_proxy_storage<DataType, ScalarType, I0, 0, I2>
+        struct indexed_proxy_storage<DataType, ScalarType, 3, I0, 0, I2>
         {
             union
             {
@@ -151,7 +151,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I0, size_t I1>
-        struct indexed_proxy_storage<DataType, ScalarType, I0, I1, 0>
+        struct indexed_proxy_storage<DataType, ScalarType, 3, I0, I1, 0>
         {
             union
             {
@@ -163,7 +163,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I0, size_t I1, size_t I2>
-        struct indexed_proxy_storage<DataType, ScalarType, I0, I1, I2>
+        struct indexed_proxy_storage<DataType, ScalarType, 3, I0, I1, I2>
         {
             union
             {
@@ -175,7 +175,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType>
-        struct indexed_proxy_storage<DataType, ScalarType, 0, 0, 0, 0>
+        struct indexed_proxy_storage<DataType, ScalarType, 4, 0, 0, 0, 0>
         {
             union
             {
@@ -188,7 +188,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I3>
-        struct indexed_proxy_storage<DataType, ScalarType, 0, 0, 0, I3>
+        struct indexed_proxy_storage<DataType, ScalarType, 4, 0, 0, 0, I3>
         {
             union
             {
@@ -201,7 +201,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I2>
-        struct indexed_proxy_storage<DataType, ScalarType, 0, 0, I2, 0>
+        struct indexed_proxy_storage<DataType, ScalarType, 4, 0, 0, I2, 0>
         {
             union
             {
@@ -214,7 +214,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I2, size_t I3>
-        struct indexed_proxy_storage<DataType, ScalarType, 0, 0, I2, I3>
+        struct indexed_proxy_storage<DataType, ScalarType, 4, 0, 0, I2, I3>
         {
             union
             {
@@ -227,7 +227,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I1>
-        struct indexed_proxy_storage<DataType, ScalarType, 0, I1, 0, 0>
+        struct indexed_proxy_storage<DataType, ScalarType, 4, 0, I1, 0, 0>
         {
             union
             {
@@ -240,7 +240,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I1, size_t I3>
-        struct indexed_proxy_storage<DataType, ScalarType, 0, I1, 0, I3>
+        struct indexed_proxy_storage<DataType, ScalarType, 4, 0, I1, 0, I3>
         {
             union
             {
@@ -253,7 +253,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I1, size_t I2>
-        struct indexed_proxy_storage<DataType, ScalarType, 0, I1, I2, 0>
+        struct indexed_proxy_storage<DataType, ScalarType, 4, 0, I1, I2, 0>
         {
             union
             {
@@ -266,7 +266,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I1, size_t I2, size_t I3>
-        struct indexed_proxy_storage<DataType, ScalarType, 0, I1, I2, I3>
+        struct indexed_proxy_storage<DataType, ScalarType, 4, 0, I1, I2, I3>
         {
             union
             {
@@ -279,7 +279,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I0>
-        struct indexed_proxy_storage<DataType, ScalarType, I0, 0, 0, 0>
+        struct indexed_proxy_storage<DataType, ScalarType, 4, I0, 0, 0, 0>
         {
             union
             {
@@ -292,7 +292,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I0, size_t I3>
-        struct indexed_proxy_storage<DataType, ScalarType, I0, 0, 0, I3>
+        struct indexed_proxy_storage<DataType, ScalarType, 4, I0, 0, 0, I3>
         {
             union
             {
@@ -305,7 +305,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I0, size_t I2>
-        struct indexed_proxy_storage<DataType, ScalarType, I0, 0, I2, 0>
+        struct indexed_proxy_storage<DataType, ScalarType, 4, I0, 0, I2, 0>
         {
             union
             {
@@ -318,7 +318,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I0, size_t I2, size_t I3>
-        struct indexed_proxy_storage<DataType, ScalarType, I0, 0, I2, I3>
+        struct indexed_proxy_storage<DataType, ScalarType, 4, I0, 0, I2, I3>
         {
             union
             {
@@ -331,7 +331,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I0, size_t I1>
-        struct indexed_proxy_storage<DataType, ScalarType, I0, I1, 0, 0>
+        struct indexed_proxy_storage<DataType, ScalarType, 4, I0, I1, 0, 0>
         {
             union
             {
@@ -344,7 +344,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I0, size_t I1, size_t I3>
-        struct indexed_proxy_storage<DataType, ScalarType, I0, I1, 0, I3>
+        struct indexed_proxy_storage<DataType, ScalarType, 4, I0, I1, 0, I3>
         {
             union
             {
@@ -357,7 +357,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I0, size_t I1, size_t I2>
-        struct indexed_proxy_storage<DataType, ScalarType, I0, I1, I2, 0>
+        struct indexed_proxy_storage<DataType, ScalarType, 4, I0, I1, I2, 0>
         {
             union
             {
@@ -370,7 +370,7 @@ namespace swizzle
         };
 
         template< typename DataType, typename ScalarType, size_t I0, size_t I1, size_t I2, size_t I3>
-        struct indexed_proxy_storage<DataType, ScalarType, I0, I1, I2, I3>
+        struct indexed_proxy_storage<DataType, ScalarType, 4, I0, I1, I2, I3>
         {
             union
             {

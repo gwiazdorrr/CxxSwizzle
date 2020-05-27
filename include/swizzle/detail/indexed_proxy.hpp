@@ -18,7 +18,7 @@ namespace swizzle
         //! The type is convertible to the vector. It also forwards all unary arithmetic operators. Binary
         //! operations hopefully fallback to the vector ones.
         template <class VectorType, class DataType, class ScalarType, size_t... Indices>
-        struct indexed_proxy : indexed_proxy_storage<DataType, ScalarType, Indices...>
+        struct indexed_proxy : indexed_proxy_storage<DataType, ScalarType, sizeof...(Indices), Indices...>
         {
             // Can easily count now since -1 must be continuous
             static const size_t num_of_components = sizeof...(Indices);
@@ -51,10 +51,23 @@ namespace swizzle
                 return decay();
             }
 
+            indexed_proxy() = default;
+
+            template <size_t... OtherIndices>
+            indexed_proxy(const indexed_proxy_storage<DataType, ScalarType, sizeof...(Indices), OtherIndices...>& other) {
+                assign_impl(other.data, std::index_sequence<OtherIndices...>{});
+            }
+
             //! Assignment only enabled if proxy is writable -> has unique indexes
             indexed_proxy& operator=(const vector_type& vec)
             {
                 return assign_impl(vec, std::make_index_sequence<num_of_components>{});
+            }
+
+            //! Assignment only enabled if proxy is writable -> has unique indexes
+            template <size_t... OtherIndices>
+            indexed_proxy& operator=(const indexed_proxy_storage<DataType, ScalarType, sizeof...(Indices), OtherIndices...>& other) {
+                return assign_impl(other.data, std::index_sequence<OtherIndices...>{});
             }
 
             //! Forwarding operator. Global non-assignment operators depend on it.
@@ -95,6 +108,12 @@ namespace swizzle
             indexed_proxy& assign_impl(const vector_type& vec, std::index_sequence<VectorIndices...>)
             {
                 return ((this->data[Indices] = vec.data[VectorIndices]), ..., *this);
+            }
+
+            template <size_t... VectorIndices>
+            indexed_proxy& assign_impl(const DataType& vec_data, std::index_sequence<VectorIndices...>)
+            {
+                return ((this->data[Indices] = vec_data[VectorIndices]), ..., *this);
             }
 
             template <size_t... VectorIndices>
