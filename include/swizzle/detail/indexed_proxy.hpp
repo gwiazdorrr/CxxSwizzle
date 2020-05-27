@@ -11,13 +11,14 @@ namespace swizzle
 {
     namespace detail
     {
+        // TODO: this comment's rubbish
         //! A VectorType's proxy, using subscript operators to access components of both the vector and the
         //! DataType. x, y, z & w template args define which components of the vector this proxy uses in place
         //! of its, with -1 meaning "don't use".
         //! The type is convertible to the vector. It also forwards all unary arithmetic operators. Binary
         //! operations hopefully fallback to the vector ones.
-        template <class VectorType, class DataType, size_t... Indices>
-        struct indexed_proxy : indexed_proxy_storage<DataType, std::remove_reference_t<decltype(std::declval<DataType>()[0])>, Indices...>
+        template <class VectorType, class DataType, class ScalarType, size_t... Indices>
+        struct indexed_proxy : indexed_proxy_storage<DataType, ScalarType, Indices...>
         {
             // Can easily count now since -1 must be continuous
             static const size_t num_of_components = sizeof...(Indices);
@@ -104,9 +105,10 @@ namespace swizzle
         };
 
 
+        // TODO: incosnistent
         //! A specialisation for the indexed_proxy, defines TVector as vector type.
-        template <class TVector, class TData, size_t... Indices>
-        struct get_vector_type_impl< indexed_proxy<TVector, TData, Indices...> >
+        template <class TVector, class TData, class ScalarType, size_t... Indices>
+        struct get_vector_type_impl< indexed_proxy<TVector, TData, ScalarType, Indices...> >
         {
             typedef TVector type;
         };

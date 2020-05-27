@@ -21,7 +21,7 @@ namespace swizzle
             template <size_t... Index>
             struct proxy_generator
             {
-                typedef swizzle::detail::indexed_proxy< vector<ScalarType, sizeof...(Index)>, data_type, Index...> type;
+                typedef swizzle::detail::indexed_proxy< vector<ScalarType, sizeof...(Index)>, data_type, ScalarType, Index...> type;
             };
 
             template <size_t Index>

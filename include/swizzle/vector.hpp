@@ -34,10 +34,14 @@ namespace swizzle
         static const bool scalar_is_number = scalar_is_integral || scalar_is_floating_point;
 
         using number_scalar_arg = detail::only_if< scalar_is_number, scalar_arg >;
+        using number_integral_arg = detail::only_if< scalar_is_integral, scalar_arg >;
         using number_vector_arg = detail::only_if< scalar_is_number, this_type_arg >;
         
         using float_scalar_arg = detail::only_if< scalar_is_floating_point, scalar_arg >;
         using float_vector_arg = detail::only_if< scalar_is_floating_point, this_type_arg >;
+
+        using integral_scalar_arg = detail::only_if< scalar_is_integral, scalar_arg >;
+        using integral_vector_arg = detail::only_if< scalar_is_integral, this_type_arg >;
 
         using bool_type = typename detail::batch_traits<ScalarType>::bool_type;
         using bool_vector_type = vector_<bool_type, Index...>;
@@ -65,6 +69,7 @@ namespace swizzle
         using float_scalar_arg_cond = detail::only_if <(num_of_components > 1), float_scalar_arg>;
         using number_vector_arg_cond = detail::only_if <(num_of_components > 1), number_vector_arg>;
         using float_vector_arg_cond = detail::only_if <(num_of_components > 1), float_vector_arg>;
+        using integral_vector_arg_cond = detail::only_if <(num_of_components > 1), integral_vector_arg>;
 
         //!
         typedef detail::indexed_vector_iterator<const this_type> const_iterator;
@@ -674,6 +679,28 @@ namespace swizzle
         friend this_type operator-(literal_arg a, number_vector_arg_cond b) { return this_type(a-b.at(Index)...); }
         friend this_type operator*(literal_arg a, number_vector_arg_cond b) { return b * a; }
         friend this_type operator/(literal_arg a, number_vector_arg_cond b) { return this_type(a/b.at(Index)...); }
+
+
+        this_type& operator&=(integral_vector_arg other)& { return ((at(Index) &= other.at(Index)), ..., *this); }
+        this_type& operator|=(integral_vector_arg other)& { return ((at(Index) |= other.at(Index)), ..., *this); }
+        this_type& operator&=(integral_scalar_arg other)& { return ((at(Index) &= other.at(Index)), ..., *this); }
+        this_type& operator|=(integral_scalar_arg other)& { return ((at(Index) |= other.at(Index)), ..., *this); }
+
+        this_type& operator&=(integral_vector_arg other)&& { return ((at_rvalue(Index) &= other.at(Index)), ..., *this); }
+        this_type& operator|=(integral_vector_arg other)&& { return ((at_rvalue(Index) |= other.at(Index)), ..., *this); }
+        this_type& operator&=(integral_scalar_arg other)&& { return ((at_rvalue(Index) &= other.at(Index)), ..., *this); }
+        this_type& operator|=(integral_scalar_arg other)&& { return ((at_rvalue(Index) |= other.at(Index)), ..., *this); }
+
+        friend this_type operator&(integral_vector_arg_cond a, integral_vector_arg_cond b) { return this_type(a.at(Index) & b.at(Index)...); }
+        friend this_type operator|(integral_vector_arg_cond a, integral_vector_arg_cond b) { return this_type(a.at(Index) | b.at(Index)...); }
+        friend this_type operator&(integral_vector_arg_cond a, integral_scalar_arg b) { return this_type(a.at(Index) & b...); }
+        friend this_type operator|(integral_vector_arg_cond a, integral_scalar_arg b) { return this_type(a.at(Index) | b...); }
+        friend this_type operator&(integral_scalar_arg a, integral_vector_arg_cond b) { return b & a; }
+        friend this_type operator|(integral_scalar_arg a, integral_vector_arg_cond b) { return b | a; }
+        friend this_type operator&(integral_vector_arg_cond a, literal_arg b) { return this_type(a.at(Index) & b...); }
+        friend this_type operator|(integral_vector_arg_cond a, literal_arg b) { return this_type(a.at(Index) | b...); }
+        friend this_type operator&(literal_arg a, integral_vector_arg_cond b) { return b & a; }
+        friend this_type operator|(literal_arg a, integral_vector_arg_cond b) { return b | a; }
 
 
         inline detail::only_if<scalar_is_number, this_type> operator-() const
