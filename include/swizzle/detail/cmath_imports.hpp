@@ -35,9 +35,28 @@ namespace swizzle
     using std::trunc;
     using std::round;
     using std::ceil;
-    using std::min;
-    using std::max;
     using std::modf;
+
+    // TODO: propert types
+    inline int min(int a, int b)
+    {
+        return a < b ? a : b;
+    }
+
+    inline int max(int a, int b)
+    {
+        return a > b ? a : b;
+    }
+
+    inline int min(unsigned a, unsigned b)
+    {
+        return a < b ? a : b;
+    }
+
+    inline int max(unsigned a, unsigned b)
+    {
+        return a > b ? a : b;
+    }
 
     inline float min(float a, float b)
     {

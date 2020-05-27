@@ -142,6 +142,12 @@ namespace swizzle
             compose<0>(t0);
         }
 
+        template <class ProxyVectorType, class ProxyDataType, class ProxyScalarType, size_t... ProxyIndices, class = std::enable_if_t<sizeof...(ProxyIndices) == num_of_components>>
+        inline explicit vector_(const detail::indexed_proxy<ProxyVectorType, ProxyDataType, ProxyScalarType, ProxyIndices...>& t0)
+        {
+            compose<0>(t0.decay());
+        }
+
         // Block of generic proxy-constructors calling construct member function. Compiler
         // will likely optimise this.
         template <class T0, class T1, class... T,
@@ -627,15 +633,16 @@ namespace swizzle
 
         // operators
 
-        inline bool_type operator==(this_type_arg other) const
+        friend bool_type operator==(this_type_arg a, this_type_arg b)
         {
-            return ((at(Index) == other.at(Index)) && ...);
+            return a.are_components_equal(b);
         }
 
-        inline bool_type operator!=(this_type_arg other) const
+        friend bool_type operator!=(this_type_arg a, this_type_arg b)
         {
-            return !(*this == other);
+            return !a.are_components_equal(b);
         }
+
 
         this_type& operator=(this_type_arg other)      & { return ((at(Index) = other.at(Index)), ..., *this);  }
         this_type& operator+=(number_vector_arg other) & { return ((at(Index) += other.at(Index)), ..., *this); }
@@ -721,6 +728,12 @@ namespace swizzle
             auto t = (x - edge0) / (edge1 - edge0);
             t = min(max(t, scalar_type(0.0)), scalar_type(1.0));
             return t * t * (scalar_type(3.0) - scalar_type(2.0) * t);
+        }
+
+        inline bool_type are_components_equal(this_type_arg other) const
+        {
+            // for some reason this can't be used in friend inline function
+            return ((at(Index) == other.at(Index)) && ...);
         }
 
         // STL COMPABILITY (not needed, but useful for testing)

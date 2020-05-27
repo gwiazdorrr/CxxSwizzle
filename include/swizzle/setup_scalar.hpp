@@ -2,7 +2,6 @@
 // Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 #pragma once
 
-#include <algorithm>
 #include <cstdint>
 
 #include <swizzle/detail/utils.h>
