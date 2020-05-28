@@ -484,19 +484,19 @@ int main(int argc, char* argv[])
         {
             texture.path = nullptr;
         }
-        else if (!stricmp(texture.path, "buffer_a")) 
+        else if (!strcmp(texture.path, "buffer_a")) 
         {
             texture.buffer_index = 0;
         }
-        else if (!stricmp(texture.path, "buffer_b"))
+        else if (!strcmp(texture.path, "buffer_b"))
         {
             texture.buffer_index = 1;
         }
-        else if (!stricmp(texture.path, "buffer_c"))
+        else if (!strcmp(texture.path, "buffer_c"))
         {
             texture.buffer_index = 2;
         }
-        else if (!stricmp(texture.path, "buffer_d"))
+        else if (!strcmp(texture.path, "buffer_d"))
         {
             texture.buffer_index = 3;
         }
@@ -528,16 +528,16 @@ int main(int argc, char* argv[])
         const char* channel_prefix[] = 
         {
             "",
-            "bufA.",
-            "bufB.",
-            "bufC.",
-            "bufD."
+            "buffer_a.",
+            "buffer_b.",
+            "buffer_c.",
+            "buffer_d."
         };
         for (int i = 0; i < size(textures); ++i)
         {
             if (textures[i].path)
             {
-                printf("%siChannel%d: %s\n", channel_prefix[i / shadertoy::num_samplers], i % shadertoy::num_samplers, textures[i].path);
+                printf("%siChannel%ld: %s\n", channel_prefix[i / shadertoy::num_samplers], i % shadertoy::num_samplers, textures[i].path);
             }
         }
     }

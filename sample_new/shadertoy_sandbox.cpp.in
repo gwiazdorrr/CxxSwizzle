@@ -9,24 +9,24 @@ namespace
     struct builtin_inout_proxy
     {
         // proxies are needed for vectors, as they need to work with swizzles
-        using vec2 = swizzle::inout_wrapper<vec2>;
-        using vec3 = swizzle::inout_wrapper<vec3>;
-        using vec4 = swizzle::inout_wrapper<vec4>;
-        using ivec2 = swizzle::inout_wrapper<ivec2>;
-        using ivec3 = swizzle::inout_wrapper<ivec3>;
-        using ivec4 = swizzle::inout_wrapper<ivec4>;
-        using uvec2 = swizzle::inout_wrapper<uvec2>;
-        using uvec3 = swizzle::inout_wrapper<uvec3>;
-        using uvec4 = swizzle::inout_wrapper<uvec4>;
-        using bvec2 = swizzle::inout_wrapper<bvec2>;
-        using bvec3 = swizzle::inout_wrapper<bvec3>;
-        using bvec4 = swizzle::inout_wrapper<bvec4>;
+        using vec2 =  swizzle::inout_wrapper<swizzle::vec2>;
+        using vec3 =  swizzle::inout_wrapper<swizzle::vec3>;
+        using vec4 =  swizzle::inout_wrapper<swizzle::vec4>;
+        using ivec2 = swizzle::inout_wrapper<swizzle::ivec2>;
+        using ivec3 = swizzle::inout_wrapper<swizzle::ivec3>;
+        using ivec4 = swizzle::inout_wrapper<swizzle::ivec4>;
+        using uvec2 = swizzle::inout_wrapper<swizzle::uvec2>;
+        using uvec3 = swizzle::inout_wrapper<swizzle::uvec3>;
+        using uvec4 = swizzle::inout_wrapper<swizzle::uvec4>;
+        using bvec2 = swizzle::inout_wrapper<swizzle::bvec2>;
+        using bvec3 = swizzle::inout_wrapper<swizzle::bvec3>;
+        using bvec4 = swizzle::inout_wrapper<swizzle::bvec4>;
 
         // regular types don't need proxies
-        using float_type = float_type&;
-        using int_type = int_type&;
-        using uint_type = uint_type&;
-        using bool_type = bool_type&;
+        using float_type = swizzle::float_type&;
+        using int_type =   swizzle::int_type&;
+        using uint_type =  swizzle::uint_type&;
+        using bool_type =  swizzle::bool_type&;
     };
 
     // change meaning of glsl keywords to match sandbox
@@ -90,6 +90,8 @@ namespace
 
     struct _cxxswizzle_fragment_shader_@FRAG_NAME@ : shadertoy::shader_inputs
     {
+        using _cxxswizzle_fragment_shader = _cxxswizzle_fragment_shader_@FRAG_NAME@;
+
 @FRAG_CUSTOM_STRUCTS_SUPPORT@
 
         vec2 gl_FragCoord;
