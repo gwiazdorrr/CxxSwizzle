@@ -37,39 +37,6 @@ namespace swizzle
     using std::ceil;
     using std::modf;
 
-    // TODO: propert types
-    inline int min(int a, int b)
-    {
-        return a < b ? a : b;
-    }
-
-    inline int max(int a, int b)
-    {
-        return a > b ? a : b;
-    }
-
-    inline int min(unsigned a, unsigned b)
-    {
-        return a < b ? a : b;
-    }
-
-    inline int max(unsigned a, unsigned b)
-    {
-        return a > b ? a : b;
-    }
-
-    inline float min(float a, float b)
-    {
-        // NaN bug "simulation": https://www.shadertoy.com/view/4tsyzf
-        return a < b || (b != b) ? a : b;
-    }
-
-    inline float max(float a, float b)
-    {
-        // NaN bug "simulation": https://www.shadertoy.com/view/4tsyzf
-        return a > b || (b != b) ? a : b;
-    }
-
     inline float isnan(float x)
     {
         // this is because std::isnan is a template and it messes up adl

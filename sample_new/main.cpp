@@ -57,6 +57,7 @@ struct sdl_deleter
     }
 };
 
+
 using surface_ptr = std::unique_ptr<SDL_Surface, sdl_deleter>;
 using window_ptr = std::unique_ptr<SDL_Window, sdl_deleter>;
 using texture_ptr = std::unique_ptr<SDL_Texture, sdl_deleter>;
@@ -76,10 +77,58 @@ struct sampler_data : swizzle::naive_sampler_data
     int buffer_index = -1;
 };
 
-using pixel_func = swizzle::vec4(*)(const shader_inputs& input, swizzle::vec2 fragCoord, swizzle::vec4 fragColor, bool* discarded);
+using pixel_func = swizzle::vec4(*)(const shader_inputs& input, swizzle::vec2 fragCoord, swizzle::vec4 fragColor, swizzle::bool_type* discarded);
+
+// 
+struct sdl_surface_storage {
+
+    //using uint32_traits = detail::batch_traits<swizzle::uint_type>;
+
+    //surface_ptr surface;
+    //int bytes_per_pixel;
+
+    //uint32_traits::aligned_storage_type aligned_blob_r;
+    //uint32_traits::aligned_storage_type aligned_blob_g;
+    //uint32_traits::aligned_storage_type aligned_blob_b;
+
+    //uint8_t* begin_row(int row) {
+    //    return reinterpret_cast<uint8_t*>(surface->pitch) + surface->pitch * bytes_per_pixel;
+    //}
+
+    //uint8_t* advance(uint8_t* ptr) {
+    //    return ptr + columns_per_batch * bytes_per_pixel;
+    //}
+
+    //swizzle::vec4 get_color(uint8_t* ptr) {
+    //    uint32_t* pr = reinterpret_cast<uint32_t*>(&aligned_blob_r);
+    //    uint32_t* pg = reinterpret_cast<uint32_t*>(&aligned_blob_g);
+    //    uint32_t* pb = reinterpret_cast<uint32_t*>(&aligned_blob_b);
+
+    //}
+
+    //void set_color(uint8_t* ptr, swizzle::vec4 color)
+    //{
+    //    // clamp results
+    //    color = vec4::call_clamp(color * 255.0f + 0.5f, 0.0f, 255.0f);
+    //    swizzle::store_r8g8b8(ptr, static_cast<swizzle::uint_type>(color.r), static_cast<swizzle::uint_type>(color.g), static_cast<swizzle::uint_type>(color.b));
+    //}
+};
+
+using uint32_traits = detail::batch_traits<swizzle::uint_type>;
+using float_traits = ::swizzle::detail::batch_traits<swizzle::float_type>;
+
+
+constexpr auto pixels_per_batch = float_traits::size;
+static_assert(pixels_per_batch == 1 || pixels_per_batch % 2 == 0, "1 or even scalar count");
+constexpr auto columns_per_batch = pixels_per_batch > 1 ? pixels_per_batch / 2 : 1;
+constexpr auto rows_per_batch = pixels_per_batch > 1 ? 2 : 1;
+
 
 static render_stats render(pixel_func func, shader_inputs uniforms, SDL_Surface* bmp, SDL_Rect viewport, const std::atomic_bool& cancelled)
 {
+    assert(bmp->w % columns_per_batch == 0);
+    assert(bmp->h % rows_per_batch == 0);
+
     swizzle::vector<int, 2> p_min(std::max(0, std::min(bmp->w, viewport.x)), std::max(0, std::min(bmp->h, viewport.y)));
     auto p_max = p_min;
     p_max.x = std::min(bmp->w, p_max.x + viewport.w);
@@ -89,14 +138,10 @@ static render_stats render(pixel_func func, shader_inputs uniforms, SDL_Surface*
     using ::swizzle::detail::static_for;
     using namespace ::swizzle;
 
-    using uint32_traits = detail::batch_traits<swizzle::uint_type>;
-    using float_traits = ::swizzle::detail::batch_traits<swizzle::float_type>;
+
     static_assert(float_traits::size == uint32_traits::size);
 
-    constexpr auto pixels_per_batch = float_traits::size;
-    static_assert(pixels_per_batch == 1 || pixels_per_batch % 2 == 0, "1 or even scalar count");
-    constexpr auto columns_per_batch = pixels_per_batch > 1 ? pixels_per_batch / 2 : 1;
-    constexpr auto rows_per_batch = pixels_per_batch > 1 ? 2 : 1;
+
 
     auto render_begin = std::chrono::steady_clock::now();
 
@@ -122,113 +167,48 @@ static render_stats render(pixel_func func, shader_inputs uniforms, SDL_Surface*
     p_min_aligned.x = (p_min.x / columns_per_batch) * columns_per_batch;
     p_min_aligned.y = (p_min.y / rows_per_batch) * rows_per_batch;
 
+
 #if SAMPLE_OMP_ENABLED
 #pragma omp parallel 
     {
-        // each thread needs to have at least rows_per_batch rows to process; also, we don't want even number of rows
-        // if rows_per_batch > 1
-        int threads_count = omp_get_num_threads();
-        int thread_num = omp_get_thread_num();
-
-        if (thread_num == 0)
+        if (omp_get_thread_num() == 0)
         {
-            num_threads = threads_count;
+            num_threads = omp_get_num_threads();
         }
-
-        // ceil
-        int height_per_thread = ( (p_max.y - p_min.y) + threads_count - 1) / threads_count;
-        height_per_thread = std::max(rows_per_batch, height_per_thread);
-
-
-        int height_start = p_min_aligned.y + thread_num * height_per_thread;
-        int height_end = height_start + height_per_thread;
-
-        height_end = std::min(p_max.y, height_end);
-
 #else
     {
-        int height_start = p_min_aligned.y;
-        int height_end = p_max.y;
         num_threads = 1;
 #endif
-
-        //debug_print(uniforms.iTime);
-
-        uint32_traits::aligned_storage_type aligned_blob_r;
-        uint32_traits::aligned_storage_type aligned_blob_g;
-        uint32_traits::aligned_storage_type aligned_blob_b;
-
-        // check the comment above for explanation
-        uint32_t* pr = reinterpret_cast<uint32_t*>(&aligned_blob_r);
-        uint32_t* pg = reinterpret_cast<uint32_t*>(&aligned_blob_g);
-        uint32_t* pb = reinterpret_cast<uint32_t*>(&aligned_blob_b);
-
-        //assert(rows_per_batch <= height_end - height_start);
-
-        //debug_print(uniforms.iTime);
-        for (int y = height_start; !cancelled && y < height_end; y += rows_per_batch)
+        
+#if SAMPLE_OMP_ENABLED
+#pragma omp for
+#endif
+        for (int y = p_min_aligned.y; y < p_max.y; y += rows_per_batch)
         {
-            swizzle::float_type frag_coord_y = static_cast<float>(bmp->h - 1 - y) + y_offsets;
-
-            uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch + p_min_aligned.x * 3;
+            if (cancelled)
+                continue;
 
             
+
+            swizzle::float_type frag_coord_y = static_cast<float>(bmp->h - 1 - y) + y_offsets;
+
+
+            //auto ptr = storage.row(y);
+
+            uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch + p_min_aligned.x * 4;
 
             int x;
             for (x = p_min_aligned.x; x < p_max.x; x += columns_per_batch)
             {
                 swizzle::vec4 previousColor;
+                
+                // swizzle::load_r8g8b8a8_aligned(ptr, previousColor.r, previousColor.g, previousColor.b, previousColor.a);
 
                 auto color = func(uniforms, vec2(static_cast<float>(x) + x_offsets, frag_coord_y), {}, nullptr);
-                color *= 255.0f + 0.5f;
 
-                store_aligned(static_cast<swizzle::uint_type>(color.r), pr);
-                store_aligned(static_cast<swizzle::uint_type>(color.g), pg);
-                store_aligned(static_cast<swizzle::uint_type>(color.b), pb);
+                store_rgba32_aligned(color.r, color.g, color.b, color.a, ptr, bmp->pitch);
 
-                if ( x < p_min.x || x + columns_per_batch > p_max.x || y < p_min.y || y + rows_per_batch > p_max.y )
-                {
-                    // slow case: partially out of the surface
-                    int min_cols = std::max(0, p_min.x - x);
-                    int min_rows = std::max(0, p_min.y - y);
-                    int max_rows = std::min<int>(p_max.y - y, rows_per_batch);
-                    int max_cols = std::min<int>(p_max.x - x, columns_per_batch);
-
-                    for (int row = min_rows; row < max_rows; ++row)
-                    {
-                        auto p = ptr + row * bmp->pitch + min_cols * 3;
-                        for (int col = min_cols; col < max_cols; ++col)
-                        {
-                            *p++ = static_cast<uint8_t>(pr[row * columns_per_batch + col]);
-                            *p++ = static_cast<uint8_t>(pg[row * columns_per_batch + col]);
-                            *p++ = static_cast<uint8_t>(pb[row * columns_per_batch + col]);
-                        }
-                    }
-                }
-                else
-                {
-                    {
-                        auto p = ptr;
-                        static_for<0, columns_per_batch>([&](size_t j)
-                        {
-                            *p++ = static_cast<uint8_t>(pr[j]);
-                            *p++ = static_cast<uint8_t>(pg[j]);
-                            *p++ = static_cast<uint8_t>(pb[j]);
-                        });
-                    }
-                    // handle second row (if present)
-                    {
-                        auto p = ptr + bmp->pitch;
-                        static_for<columns_per_batch, pixels_per_batch>([&](size_t j)
-                        {
-                            *p++ = static_cast<uint8_t>(pr[j]);
-                            *p++ = static_cast<uint8_t>(pg[j]);
-                            *p++ = static_cast<uint8_t>(pb[j]);
-                        });
-                    }
-                }
-
-                ptr += 3 * columns_per_batch;
+                ptr += /*storage.advance(ptr);*/ 4 * columns_per_batch;
             }
 
             num_pixels += x * rows_per_batch;
@@ -567,7 +547,11 @@ int main(int argc, char* argv[])
         // a function used to resize the target_surface
         auto resize_or_create_surfaces = [&](int w, int h) -> void
         {
-            auto create_matching_surface = [=]()-> auto { return SDL_CreateRGBSurface(0, w, h, 24, 0x000000ff, 0x0000ff00, 0x00ff0000, 0); };
+            // let's make life easier and make sure surfaces are aligned to the batch size
+            auto aligned_w = ((w + columns_per_batch - 1) / columns_per_batch) * columns_per_batch;
+            auto aligned_h = ((h + rows_per_batch - 1) / rows_per_batch) * rows_per_batch;
+
+            auto create_matching_surface = [=]()-> auto { return SDL_CreateRGBSurface(0, aligned_w, aligned_h, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000); };
 
 #ifdef SAMPLE_HAS_BUFFER_A
             buffer_surfaces[0][0].reset(create_matching_surface()); buffer_surfaces[0][1].reset(create_matching_surface());
@@ -588,7 +572,7 @@ int main(int argc, char* argv[])
                 throw std::runtime_error("Unable to create target_surface");
             }
 
-            target_texture.reset(SDL_CreateTexture(renderer.get(), SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, w, h));
+            target_texture.reset(SDL_CreateTexture(renderer.get(), SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h));
             if ( !target_texture )
                 throw std::runtime_error("Unable to create target_texture");
 
@@ -820,7 +804,12 @@ int main(int argc, char* argv[])
             {
                 if (blit_now || frameReady || is_shift_selecting)
                 {
-                    SDL_UpdateTexture(target_texture.get(), nullptr, target_surface->pixels, target_surface->pitch);
+                    SDL_Rect rect;
+                    rect.x = 0;
+                    rect.y = 0;
+                    rect.w = resolution.x;
+                    rect.h = resolution.y;
+                    SDL_UpdateTexture(target_texture.get(), &rect, target_surface->pixels, target_surface->pitch);
                     SDL_RenderClear(renderer.get());
                     SDL_RenderCopy(renderer.get(), target_texture.get(), NULL, NULL);
 

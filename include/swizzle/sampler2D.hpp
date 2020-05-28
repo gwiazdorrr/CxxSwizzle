@@ -113,9 +113,15 @@ namespace swizzle
             // OGL uses left-bottom corner as origin...
             //uv.y = 1.0f - uv.y;
 
+
+            static_cast<int>(data->width) - 1;
+
             ivec2 icoord;
-            icoord.x = max(0, min(static_cast<int32_type>(data->width - 1), static_cast<int32_type>(uv.x * data->width)));
-            icoord.y = max(0, min(static_cast<int32_type>(data->height - 1), static_cast<int32_type>(uv.y * data->height)));
+            icoord.x = static_cast<int32_type>(uv.x * data->width);
+            icoord.y = static_cast<int32_type>(uv.y * data->height);
+            icoord.x = max(0, min(static_cast<int>(data->width) - 1, icoord.x));
+            icoord.y = max(0, min(static_cast<int>(data->height) - 1, icoord.y));
+
             return fetch(icoord);
         }
 

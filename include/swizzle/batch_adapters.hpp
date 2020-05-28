@@ -284,6 +284,7 @@ namespace swizzle
         using this_type = float_batch;
         using this_arg = const this_type&;
         using primitive_type = typename base_type::primitive_type;
+        using data_type = typename base_type::data_type;
         using bool_type = bool_batch<BoolType, Index...>;
 
 
@@ -303,6 +304,16 @@ namespace swizzle
         CXXSWIZZLE_FORCE_INLINE this_type decay() const
         {
             return *this;
+        }
+
+        friend CXXSWIZZLE_FORCE_INLINE void store_rgba32_aligned(this_arg r, this_arg g, this_arg b, this_arg a, uint8_t* ptr, size_t pitch)
+        {
+            store_rgba32_aligned_internal(r, g, b, a, ptr, pitch);
+        }
+
+        static CXXSWIZZLE_FORCE_INLINE void store_rgba32_aligned_internal(this_arg r, this_arg g, this_arg b, this_arg a, uint8_t* ptr, size_t pitch)
+        {
+            (batch_store_rgba32_aligned(r.at<Index>(), g.at<Index>(), b.at<Index>(), a.at<Index>(), ptr + 4 * Index * sizeof(data_type) / sizeof(primitive_type), pitch), ...);
         }
 
 #include <swizzle/detail/common_batch_operators.hpp>
