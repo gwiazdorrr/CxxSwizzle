@@ -313,7 +313,7 @@ namespace swizzle
 
         static CXXSWIZZLE_FORCE_INLINE void store_rgba32_aligned_internal(this_arg r, this_arg g, this_arg b, this_arg a, uint8_t* ptr, size_t pitch)
         {
-            (batch_store_rgba32_aligned(r.at<Index>(), g.at<Index>(), b.at<Index>(), a.at<Index>(), ptr + 4 * Index * sizeof(data_type) / sizeof(primitive_type), pitch), ...);
+            ((ptr = batch_store_rgba32_aligned(r.at<Index>(), g.at<Index>(), b.at<Index>(), a.at<Index>(), ptr, pitch)), ...);
         }
 
 #include <swizzle/detail/common_batch_operators.hpp>

@@ -57,8 +57,18 @@ struct sdl_deleter
     }
 };
 
+struct sdl_aligned_deleter
+{
+    void operator()(SDL_Surface* ptr)
+    {
+        delete ptr->userdata;
+        SDL_FreeSurface(ptr);
+    }
+};
+
 
 using surface_ptr = std::unique_ptr<SDL_Surface, sdl_deleter>;
+using aligned_surface_ptr = std::unique_ptr<SDL_Surface, sdl_aligned_deleter>;
 using window_ptr = std::unique_ptr<SDL_Window, sdl_deleter>;
 using texture_ptr = std::unique_ptr<SDL_Texture, sdl_deleter>;
 using renderer_ptr = std::unique_ptr<SDL_Renderer, sdl_deleter>;
@@ -67,7 +77,7 @@ using renderer_ptr = std::unique_ptr<SDL_Renderer, sdl_deleter>;
 struct render_stats
 {
     std::chrono::microseconds duration;
-    size_t num_pixels;
+    int num_pixels;
     int num_threads;
 };
 
@@ -76,6 +86,38 @@ struct sampler_data : swizzle::naive_sampler_data
     const char* path = nullptr;
     int buffer_index = -1;
 };
+
+aligned_surface_ptr create_aligned_rgba32_surface(int width, int height)
+{
+    const int bytes_per_pixel = 4;
+    const int align = 32;
+
+    // each row has to be allocated
+    int pitch = (width * bytes_per_pixel + align - 1) & (~align);
+    size_t pixels_size = static_cast<size_t>(pitch * height);
+    size_t alloc_size = pixels_size + align - 1;
+    
+    // alloc and align
+    void* pixels = ::operator new (alloc_size);
+    void* aligned_pixels = pixels;
+    aligned_pixels = std::align(align, pixels_size, aligned_pixels, alloc_size);
+    assert(aligned_pixels);
+
+    // init surface
+    aligned_surface_ptr result(SDL_CreateRGBSurfaceWithFormatFrom(aligned_pixels, width, height, 32, pitch, SDL_PIXELFORMAT_RGBA32));
+    if (!result) 
+    {
+        delete pixels;
+    }
+    else 
+    {
+        result->userdata = pixels;
+    }
+    
+    assert(result);
+    return std::move(result);
+}
+
 
 using pixel_func = swizzle::vec4(*)(const shader_inputs& input, swizzle::vec2 fragCoord, swizzle::vec4 fragColor, swizzle::bool_type* discarded);
 
@@ -114,30 +156,46 @@ struct sdl_surface_storage {
     //}
 };
 
+struct sdl_write_only_rt {
+    SDL_Surface* surface;
+    
+    size_t pitch_bytes;
+
+    const size_t texel_bytes = 4;
+
+    uint8_t* get_ptr()
+    {
+        return reinterpret_cast<uint8_t*>(surface->pixels);
+    }
+
+    vec4 get_color_batch(uint8_t* ptr)
+    {
+        return vec4(0);
+    }
+
+    inline void set_color_batch(uint8_t* ptr, const vec4& color)
+    {
+        store_rgba32_aligned(color.r, color.g, color.b, color.a, ptr, pitch_bytes);
+    }
+};
+
 using uint32_traits = detail::batch_traits<swizzle::uint_type>;
 using float_traits = ::swizzle::detail::batch_traits<swizzle::float_type>;
 
 
-constexpr auto pixels_per_batch = float_traits::size;
+constexpr auto pixels_per_batch = static_cast<int>(float_traits::size);
 static_assert(pixels_per_batch == 1 || pixels_per_batch % 2 == 0, "1 or even scalar count");
 constexpr auto columns_per_batch = pixels_per_batch > 1 ? pixels_per_batch / 2 : 1;
 constexpr auto rows_per_batch = pixels_per_batch > 1 ? 2 : 1;
 
 
-static render_stats render(pixel_func func, shader_inputs uniforms, SDL_Surface* bmp, SDL_Rect viewport, const std::atomic_bool& cancelled)
+static render_stats render(pixel_func func, shader_inputs uniforms, SDL_Surface* bmp, const std::atomic_bool& cancelled)
 {
     assert(bmp->w % columns_per_batch == 0);
     assert(bmp->h % rows_per_batch == 0);
 
-    swizzle::vector<int, 2> p_min(std::max(0, std::min(bmp->w, viewport.x)), std::max(0, std::min(bmp->h, viewport.y)));
-    auto p_max = p_min;
-    p_max.x = std::min(bmp->w, p_max.x + viewport.w);
-    p_max.y = std::min(bmp->h, p_max.y + viewport.h);
-
-    float f = float(0x1000);
     using ::swizzle::detail::static_for;
     using namespace ::swizzle;
-
 
     static_assert(float_traits::size == uint32_traits::size);
 
@@ -149,7 +207,7 @@ static render_stats render(pixel_func func, shader_inputs uniforms, SDL_Surface*
     swizzle::float_type x_offsets(0);
     swizzle::float_type y_offsets(0);
 
-    std::atomic<size_t> num_pixels = 0;
+    std::atomic<int> num_pixels = 0;
     std::atomic<int> num_threads = 0;
 
     {
@@ -163,10 +221,15 @@ static render_stats render(pixel_func func, shader_inputs uniforms, SDL_Surface*
         load_aligned(y_offsets, aligned);
     }
   
-    auto p_min_aligned = p_min;
-    p_min_aligned.x = (p_min.x / columns_per_batch) * columns_per_batch;
-    p_min_aligned.y = (p_min.y / rows_per_batch) * rows_per_batch;
+    
+    int min_x = 0;
+    int min_y = 0;
+    int max_x = bmp->w;
+    int max_y = bmp->h;
 
+    sdl_write_only_rt surface;
+    surface.surface = bmp;
+    surface.pitch_bytes = bmp->pitch;
 
 #if SAMPLE_OMP_ENABLED
 #pragma omp parallel 
@@ -183,35 +246,28 @@ static render_stats render(pixel_func func, shader_inputs uniforms, SDL_Surface*
 #if SAMPLE_OMP_ENABLED
 #pragma omp for
 #endif
-        for (int y = p_min_aligned.y; y < p_max.y; y += rows_per_batch)
+        for (int y = min_y; y < max_y; y += rows_per_batch)
         {
             if (cancelled)
                 continue;
 
-            
-
             swizzle::float_type frag_coord_y = static_cast<float>(bmp->h - 1 - y) + y_offsets;
 
-
-            //auto ptr = storage.row(y);
-
-            uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch + p_min_aligned.x * 4;
+            uint8_t* ptr = surface.get_ptr() + y * surface.pitch_bytes + min_x * surface.texel_bytes;
 
             int x;
-            for (x = p_min_aligned.x; x < p_max.x; x += columns_per_batch)
+            for (x = min_x; x < max_x; x += columns_per_batch)
             {
-                swizzle::vec4 previousColor;
-                
-                // swizzle::load_r8g8b8a8_aligned(ptr, previousColor.r, previousColor.g, previousColor.b, previousColor.a);
+                swizzle::vec4 previousColor = surface.get_color_batch(ptr);
 
                 auto color = func(uniforms, vec2(static_cast<float>(x) + x_offsets, frag_coord_y), {}, nullptr);
 
-                store_rgba32_aligned(color.r, color.g, color.b, color.a, ptr, bmp->pitch);
+                surface.set_color_batch(ptr, color);
 
-                ptr += /*storage.advance(ptr);*/ 4 * columns_per_batch;
+                ptr += surface.texel_bytes * columns_per_batch;
             }
 
-            num_pixels += x * rows_per_batch;
+            num_pixels += (max_x - min_x) * rows_per_batch;
         }
     }
 
@@ -235,7 +291,7 @@ void set_textures(shader_inputs& inputs, const sampler_data ptr[4])
 #define VT100_CLEARLINE "\33[2K"
 #define VT100_UP(x)     "\33[" STR2(x) "A"
 #define VT100_DOWN(x)   "\33[" STR2(x) "B"
-#define STATS_LINES 12
+#define STATS_LINES 11
 
 const double seconds_to_micro = 1000000.0;
 const double micro_to_seconds = 1 / seconds_to_micro;
@@ -350,7 +406,6 @@ int main(int argc, char* argv[])
 #endif
 
     swizzle::vector<int, 2> resolution(512, 288);
-    SDL_Rect viewport = { 0, 0, 0, 0 };
     float time = 0.0f;
     float time_scale = 1.0f;
 
@@ -385,17 +440,6 @@ int main(int argc, char* argv[])
         {
             if (i + 2 < argc && from_string(argv[++i], resolution.x) && from_string(argv[++i], resolution.y))
             {
-            }
-            else
-            {
-                return print_args_error();
-            }
-        }
-        else if (!strcmp(arg, "-w"))
-        {
-            if (i + 4 < argc && from_string(argv[++i], viewport.x) && from_string(argv[++i], viewport.y) && from_string(argv[++i], viewport.w) && from_string(argv[++i], viewport.h))
-            {
-
             }
             else
             {
@@ -486,9 +530,6 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (viewport.w == 0 || viewport.h == 0)
-        viewport = { 0, 0, resolution.x, resolution.y };
-
     if (resolution.x <= 0 || resolution.y < 0 )
     {
         fprintf(stderr, "ERROR: invalid resolution: %dx%d\n", resolution.x, resolution.y);
@@ -498,7 +539,6 @@ int main(int argc, char* argv[])
     printf("p           - pause/unpause\n");
     printf("left arrow  - decrease time by 1 s\n");
     printf("right arrow - increase time by 1 s\n");
-    printf("shift+mouse - select viewport\n");
     printf("space       - blit now! (show incomplete render)\n");
     printf("esc         - quit\n");
     printf("\n");
@@ -517,7 +557,7 @@ int main(int argc, char* argv[])
         {
             if (textures[i].path)
             {
-                printf("%siChannel%ld: %s\n", channel_prefix[i / shadertoy::num_samplers], i % shadertoy::num_samplers, textures[i].path);
+                printf("%siChannel%d: %s\n", channel_prefix[i / shadertoy::num_samplers], i % shadertoy::num_samplers, textures[i].path);
             }
         }
     }
@@ -540,7 +580,7 @@ int main(int argc, char* argv[])
     { 
         window_ptr window(SDL_CreateWindow("CxxSwizzle sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, resolution.x, resolution.y, SDL_WINDOW_RESIZABLE));
         renderer_ptr renderer(SDL_CreateRenderer(window.get(), -1, 0));
-        surface_ptr target_surface;
+        aligned_surface_ptr target_surface;
         texture_ptr target_texture;
         surface_ptr buffer_surfaces[4][2];
 
@@ -566,7 +606,7 @@ int main(int argc, char* argv[])
             buffer_surfaces[3][0].reset(create_matching_surface()); buffer_surfaces[3][1].reset(create_matching_surface());
 #endif
 
-            target_surface.reset(create_matching_surface());
+            target_surface = create_aligned_rgba32_surface(aligned_w, aligned_h);
             if ( !target_surface )
             {
                 throw std::runtime_error("Unable to create target_surface");
@@ -598,30 +638,28 @@ int main(int argc, char* argv[])
 
         std::atomic_bool abort_render_token = false;
 
-        auto render_all = [&target_surface, &buffer_surfaces, &textures, &num_frames](shader_inputs inputs, SDL_Rect viewport, const std::atomic_bool& cancel) -> auto
+        auto render_all = [&target_surface, &buffer_surfaces, &textures, &num_frames](shader_inputs inputs, const std::atomic_bool& cancel) -> auto
         {
             int buffer_surface_index = 1 - (num_frames & 1);
 
-            SDL_Rect full_viewport = { 0, 0, target_surface->w, target_surface->h };
-
 #ifdef SAMPLE_HAS_BUFFER_A
             set_textures(inputs, &textures[4]);
-            render(shadertoy::buffer_a, inputs, buffer_surfaces[0][buffer_surface_index].get(), full_viewport, cancel);
+            render(shadertoy::buffer_a, inputs, buffer_surfaces[0][buffer_surface_index].get(), cancel);
 #endif
 #ifdef SAMPLE_HAS_BUFFER_B
             set_textures(inputs, &textures[8]);
-            render(shadertoy::buffer_b, inputs, buffer_surfaces[1][buffer_surface_index].get(), full_viewport, cancel);
+            render(shadertoy::buffer_b, inputs, buffer_surfaces[1][buffer_surface_index].get(), cancel);
 #endif
 #ifdef SAMPLE_HAS_BUFFER_C
             set_textures(inputs, &textures[12]);
-            render(shadertoy::buffer_c, inputs, buffer_surfaces[2][buffer_surface_index].get(), full_viewport, cancel);
+            render(shadertoy::buffer_c, inputs, buffer_surfaces[2][buffer_surface_index].get(), cancel);
 #endif
 #ifdef SAMPLE_HAS_BUFFER_D
             set_textures(inputs, &textures[16]);
-            render(shadertoy::buffer_d, inputs, buffer_surfaces[3][buffer_surface_index].get(), full_viewport, cancel);
+            render(shadertoy::buffer_d, inputs, buffer_surfaces[3][buffer_surface_index].get(), cancel);
 #endif
             set_textures(inputs, &textures[0]);
-            return render(shadertoy::image, inputs, target_surface.get(), viewport, cancel);
+            return render(shadertoy::image, inputs, target_surface.get(), cancel);
         };
 
 
@@ -652,15 +690,10 @@ int main(int argc, char* argv[])
             inputs.iMouse.z = mouse_pressed ? 1.0f : 0.0f;
             inputs.iMouse.w = 0.0f;
 
-            return std::async(render_all, inputs, viewport, std::ref(abort_render_token));
+            return std::async(render_all, inputs, std::ref(abort_render_token));
         };
 
         std::future<render_stats> render_task = render_async();
-        
-        SDL_Rect mouse_rect = {};
-
-        bool is_shift_pressed = false;
-        bool is_shift_selecting = false;
 
         for (auto update_begin = chrono::steady_clock::now();;)
         {
@@ -689,14 +722,6 @@ int main(int argc, char* argv[])
                         abort_render_token = quit = true;
                     }
                     break; 
-                case SDL_KEYUP:
-                    switch (event.key.keysym.sym)
-                    {
-                    case SDLK_LSHIFT:
-                        is_shift_pressed = false;
-                        break;
-                    }
-                    break;
                 case SDL_KEYDOWN:
                     switch ( event.key.keysym.sym ) 
                     {
@@ -719,9 +744,6 @@ int main(int argc, char* argv[])
                     case SDLK_RIGHT:
                         time += 1.0f;
                         break;
-                    case SDLK_LSHIFT:
-                        is_shift_pressed = true;
-                        break;
                     default:
                         break;
                     }
@@ -732,46 +754,14 @@ int main(int argc, char* argv[])
                         mouse_x = event.button.x;
                         mouse_y = event.button.y;
                     }
-                    else if (is_shift_selecting)
-                    {
-                        mouse_rect.w = event.button.x - mouse_rect.x;
-                        mouse_rect.h = event.button.y - mouse_rect.y;
-                    }
                     break;
                 case SDL_MOUSEBUTTONDOWN:
-                    if (is_shift_pressed)
-                    {
-                        is_shift_selecting = true;
-                        mouse_rect.x = event.button.x;
-                        mouse_rect.y = event.button.y;
-                        mouse_rect.w = mouse_rect.h = 0;
-                    }
-                    else
-                    {
-                        mouse_pressed = true;
-                        mouse_x = event.button.x;
-                        mouse_y = event.button.y;
-                    }
+                    mouse_pressed = true;
+                    mouse_x = event.button.x;
+                    mouse_y = event.button.y;
                     break;
                 case SDL_MOUSEBUTTONUP:
-                    if (is_shift_selecting)
-                    {
-                        is_shift_selecting = false;
-                        if (mouse_rect.h == 0 || mouse_rect.w == 0)
-                        {
-                            viewport = { 0, 0, resolution.x, resolution.y };
-                        }
-                        else
-                        {
-                            viewport = fix_rect(mouse_rect);
-                        }
-                        
-                        abort_render_token = true;
-                        mouse_rect = {};
-                    }
-
                     mouse_pressed = false;
-                    is_shift_selecting = false;
                     break;
 
                 default:
@@ -802,7 +792,7 @@ int main(int argc, char* argv[])
             }
             else
             {
-                if (blit_now || frameReady || is_shift_selecting)
+                if (blit_now || frameReady )
                 {
                     SDL_Rect rect;
                     rect.x = 0;
@@ -812,24 +802,6 @@ int main(int argc, char* argv[])
                     SDL_UpdateTexture(target_texture.get(), &rect, target_surface->pixels, target_surface->pitch);
                     SDL_RenderClear(renderer.get());
                     SDL_RenderCopy(renderer.get(), target_texture.get(), NULL, NULL);
-
-                    SDL_SetRenderDrawColor(renderer.get(), 0, 0, 255, 128);
-                    {
-                        auto r = viewport;
-                        r.x -= 1;
-                        r.y -= 1;
-                        r.w += 2;
-                        r.h += 2;
-                        SDL_RenderDrawRect(renderer.get(), &r);
-                    }
-
-                    if (mouse_rect.w != 0 && mouse_rect.h != 0)
-                    {
-                        auto fixed = fix_rect(mouse_rect);
-                        SDL_SetRenderDrawColor(renderer.get(), 0, 255, 255, 128);
-                        SDL_RenderDrawRect(renderer.get(), &fixed);
-                        SDL_RenderPresent(renderer.get());
-                    }
 
                     SDL_RenderPresent(renderer.get());
                 }
@@ -872,7 +844,6 @@ int main(int argc, char* argv[])
             printf(VT100_CLEARLINE "time:            %.2f s%s\n", time, time_scale > 0 ? "" : " (paused)");
             printf(VT100_CLEARLINE "frames:          %d\n", num_frames);
             printf(VT100_CLEARLINE "resolution:      %dx%d\n", target_surface->w, target_surface->h);
-            printf(VT100_CLEARLINE "viewport:        %d %d %d %d\n", viewport.x, viewport.y, viewport.w, viewport.h);
             printf(VT100_CLEARLINE "fps:             %lg\n", current_fps);
         }
 
