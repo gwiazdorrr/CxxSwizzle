@@ -892,4 +892,14 @@ static int result_ENABLE_VIRTUAL_TERMINAL_PROCESSING = []() -> int {
     }
     return 0;
 }();
+
+static int result_SetProcessDPIAware = []() -> int {
+    if (!SetProcessDPIAware()) 
+    {
+        return GetLastError();
+    }
+    return 0;
+}();
+
+
 #endif
