@@ -75,7 +75,7 @@ namespace swizzle
         *ptr = value;
     }
 
-    inline void store_rgba32_aligned(float r, float g, float b, float a, uint8_t* ptr, size_t) {
+    inline void store_rgba8_aligned(float r, float g, float b, float a, uint8_t* ptr, size_t) {
 
         auto ir = max(0, min(255, static_cast<int>(floor(r * 256))));
         auto ig = max(0, min(255, static_cast<int>(floor(g * 256))));
@@ -83,6 +83,14 @@ namespace swizzle
         auto ia = max(0, min(255, static_cast<int>(floor(a * 256))));
         uint32_t rgba = ir | (ig << 8) | (ib << 16) | (static_cast<unsigned>(ia) << 24);
         *reinterpret_cast<uint32_t*>(ptr) = rgba;
+    }
+
+    inline void store_rgba32f_aligned(float r, float g, float b, float a, uint8_t* ptr, size_t) {
+        float* p = reinterpret_cast<float*>(ptr);
+        p[0] = r;
+        p[1] = g;
+        p[2] = b;
+        p[3] = a;
     }
 
     //inline void load_r8g8b8a8_aligned(const void* ptr, float& r, float& g, float& b, float& a) {

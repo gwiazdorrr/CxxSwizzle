@@ -72,7 +72,7 @@ namespace swizzle
     inline bool batch_collapse(bool value)
     {
         return value;
-    }
+    }   
 
     template <typename T>
     inline void batch_load_aligned(T& value, const T* data)

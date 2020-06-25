@@ -76,7 +76,7 @@ namespace swizzle
         target = src;
     }
     
-    inline uint8_t* batch_store_rgba32_aligned(const ::Vc::float_v& r, const ::Vc::float_v& g, const ::Vc::float_v& b, const ::Vc::float_v& a, uint8_t* ptr, size_t pitch)
+    inline uint8_t* batch_store_rgba8_aligned(const ::Vc::float_v& r, const ::Vc::float_v& g, const ::Vc::float_v& b, const ::Vc::float_v& a, uint8_t* ptr, size_t pitch)
     {
         using namespace Vc;
 
@@ -102,10 +102,29 @@ namespace swizzle
         *reinterpret_cast<int64_t*>(ptr + pitch) = i2;
         return ptr + 8;
 #endif
-        
-
     }
-    
+
+    inline uint8_t* batch_store_rgba32f_aligned(const ::Vc::float_v& r, const ::Vc::float_v& g, const ::Vc::float_v& b, const ::Vc::float_v& a, uint8_t* ptr, size_t pitch)
+    {
+        using namespace Vc;
+
+        float_v rbrb = r.interleaveLow(b); // r0b0r1b1...
+        float_v gaga = b.interleaveLow(a); // g0a0g1a1...
+
+        float* p = reinterpret_cast<float*>(ptr);
+        rbrb.interleaveLow(gaga).store(p, Aligned); // r0g0b0a0...
+        rbrb.interleaveHigh(gaga).store(p + float_v::Size, Aligned);
+
+        rbrb = r.interleaveHigh(g);
+        gaga = b.interleaveHigh(a);
+        ptr += pitch;
+
+        p = reinterpret_cast<float*>(ptr + pitch);
+        rbrb.interleaveLow(gaga).store(p, Aligned);
+        rbrb.interleaveHigh(gaga).store(p + float_v::Size, Aligned);
+
+        return ptr + sizeof(float) * float_v::Size * 2;
+    }
 }
 
 // Vc generally supports it all, but it lacks some crucial functions.
