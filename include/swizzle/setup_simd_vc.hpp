@@ -117,7 +117,6 @@ namespace swizzle
 
         rbrb = r.interleaveHigh(g);
         gaga = b.interleaveHigh(a);
-        ptr += pitch;
 
         p = reinterpret_cast<float*>(ptr + pitch);
         rbrb.interleaveLow(gaga).store(p, Aligned);
