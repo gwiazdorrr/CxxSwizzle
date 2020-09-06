@@ -30,7 +30,7 @@ static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 #include <SDL_image.h>
 #endif
 
-#include <time.h>
+#include <ctime>
 #include <memory>
 #include <functional>
 #if SAMPLE_OMP_ENABLED
@@ -228,7 +228,11 @@ static render_stats render(PixelFunc func, shader_inputs uniforms, RenderTarget&
             for (x = min_x; x < max_x; x += columns_per_batch)
             {
                 swizzle::vec4 previousColor;
-                swizzle::vec4 color = func(uniforms, vec2(static_cast<float>(x) + x_offsets, frag_coord_y), {}, nullptr);
+
+                swizzle::bool_type discarded;
+                swizzle::vec4 color = func(uniforms, vec2(static_cast<float>(x) + x_offsets, frag_coord_y), {}, &discarded);
+
+                color = swizzle::vec4::call_mix(color, previousColor, swizzle::bvec4(discarded));
 
                 rt.store(ptr, color, rt.pitch);
 
@@ -582,10 +586,10 @@ int main(int argc, char* argv[])
             buffer_surfaces[1][0] = create_matching_rows(); buffer_surfaces[1][1] = create_matching_rows();
 #endif
 #ifdef SAMPLE_HAS_BUFFER_C
-            buffer_surfaces[2][0].reset(create_matching_rows()); buffer_surfaces[2][1].reset(create_matching_rows());
+            buffer_surfaces[2][0] = create_matching_rows(); buffer_surfaces[2][1] = create_matching_rows();
 #endif
 #ifdef SAMPLE_HAS_BUFFER_D
-            buffer_surfaces[3][0].reset(create_matching_rows()); buffer_surfaces[3][1].reset(create_matching_rows());
+            buffer_surfaces[3][0] = create_matching_rows(); buffer_surfaces[3][1] = create_matching_rows();
 #endif
 
             target_surface_data = render_target_rgba32(aligned_w, aligned_h);
