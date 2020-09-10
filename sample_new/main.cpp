@@ -79,7 +79,7 @@ using surface_ptr = std::unique_ptr<SDL_Surface, sdl_deleter>;
 using window_ptr = std::unique_ptr<SDL_Window, sdl_deleter>;
 using texture_ptr = std::unique_ptr<SDL_Texture, sdl_deleter>;
 using renderer_ptr = std::unique_ptr<SDL_Renderer, sdl_deleter>;
-using void_ptr = std::unique_ptr<void, void_deleter>;
+using void_unique_ptr = std::unique_ptr<void, void_deleter>;
 
 
 struct render_stats
@@ -95,16 +95,16 @@ struct sampler_data : swizzle::naive_sampler_data
     int buffer_index = -1;
 };
 
-struct render_target_base 
+struct aligned_render_target_base 
 {
-    void_ptr memory;
+    void_unique_ptr memory;
     void* first_row = nullptr;
     size_t pitch = 0;
     int width = 0;
     int height = 0;
 
-    render_target_base() = default;
-    render_target_base(int width, int height, int bpp, int align) : width(width), height(height)
+    aligned_render_target_base() = default;
+    aligned_render_target_base(int width, int height, int bpp, int align) : width(width), height(height)
     {
         const int mask = align - 1;
 
@@ -120,12 +120,12 @@ struct render_target_base
     }
 };
 
-struct render_target_rgba32 : render_target_base
+struct render_target_rgba32 : aligned_render_target_base
 {
     static const int bytes_per_pixel = 4;
 
     render_target_rgba32() = default;
-    render_target_rgba32(int width, int height) : render_target_base(width, height, bytes_per_pixel, 32) {}
+    render_target_rgba32(int width, int height) : aligned_render_target_base(width, height, bytes_per_pixel, 32) {}
 
 
     void store(uint8_t* ptr, const vec4& color, size_t pitch)
@@ -134,12 +134,12 @@ struct render_target_rgba32 : render_target_base
     }
 };
 
-struct render_target_float : render_target_base
+struct render_target_float : aligned_render_target_base
 {
     static const int bytes_per_pixel = 16;
 
     render_target_float() = default;
-    render_target_float(int width, int height) : render_target_base(width, height, bytes_per_pixel, 32) {}
+    render_target_float(int width, int height) : aligned_render_target_base(width, height, bytes_per_pixel, 32) {}
 
     void store(uint8_t* ptr, const vec4& color, size_t pitch)
     {
@@ -178,8 +178,8 @@ static render_stats render(PixelFunc func, shader_inputs uniforms, RenderTarget&
     swizzle::float_type x_offsets(0);
     swizzle::float_type y_offsets(0);
 
-    std::atomic<int> num_pixels = 0;
-    std::atomic<int> num_threads = 0;
+    int num_pixels = 0;
+    int num_threads = 0;
 
     {
         float_traits::aligned_storage_type aligned_storage;
@@ -193,53 +193,47 @@ static render_stats render(PixelFunc func, shader_inputs uniforms, RenderTarget&
     }
   
     
-    int min_x = 0;
-    int min_y = 0;
     int max_x = rt.width;
     int max_y = rt.height;
 
-
-#if SAMPLE_OMP_ENABLED
-#pragma omp parallel 
-    {
-        if (omp_get_thread_num() == 0)
-        {
-            num_threads = omp_get_num_threads();
-        }
-#else
+#if !SAMPLE_OMP_ENABLED
     {
         num_threads = 1;
-#endif
-        
-#if SAMPLE_OMP_ENABLED
-#pragma omp for
-#endif
+#else
+    #pragma omp parallel default(none) shared(num_threads, num_pixels)
+    {
+        #pragma omp master
+        num_threads = omp_get_num_threads();
 
-        for (int y = min_y; y < max_y; y += rows_per_batch)
+        #pragma omp for
+#endif
+        for (int y = 0; y < max_y; y += rows_per_batch)
         {
             if (cancelled)
                 continue;
 
             swizzle::float_type frag_coord_y = static_cast<float>(rt.height - 1 - y) + y_offsets;
 
-            uint8_t* ptr = reinterpret_cast<uint8_t*>(rt.first_row) + y * rt.pitch + min_x * rt.bytes_per_pixel;
+            uint8_t* ptr = reinterpret_cast<uint8_t*>(rt.first_row) + y * rt.pitch;
 
             int x;
-            for (x = min_x; x < max_x; x += columns_per_batch)
+            for (x = 0; x < max_x; x += columns_per_batch)
             {
-                swizzle::vec4 previousColor;
-
                 swizzle::bool_type discarded;
                 swizzle::vec4 color = func(uniforms, vec2(static_cast<float>(x) + x_offsets, frag_coord_y), {}, &discarded);
 
-                color = swizzle::vec4::call_mix(color, previousColor, swizzle::bvec4(discarded));
-
-                rt.store(ptr, color, rt.pitch);
-
+                if (!discarded) 
+                {
+                    rt.store(ptr, color, rt.pitch);
+                }
+                
                 ptr += rt.bytes_per_pixel * columns_per_batch;
             }
 
-            num_pixels += (max_x - min_x) * rows_per_batch;
+#if SAMPLE_OMP_ENABLED
+            #pragma omp atomic
+#endif
+            num_pixels += (max_x) * rows_per_batch;
         }
     }
 
@@ -576,33 +570,34 @@ int main(int argc, char* argv[])
             auto aligned_w = ((w + columns_per_batch - 1) / columns_per_batch) * columns_per_batch;
             auto aligned_h = ((h + rows_per_batch - 1) / rows_per_batch) * rows_per_batch;
 
-            auto create_matching_surface = [=]()-> auto { return ; };
-            auto create_matching_rows = [=]() -> auto { return render_target_float(aligned_w, aligned_h); };
+            auto create_buffer_surface = [=]() -> auto { return render_target_float(aligned_w, aligned_h); };
 
 #ifdef SAMPLE_HAS_BUFFER_A
-            buffer_surfaces[0][0] = create_matching_rows(); buffer_surfaces[0][1] = create_matching_rows();
+            buffer_surfaces[0][0] = create_buffer_surface(); buffer_surfaces[0][1] = create_buffer_surface();
 #endif
 #ifdef SAMPLE_HAS_BUFFER_B
-            buffer_surfaces[1][0] = create_matching_rows(); buffer_surfaces[1][1] = create_matching_rows();
+            buffer_surfaces[1][0] = create_buffer_surface(); buffer_surfaces[1][1] = create_buffer_surface();
 #endif
 #ifdef SAMPLE_HAS_BUFFER_C
-            buffer_surfaces[2][0] = create_matching_rows(); buffer_surfaces[2][1] = create_matching_rows();
+            buffer_surfaces[2][0] = create_buffer_surface(); buffer_surfaces[2][1] = create_buffer_surface();
 #endif
 #ifdef SAMPLE_HAS_BUFFER_D
-            buffer_surfaces[3][0] = create_matching_rows(); buffer_surfaces[3][1] = create_matching_rows();
+            buffer_surfaces[3][0] = create_buffer_surface(); buffer_surfaces[3][1] = create_buffer_surface();
 #endif
 
             target_surface_data = render_target_rgba32(aligned_w, aligned_h);
 
             target_surface.reset(SDL_CreateRGBSurfaceWithFormatFrom(target_surface_data.first_row, aligned_w, aligned_h, 32, target_surface_data.pitch, SDL_PIXELFORMAT_RGBA32));
-            if ( !target_surface )
+            if (!target_surface)
             {
                 throw std::runtime_error("Unable to create target_surface");
             }
 
             target_texture.reset(SDL_CreateTexture(renderer.get(), SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h));
-            if ( !target_texture )
+            if (!target_texture)
+            {
                 throw std::runtime_error("Unable to create target_texture");
+            }
 
             resolution.x = w;
             resolution.y = h;
@@ -631,24 +626,28 @@ int main(int argc, char* argv[])
         {
             int buffer_surface_index = 1 - (num_frames & 1);
 
+            std::chrono::microseconds duration(0);
+
 #ifdef SAMPLE_HAS_BUFFER_A
             set_textures(inputs, &textures[4]);
-            render(shadertoy::buffer_a, inputs, buffer_surfaces[0][buffer_surface_index], cancel);
+            duration += render(shadertoy::buffer_a, inputs, buffer_surfaces[0][buffer_surface_index], cancel).duration;
 #endif
 #ifdef SAMPLE_HAS_BUFFER_B
             set_textures(inputs, &textures[8]);
-            render(shadertoy::buffer_b, inputs, buffer_surfaces[1][buffer_surface_index], cancel);
+            duration += render(shadertoy::buffer_b, inputs, buffer_surfaces[1][buffer_surface_index], cancel).duration;
 #endif
 #ifdef SAMPLE_HAS_BUFFER_C
             set_textures(inputs, &textures[12]);
-            render(shadertoy::buffer_c, inputs, buffer_surfaces[2][buffer_surface_index], cancel);
+            duration += render(shadertoy::buffer_c, inputs, buffer_surfaces[2][buffer_surface_index], cancel).duration;
 #endif
 #ifdef SAMPLE_HAS_BUFFER_D
             set_textures(inputs, &textures[16]);
-            render(shadertoy::buffer_d, inputs, buffer_surfaces[3][buffer_surface_index], cancel);
+            duration += render(shadertoy::buffer_d, inputs, buffer_surfaces[3][buffer_surface_index], cancel).duration;
 #endif
             set_textures(inputs, &textures[0]);
-            return render(shadertoy::image, inputs, target_surface_data, cancel);
+            render_stats result = render(shadertoy::image, inputs, target_surface_data, cancel);
+            result.duration += duration;
+            return result;
         };
 
 
