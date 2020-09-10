@@ -304,9 +304,14 @@ foreach(SAMPLE_DIR ${SAMPLES_DIRS})
     configure_file("config.hpp.in" "${GEN_CONFIG_PATH}")
 
     set(CODEGEN_TEMPLATE_FILES "shadertoy_sandbox.cpp.in" "config.hpp.in")
-    #set(README_PATH "${SAMPLE_DIR}/README.md")
+    set(README_PATH "${SAMPLE_DIR}/README.md")
+
     set(TARGET_FILES main.cpp ${GEN_SHADERS} shadertoy_sandbox.hpp ${SHADERS} ${GEN_CONFIG_PATH} ${COMPILER_SPECIFIC_FILES} ${CODEGEN_TEMPLATE_FILES})
-    source_group("shaders" FILES ${SHADERS} )
+    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${README_PATH}")
+        list(APPEND TARGET_FILES ${README_PATH})
+    endif()
+
+    source_group("shaders" FILES ${SHADERS} ${README_PATH})
     source_group("codegen" FILES ${GEN_SHADERS} ${GEN_CONFIG_PATH} )
     source_group("codegen-templates" FILES ${CODEGEN_TEMPLATE_FILES} )
     source_group("" FILES main.cpp shadertoy_sandbox.hpp ${COMPILER_SPECIFIC_FILES})
