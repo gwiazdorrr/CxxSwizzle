@@ -9,8 +9,8 @@
 
 namespace shadertoy
 {
-    const size_t num_samplers = 4;
-    const size_t num_buffers = 4;
+    const int num_samplers = 4;
+    const int num_buffers = 4;
 
     struct shader_inputs
     {

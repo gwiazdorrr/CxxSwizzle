@@ -38,7 +38,7 @@ namespace swizzle
         unsigned bytes_per_pixel = 0;
         unsigned pitch_bytes = 0;
 
-        const size_t checkers_size = 16;
+        bool is_floating_point = false;
     };
 
     //! A really naive implemenation of a sampler
@@ -114,8 +114,11 @@ namespace swizzle
             //uv.y = 1.0f - uv.y;
 
             ivec2 icoord;
-            icoord.x = max(0, min(static_cast<int32_type>(data->width - 1), static_cast<int32_type>(uv.x * data->width)));
-            icoord.y = max(0, min(static_cast<int32_type>(data->height - 1), static_cast<int32_type>(uv.y * data->height)));
+            icoord.x = static_cast<int32_type>(uv.x * data->width);
+            icoord.y = static_cast<int32_type>(uv.y * data->height);
+            icoord.x = max(0, min(static_cast<int>(data->width) - 1, icoord.x));
+            icoord.y = max(0, min(static_cast<int>(data->height) - 1, icoord.y));
+
             return fetch(icoord);
         }
 
@@ -132,7 +135,7 @@ namespace swizzle
                 typename batch_traits<int32_type>::aligned_storage_type istorage;
                 auto ibuffer = reinterpret_cast<int32_t*>(&istorage);
                 {
-                    int32_type index = (data->height - coord.y) * data->pitch_bytes + coord.x * data->bytes_per_pixel;
+                    int32_type index = (data->height - 1 - coord.y) * data->pitch_bytes + coord.x * data->bytes_per_pixel;
                     store_aligned(index, ibuffer);
                 }
 
@@ -146,33 +149,55 @@ namespace swizzle
                 auto bbuffer = reinterpret_cast<float*>(&bstorage);
                 auto abuffer = reinterpret_cast<float*>(&astorage);
 
-                static_for<0, batch_traits<int32_type>::size>([&](size_t i)
+                if (data->is_floating_point)
                 {
-                    auto ptr = data->bytes + ibuffer[i];
-                    uint32_t pixel = 0;
-                    // TODO: are cache reads aligned?
-                    switch (data->bytes_per_pixel)
+                    static_for<0, batch_traits<int32_type>::size>([&](size_t i)
                     {
-                    case 4: pixel |= (ptr[3] << (3 * 8));
-                    case 3: pixel |= (ptr[2] << (2 * 8));
-                    case 2: pixel |= (ptr[1] << (1 * 8));
-                    case 1: pixel |= (ptr[0] << (0 * 8));
-                    }
+                        auto ptr = data->bytes + ibuffer[i];
+                        rbuffer[i] = reinterpret_cast<const float*>(ptr)[0];
+                        gbuffer[i] = reinterpret_cast<const float*>(ptr)[1];
+                        bbuffer[i] = reinterpret_cast<const float*>(ptr)[2];
+                        abuffer[i] = reinterpret_cast<const float*>(ptr)[3];
+                    });
 
-                    // TODO: a faster cast is possible
-                    rbuffer[i] = static_cast<float>((pixel & data->rmask) >> data->rshift);
-                    gbuffer[i] = static_cast<float>((pixel & data->gmask) >> data->gshift);
-                    bbuffer[i] = static_cast<float>((pixel & data->bmask) >> data->bshift);
-                    abuffer[i] = static_cast<float>(data->amask ? ((pixel & data->amask) >> data->ashift) : 255);
-                });
+                    vec4 result;
+                    load_aligned(result.r, rbuffer);
+                    load_aligned(result.g, gbuffer);
+                    load_aligned(result.b, bbuffer);
+                    load_aligned(result.a, abuffer);
+                    return result;
+                }
+                else
+                {
+                    static_for<0, batch_traits<int32_type>::size>([&](size_t i)
+                    {
+                        auto ptr = data->bytes + ibuffer[i];
+                        uint32_t pixel = 0;
+                        // TODO: are cache reads aligned?
+                        // TODO: still crashing
+                        switch (data->bytes_per_pixel)
+                        {
+                        case 4: pixel |= (ptr[3] << (3 * 8));
+                        case 3: pixel |= (ptr[2] << (2 * 8));
+                        case 2: pixel |= (ptr[1] << (1 * 8));
+                        case 1: pixel |= (ptr[0] << (0 * 8));
+                        }
 
-                vec4 result;
-                load_aligned(result.r, rbuffer);
-                load_aligned(result.g, gbuffer);
-                load_aligned(result.b, bbuffer);
-                load_aligned(result.a, abuffer);
-                result /= 255.0f;
-                return result;
+                        // TODO: a faster cast is possible
+                        rbuffer[i] = static_cast<float>((pixel & data->rmask) >> data->rshift);
+                        gbuffer[i] = static_cast<float>((pixel & data->gmask) >> data->gshift);
+                        bbuffer[i] = static_cast<float>((pixel & data->bmask) >> data->bshift);
+                        abuffer[i] = static_cast<float>(data->amask ? ((pixel & data->amask) >> data->ashift) : 255);
+                    });
+
+                    vec4 result;
+                    load_aligned(result.r, rbuffer);
+                    load_aligned(result.g, gbuffer);
+                    load_aligned(result.b, bbuffer);
+                    load_aligned(result.a, abuffer);
+                    result /= 255.0f;
+                    return result;
+                }
             }
         }
     };

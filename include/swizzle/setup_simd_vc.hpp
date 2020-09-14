@@ -75,6 +75,55 @@ namespace swizzle
     {
         target = src;
     }
+    
+    inline uint8_t* batch_store_rgba8_aligned(const ::Vc::float_v& r, const ::Vc::float_v& g, const ::Vc::float_v& b, const ::Vc::float_v& a, uint8_t* ptr, size_t pitch)
+    {
+        using namespace Vc;
+
+        uint16_v sr = static_cast<uint16_v>(max(0.0f, min(255.0f, r * 256.0f)));
+        uint16_v sg = static_cast<uint16_v>(max(0.0f, min(255.0f, g * 256.0f)));
+        uint16_v sb = static_cast<uint16_v>(max(0.0f, min(255.0f, b * 256.0f)));
+        uint16_v sa = static_cast<uint16_v>(max(0.0f, min(255.0f, a * 256.0f)));
+
+        uint16_v srg = sr | (sg << 8);
+        uint16_v sba = sb | (sa << 8);
+
+        uint16_v srgba = srg.interleaveLow(sba);
+        auto data = srgba.data();
+
+#if Vc_IMPL_AVX 
+        SSE::float_v(AVX::lo128(srgba)).store(reinterpret_cast<uint16_t*>(ptr));
+        SSE::float_v(AVX::hi128(srgba)).store(reinterpret_cast<uint16_t*>(ptr + pitch));
+        return ptr + 16;
+#else
+        auto i1 = _mm_extract_epi64(data, 0);;
+        auto i2 = _mm_extract_epi64(data, 1);
+        *reinterpret_cast<int64_t*>(ptr) = i1;
+        *reinterpret_cast<int64_t*>(ptr + pitch) = i2;
+        return ptr + 8;
+#endif
+    }
+
+    inline uint8_t* batch_store_rgba32f_aligned(const ::Vc::float_v& r, const ::Vc::float_v& g, const ::Vc::float_v& b, const ::Vc::float_v& a, uint8_t* ptr, size_t pitch)
+    {
+        using namespace Vc;
+
+        float_v rbrb = r.interleaveLow(b); // r0b0r1b1...
+        float_v gaga = b.interleaveLow(a); // g0a0g1a1...
+
+        float* p = reinterpret_cast<float*>(ptr);
+        rbrb.interleaveLow(gaga).store(p, Aligned); // r0g0b0a0...
+        rbrb.interleaveHigh(gaga).store(p + float_v::Size, Aligned);
+
+        rbrb = r.interleaveHigh(g);
+        gaga = b.interleaveHigh(a);
+
+        p = reinterpret_cast<float*>(ptr + pitch);
+        rbrb.interleaveLow(gaga).store(p, Aligned);
+        rbrb.interleaveHigh(gaga).store(p + float_v::Size, Aligned);
+
+        return ptr + sizeof(float) * float_v::Size * 2;
+    }
 }
 
 // Vc generally supports it all, but it lacks some crucial functions.

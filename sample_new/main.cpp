@@ -30,7 +30,7 @@ static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 #include <SDL_image.h>
 #endif
 
-#include <time.h>
+#include <ctime>
 #include <memory>
 #include <functional>
 #if SAMPLE_OMP_ENABLED
@@ -57,16 +57,10 @@ struct sdl_deleter
     }
 };
 
-using surface_ptr = std::unique_ptr<SDL_Surface, sdl_deleter>;
-using window_ptr = std::unique_ptr<SDL_Window, sdl_deleter>;
-using texture_ptr = std::unique_ptr<SDL_Texture, sdl_deleter>;
-using renderer_ptr = std::unique_ptr<SDL_Renderer, sdl_deleter>;
-
-
 struct render_stats
 {
     std::chrono::microseconds duration;
-    size_t num_pixels;
+    int num_pixels;
     int num_threads;
 };
 
@@ -76,27 +70,81 @@ struct sampler_data : swizzle::naive_sampler_data
     int buffer_index = -1;
 };
 
-using pixel_func = swizzle::vec4(*)(const shader_inputs& input, swizzle::vec2 fragCoord, swizzle::vec4 fragColor, bool* discarded);
-
-static render_stats render(pixel_func func, shader_inputs uniforms, SDL_Surface* bmp, SDL_Rect viewport, const std::atomic_bool& cancelled)
+struct aligned_render_target_base 
 {
-    swizzle::vector<int, 2> p_min(std::max(0, std::min(bmp->w, viewport.x)), std::max(0, std::min(bmp->h, viewport.y)));
-    auto p_max = p_min;
-    p_max.x = std::min(bmp->w, p_max.x + viewport.w);
-    p_max.y = std::min(bmp->h, p_max.y + viewport.h);
+    struct void_deleter
+    {
+        void operator()(void* ptr)
+        {
+            delete ptr;
+        }
+    };
 
-    float f = float(0x1000);
+    std::unique_ptr<void, void_deleter> memory;
+    void* first_row = nullptr;
+    size_t pitch = 0;
+    int width = 0;
+    int height = 0;
+
+    aligned_render_target_base() = default;
+    aligned_render_target_base(int width, int height, int bpp, int align) : width(width), height(height)
+    {
+        const int mask = align - 1;
+
+        // each row has to be allocated
+        pitch = (width * bpp + mask) & (~mask);
+        size_t pixels_size = static_cast<size_t>(pitch) * height;
+        size_t alloc_size = pixels_size + align - 1;
+
+        // alloc and align
+        memory.reset(::operator new (alloc_size));
+        first_row = memory.get();
+        first_row = std::align(align, pixels_size, first_row, alloc_size);
+    }
+};
+
+struct render_target_rgba32 : aligned_render_target_base
+{
+    static const int bytes_per_pixel = 4;
+
+    render_target_rgba32() = default;
+    render_target_rgba32(int width, int height) : aligned_render_target_base(width, height, bytes_per_pixel, 32) {}
+
+
+    void store(uint8_t* ptr, const vec4& color, size_t pitch)
+    {
+        store_rgba8_aligned(color.r, color.g, color.b, color.a, ptr, pitch);
+    }
+};
+
+struct render_target_float : aligned_render_target_base
+{
+    static const int bytes_per_pixel = 16;
+
+    render_target_float() = default;
+    render_target_float(int width, int height) : aligned_render_target_base(width, height, bytes_per_pixel, 32) {}
+
+    void store(uint8_t* ptr, const vec4& color, size_t pitch)
+    {
+        store_rgba32f_aligned(color.r, color.g, color.b, color.a, ptr, pitch);
+    }
+};
+
+constexpr auto pixels_per_batch = static_cast<int>(::swizzle::detail::batch_traits<swizzle::float_type>::size);
+static_assert(pixels_per_batch == 1 || pixels_per_batch % 2 == 0, "1 or even scalar count");
+constexpr auto columns_per_batch = pixels_per_batch > 1 ? pixels_per_batch / 2 : 1;
+constexpr auto rows_per_batch = pixels_per_batch > 1 ? 2 : 1;
+
+
+template <typename PixelFunc, typename RenderTarget>
+static render_stats render(PixelFunc func, shader_inputs uniforms, RenderTarget& rt, const std::atomic_bool& cancelled)
+{
+    assert(rt.width % columns_per_batch == 0);
+    assert(rt.height % rows_per_batch == 0);
+
     using ::swizzle::detail::static_for;
     using namespace ::swizzle;
-
-    using uint32_traits = detail::batch_traits<swizzle::uint_type>;
     using float_traits = ::swizzle::detail::batch_traits<swizzle::float_type>;
-    static_assert(float_traits::size == uint32_traits::size);
-
-    constexpr auto pixels_per_batch = float_traits::size;
-    static_assert(pixels_per_batch == 1 || pixels_per_batch % 2 == 0, "1 or even scalar count");
-    constexpr auto columns_per_batch = pixels_per_batch > 1 ? pixels_per_batch / 2 : 1;
-    constexpr auto rows_per_batch = pixels_per_batch > 1 ? 2 : 1;
 
     auto render_begin = std::chrono::steady_clock::now();
 
@@ -104,8 +152,8 @@ static render_stats render(pixel_func func, shader_inputs uniforms, SDL_Surface*
     swizzle::float_type x_offsets(0);
     swizzle::float_type y_offsets(0);
 
-    std::atomic<size_t> num_pixels = 0;
-    std::atomic<int> num_threads = 0;
+    int num_pixels = 0;
+    int num_threads = 0;
 
     {
         float_traits::aligned_storage_type aligned_storage;
@@ -114,124 +162,52 @@ static render_stats render(pixel_func func, shader_inputs uniforms, SDL_Surface*
         static_for<0, float_traits::size>([&](size_t i) { aligned[i] = static_cast<float>(i % columns_per_batch) + 0.5f; });
         load_aligned(x_offsets, aligned);
 
-        static_for<0, float_traits::size>([&](size_t i) { aligned[i] = static_cast<float>(1 - i / columns_per_batch) + 0.5f; });
+        static_for<0, float_traits::size>([&](size_t i) { aligned[i] = static_cast<float>(i / columns_per_batch) + 0.5f; });
         load_aligned(y_offsets, aligned);
     }
   
-    auto p_min_aligned = p_min;
-    p_min_aligned.x = (p_min.x / columns_per_batch) * columns_per_batch;
-    p_min_aligned.y = (p_min.y / rows_per_batch) * rows_per_batch;
+    
+    int max_x = rt.width;
+    int max_y = rt.height;
 
-#if SAMPLE_OMP_ENABLED
-#pragma omp parallel 
+#if !SAMPLE_OMP_ENABLED
     {
-        // each thread needs to have at least rows_per_batch rows to process; also, we don't want even number of rows
-        // if rows_per_batch > 1
-        int threads_count = omp_get_num_threads();
-        int thread_num = omp_get_thread_num();
-
-        if (thread_num == 0)
-        {
-            num_threads = threads_count;
-        }
-
-        // ceil
-        int height_per_thread = ( (p_max.y - p_min.y) + threads_count - 1) / threads_count;
-        height_per_thread = std::max(rows_per_batch, height_per_thread);
-
-
-        int height_start = p_min_aligned.y + thread_num * height_per_thread;
-        int height_end = height_start + height_per_thread;
-
-        height_end = std::min(p_max.y, height_end);
-
-#else
-    {
-        int height_start = p_min_aligned.y;
-        int height_end = p_max.y;
         num_threads = 1;
+#else
+    #pragma omp parallel default(none) shared(num_threads, num_pixels)
+    {
+        #pragma omp master
+        num_threads = omp_get_num_threads();
+
+        #pragma omp for
 #endif
-
-        //debug_print(uniforms.iTime);
-
-        uint32_traits::aligned_storage_type aligned_blob_r;
-        uint32_traits::aligned_storage_type aligned_blob_g;
-        uint32_traits::aligned_storage_type aligned_blob_b;
-
-        // check the comment above for explanation
-        uint32_t* pr = reinterpret_cast<uint32_t*>(&aligned_blob_r);
-        uint32_t* pg = reinterpret_cast<uint32_t*>(&aligned_blob_g);
-        uint32_t* pb = reinterpret_cast<uint32_t*>(&aligned_blob_b);
-
-        //assert(rows_per_batch <= height_end - height_start);
-
-        //debug_print(uniforms.iTime);
-        for (int y = height_start; !cancelled && y < height_end; y += rows_per_batch)
+        for (int y = 0; y < max_y; y += rows_per_batch)
         {
-            swizzle::float_type frag_coord_y = static_cast<float>(bmp->h - 1 - y) + y_offsets;
+            if (cancelled)
+                continue;
 
-            uint8_t * ptr = reinterpret_cast<uint8_t*>(bmp->pixels) + y * bmp->pitch + p_min_aligned.x * 3;
+            swizzle::float_type frag_coord_y = static_cast<float>(rt.height - 1 - y) + y_offsets;
 
-            
+            uint8_t* ptr = reinterpret_cast<uint8_t*>(rt.first_row) + y * rt.pitch;
 
             int x;
-            for (x = p_min_aligned.x; x < p_max.x; x += columns_per_batch)
+            for (x = 0; x < max_x; x += columns_per_batch)
             {
-                swizzle::vec4 previousColor;
+                swizzle::bool_type discarded;
+                swizzle::vec4 color = func(uniforms, vec2(static_cast<float>(x) + x_offsets, frag_coord_y), {}, &discarded);
 
-                auto color = func(uniforms, vec2(static_cast<float>(x) + x_offsets, frag_coord_y), {}, nullptr);
-                color *= 255.0f + 0.5f;
-
-                store_aligned(static_cast<swizzle::uint_type>(color.r), pr);
-                store_aligned(static_cast<swizzle::uint_type>(color.g), pg);
-                store_aligned(static_cast<swizzle::uint_type>(color.b), pb);
-
-                if ( x < p_min.x || x + columns_per_batch > p_max.x || y < p_min.y || y + rows_per_batch > p_max.y )
+                if (!discarded) 
                 {
-                    // slow case: partially out of the surface
-                    int min_cols = std::max(0, p_min.x - x);
-                    int min_rows = std::max(0, p_min.y - y);
-                    int max_rows = std::min<int>(p_max.y - y, rows_per_batch);
-                    int max_cols = std::min<int>(p_max.x - x, columns_per_batch);
-
-                    for (int row = min_rows; row < max_rows; ++row)
-                    {
-                        auto p = ptr + row * bmp->pitch + min_cols * 3;
-                        for (int col = min_cols; col < max_cols; ++col)
-                        {
-                            *p++ = static_cast<uint8_t>(pr[row * columns_per_batch + col]);
-                            *p++ = static_cast<uint8_t>(pg[row * columns_per_batch + col]);
-                            *p++ = static_cast<uint8_t>(pb[row * columns_per_batch + col]);
-                        }
-                    }
+                    rt.store(ptr, color, rt.pitch);
                 }
-                else
-                {
-                    {
-                        auto p = ptr;
-                        static_for<0, columns_per_batch>([&](size_t j)
-                        {
-                            *p++ = static_cast<uint8_t>(pr[j]);
-                            *p++ = static_cast<uint8_t>(pg[j]);
-                            *p++ = static_cast<uint8_t>(pb[j]);
-                        });
-                    }
-                    // handle second row (if present)
-                    {
-                        auto p = ptr + bmp->pitch;
-                        static_for<columns_per_batch, pixels_per_batch>([&](size_t j)
-                        {
-                            *p++ = static_cast<uint8_t>(pr[j]);
-                            *p++ = static_cast<uint8_t>(pg[j]);
-                            *p++ = static_cast<uint8_t>(pb[j]);
-                        });
-                    }
-                }
-
-                ptr += 3 * columns_per_batch;
+                
+                ptr += rt.bytes_per_pixel * columns_per_batch;
             }
 
-            num_pixels += x * rows_per_batch;
+#if SAMPLE_OMP_ENABLED
+            #pragma omp atomic
+#endif
+            num_pixels += (max_x) * rows_per_batch;
         }
     }
 
@@ -255,12 +231,19 @@ void set_textures(shader_inputs& inputs, const sampler_data ptr[4])
 #define VT100_CLEARLINE "\33[2K"
 #define VT100_UP(x)     "\33[" STR2(x) "A"
 #define VT100_DOWN(x)   "\33[" STR2(x) "B"
-#define STATS_LINES 12
+#define STATS_LINES 11
 
-const double seconds_to_micro = 1000000.0;
-const double micro_to_seconds = 1 / seconds_to_micro;
+void make_naive_sampler_data(swizzle::naive_sampler_data& sampler, render_target_float& rt)
+{
+    sampler.bytes = reinterpret_cast<uint8_t*>(rt.first_row);
+    sampler.width = rt.width;
+    sampler.height = rt.height;
+    sampler.pitch_bytes = rt.pitch;
+    sampler.bytes_per_pixel = rt.bytes_per_pixel;
+    sampler.is_floating_point = true;
+}
 
-void from_surface(swizzle::naive_sampler_data& sampler, const SDL_Surface* surface)
+void make_naive_sampler_data(swizzle::naive_sampler_data& sampler, const SDL_Surface* surface)
 {
     sampler.bytes = reinterpret_cast<uint8_t*>(surface->pixels);
     sampler.width = surface->w;
@@ -300,7 +283,7 @@ bool load_texture(swizzle::naive_sampler_data& sampler, const char* name)
     }
     else
     {
-        from_surface(sampler, img);
+        make_naive_sampler_data(sampler, img);
         return true;
     }
 #else
@@ -309,7 +292,11 @@ bool load_texture(swizzle::naive_sampler_data& sampler, const char* name)
 #endif
 }
 
-
+template <class Rep, class Period>
+constexpr auto duration_to_seconds(const std::chrono::duration<Rep, Period>& d)
+{
+    return std::chrono::duration<double>(d).count();
+}
 
 
 template <typename T>
@@ -370,7 +357,6 @@ int main(int argc, char* argv[])
 #endif
 
     swizzle::vector<int, 2> resolution(512, 288);
-    SDL_Rect viewport = { 0, 0, 0, 0 };
     float time = 0.0f;
     float time_scale = 1.0f;
 
@@ -405,17 +391,6 @@ int main(int argc, char* argv[])
         {
             if (i + 2 < argc && from_string(argv[++i], resolution.x) && from_string(argv[++i], resolution.y))
             {
-            }
-            else
-            {
-                return print_args_error();
-            }
-        }
-        else if (!strcmp(arg, "-w"))
-        {
-            if (i + 4 < argc && from_string(argv[++i], viewport.x) && from_string(argv[++i], viewport.y) && from_string(argv[++i], viewport.w) && from_string(argv[++i], viewport.h))
-            {
-
             }
             else
             {
@@ -506,9 +481,6 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (viewport.w == 0 || viewport.h == 0)
-        viewport = { 0, 0, resolution.x, resolution.y };
-
     if (resolution.x <= 0 || resolution.y < 0 )
     {
         fprintf(stderr, "ERROR: invalid resolution: %dx%d\n", resolution.x, resolution.y);
@@ -518,7 +490,6 @@ int main(int argc, char* argv[])
     printf("p           - pause/unpause\n");
     printf("left arrow  - decrease time by 1 s\n");
     printf("right arrow - increase time by 1 s\n");
-    printf("shift+mouse - select viewport\n");
     printf("space       - blit now! (show incomplete render)\n");
     printf("esc         - quit\n");
     printf("\n");
@@ -537,7 +508,7 @@ int main(int argc, char* argv[])
         {
             if (textures[i].path)
             {
-                printf("%siChannel%ld: %s\n", channel_prefix[i / shadertoy::num_samplers], i % shadertoy::num_samplers, textures[i].path);
+                printf("%siChannel%d: %s\n", channel_prefix[i / shadertoy::num_samplers], i % shadertoy::num_samplers, textures[i].path);
             }
         }
     }
@@ -554,43 +525,51 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    
-
     try 
     { 
-        window_ptr window(SDL_CreateWindow("CxxSwizzle sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, resolution.x, resolution.y, SDL_WINDOW_RESIZABLE));
-        renderer_ptr renderer(SDL_CreateRenderer(window.get(), -1, 0));
-        surface_ptr target_surface;
-        texture_ptr target_texture;
-        surface_ptr buffer_surfaces[4][2];
+        std::unique_ptr<SDL_Window, sdl_deleter> window(SDL_CreateWindow("CxxSwizzle sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, resolution.x, resolution.y, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI));
+        std::unique_ptr<SDL_Renderer, sdl_deleter> renderer(SDL_CreateRenderer(window.get(), -1, 0));
+        std::unique_ptr<SDL_Surface, sdl_deleter> target_surface;
+        std::unique_ptr<SDL_Texture, sdl_deleter> target_texture;
+
+        render_target_rgba32 target_surface_data;
+        render_target_float buffer_surfaces[4][2];
 
         // a function used to resize the target_surface
         auto resize_or_create_surfaces = [&](int w, int h) -> void
         {
-            auto create_matching_surface = [=]()-> auto { return SDL_CreateRGBSurface(0, w, h, 24, 0x000000ff, 0x0000ff00, 0x00ff0000, 0); };
+            // let's make life easier and make sure surfaces are aligned to the batch size
+            auto aligned_w = ((w + columns_per_batch - 1) / columns_per_batch) * columns_per_batch;
+            auto aligned_h = ((h + rows_per_batch - 1) / rows_per_batch) * rows_per_batch;
+
+            auto create_buffer_surface = [=]() -> auto { return render_target_float(aligned_w, aligned_h); };
 
 #ifdef SAMPLE_HAS_BUFFER_A
-            buffer_surfaces[0][0].reset(create_matching_surface()); buffer_surfaces[0][1].reset(create_matching_surface());
+            buffer_surfaces[0][0] = create_buffer_surface(); buffer_surfaces[0][1] = create_buffer_surface();
 #endif
 #ifdef SAMPLE_HAS_BUFFER_B
-            buffer_surfaces[1][0].reset(create_matching_surface()); buffer_surfaces[1][1].reset(create_matching_surface());
+            buffer_surfaces[1][0] = create_buffer_surface(); buffer_surfaces[1][1] = create_buffer_surface();
 #endif
 #ifdef SAMPLE_HAS_BUFFER_C
-            buffer_surfaces[2][0].reset(create_matching_surface()); buffer_surfaces[2][1].reset(create_matching_surface());
+            buffer_surfaces[2][0] = create_buffer_surface(); buffer_surfaces[2][1] = create_buffer_surface();
 #endif
 #ifdef SAMPLE_HAS_BUFFER_D
-            buffer_surfaces[3][0].reset(create_matching_surface()); buffer_surfaces[3][1].reset(create_matching_surface());
+            buffer_surfaces[3][0] = create_buffer_surface(); buffer_surfaces[3][1] = create_buffer_surface();
 #endif
 
-            target_surface.reset(create_matching_surface());
-            if ( !target_surface )
+            target_surface_data = render_target_rgba32(aligned_w, aligned_h);
+
+            target_surface.reset(SDL_CreateRGBSurfaceWithFormatFrom(target_surface_data.first_row, aligned_w, aligned_h, 32, target_surface_data.pitch, SDL_PIXELFORMAT_RGBA32));
+            if (!target_surface)
             {
                 throw std::runtime_error("Unable to create target_surface");
             }
 
-            target_texture.reset(SDL_CreateTexture(renderer.get(), SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING, w, h));
-            if ( !target_texture )
+            target_texture.reset(SDL_CreateTexture(renderer.get(), SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h));
+            if (!target_texture)
+            {
                 throw std::runtime_error("Unable to create target_texture");
+            }
 
             resolution.x = w;
             resolution.y = h;
@@ -614,30 +593,33 @@ int main(int argc, char* argv[])
 
         std::atomic_bool abort_render_token = false;
 
-        auto render_all = [&target_surface, &buffer_surfaces, &textures, &num_frames](shader_inputs inputs, SDL_Rect viewport, const std::atomic_bool& cancel) -> auto
+
+        auto render_all = [&target_surface_data, &buffer_surfaces, &textures, &num_frames](shader_inputs inputs, const std::atomic_bool& cancel) -> auto
         {
             int buffer_surface_index = 1 - (num_frames & 1);
 
-            SDL_Rect full_viewport = { 0, 0, target_surface->w, target_surface->h };
+            std::chrono::microseconds duration(0);
 
 #ifdef SAMPLE_HAS_BUFFER_A
             set_textures(inputs, &textures[4]);
-            render(shadertoy::buffer_a, inputs, buffer_surfaces[0][buffer_surface_index].get(), full_viewport, cancel);
+            duration += render(shadertoy::buffer_a, inputs, buffer_surfaces[0][buffer_surface_index], cancel).duration;
 #endif
 #ifdef SAMPLE_HAS_BUFFER_B
             set_textures(inputs, &textures[8]);
-            render(shadertoy::buffer_b, inputs, buffer_surfaces[1][buffer_surface_index].get(), full_viewport, cancel);
+            duration += render(shadertoy::buffer_b, inputs, buffer_surfaces[1][buffer_surface_index], cancel).duration;
 #endif
 #ifdef SAMPLE_HAS_BUFFER_C
             set_textures(inputs, &textures[12]);
-            render(shadertoy::buffer_c, inputs, buffer_surfaces[2][buffer_surface_index].get(), full_viewport, cancel);
+            duration += render(shadertoy::buffer_c, inputs, buffer_surfaces[2][buffer_surface_index], cancel).duration;
 #endif
 #ifdef SAMPLE_HAS_BUFFER_D
             set_textures(inputs, &textures[16]);
-            render(shadertoy::buffer_d, inputs, buffer_surfaces[3][buffer_surface_index].get(), full_viewport, cancel);
+            duration += render(shadertoy::buffer_d, inputs, buffer_surfaces[3][buffer_surface_index], cancel).duration;
 #endif
             set_textures(inputs, &textures[0]);
-            return render(shadertoy::image, inputs, target_surface.get(), viewport, cancel);
+            render_stats result = render(shadertoy::image, inputs, target_surface_data, cancel);
+            result.duration += duration;
+            return result;
         };
 
 
@@ -652,7 +634,7 @@ int main(int argc, char* argv[])
                 {
                     if (data.buffer_index >= 0)
                     {
-                        from_surface(data, buffer_surfaces[data.buffer_index][buffer_surface_index].get());
+                        make_naive_sampler_data(data, buffer_surfaces[data.buffer_index][buffer_surface_index]);
                     }
                 }
             }
@@ -668,15 +650,10 @@ int main(int argc, char* argv[])
             inputs.iMouse.z = mouse_pressed ? 1.0f : 0.0f;
             inputs.iMouse.w = 0.0f;
 
-            return std::async(render_all, inputs, viewport, std::ref(abort_render_token));
+            return std::async(render_all, inputs, std::ref(abort_render_token));
         };
 
         std::future<render_stats> render_task = render_async();
-        
-        SDL_Rect mouse_rect = {};
-
-        bool is_shift_pressed = false;
-        bool is_shift_selecting = false;
 
         for (auto update_begin = chrono::steady_clock::now();;)
         {
@@ -705,14 +682,6 @@ int main(int argc, char* argv[])
                         abort_render_token = quit = true;
                     }
                     break; 
-                case SDL_KEYUP:
-                    switch (event.key.keysym.sym)
-                    {
-                    case SDLK_LSHIFT:
-                        is_shift_pressed = false;
-                        break;
-                    }
-                    break;
                 case SDL_KEYDOWN:
                     switch ( event.key.keysym.sym ) 
                     {
@@ -735,9 +704,6 @@ int main(int argc, char* argv[])
                     case SDLK_RIGHT:
                         time += 1.0f;
                         break;
-                    case SDLK_LSHIFT:
-                        is_shift_pressed = true;
-                        break;
                     default:
                         break;
                     }
@@ -748,46 +714,14 @@ int main(int argc, char* argv[])
                         mouse_x = event.button.x;
                         mouse_y = event.button.y;
                     }
-                    else if (is_shift_selecting)
-                    {
-                        mouse_rect.w = event.button.x - mouse_rect.x;
-                        mouse_rect.h = event.button.y - mouse_rect.y;
-                    }
                     break;
                 case SDL_MOUSEBUTTONDOWN:
-                    if (is_shift_pressed)
-                    {
-                        is_shift_selecting = true;
-                        mouse_rect.x = event.button.x;
-                        mouse_rect.y = event.button.y;
-                        mouse_rect.w = mouse_rect.h = 0;
-                    }
-                    else
-                    {
-                        mouse_pressed = true;
-                        mouse_x = event.button.x;
-                        mouse_y = event.button.y;
-                    }
+                    mouse_pressed = true;
+                    mouse_x = event.button.x;
+                    mouse_y = event.button.y;
                     break;
                 case SDL_MOUSEBUTTONUP:
-                    if (is_shift_selecting)
-                    {
-                        is_shift_selecting = false;
-                        if (mouse_rect.h == 0 || mouse_rect.w == 0)
-                        {
-                            viewport = { 0, 0, resolution.x, resolution.y };
-                        }
-                        else
-                        {
-                            viewport = fix_rect(mouse_rect);
-                        }
-                        
-                        abort_render_token = true;
-                        mouse_rect = {};
-                    }
-
                     mouse_pressed = false;
-                    is_shift_selecting = false;
                     break;
 
                 default:
@@ -818,29 +752,17 @@ int main(int argc, char* argv[])
             }
             else
             {
-                if (blit_now || frameReady || is_shift_selecting)
+                if (blit_now || frameReady )
                 {
-                    SDL_UpdateTexture(target_texture.get(), nullptr, target_surface->pixels, target_surface->pitch);
+                    SDL_Rect rect;
+                    rect.x = 0;
+                    rect.y = 0;
+                    rect.w = resolution.x;
+                    rect.h = resolution.y;
+                    auto& s = target_surface;
+                    SDL_UpdateTexture(target_texture.get(), &rect, s->pixels, s->pitch);
                     SDL_RenderClear(renderer.get());
                     SDL_RenderCopy(renderer.get(), target_texture.get(), NULL, NULL);
-
-                    SDL_SetRenderDrawColor(renderer.get(), 0, 0, 255, 128);
-                    {
-                        auto r = viewport;
-                        r.x -= 1;
-                        r.y -= 1;
-                        r.w += 2;
-                        r.h += 2;
-                        SDL_RenderDrawRect(renderer.get(), &r);
-                    }
-
-                    if (mouse_rect.w != 0 && mouse_rect.h != 0)
-                    {
-                        auto fixed = fix_rect(mouse_rect);
-                        SDL_SetRenderDrawColor(renderer.get(), 0, 255, 255, 128);
-                        SDL_RenderDrawRect(renderer.get(), &fixed);
-                        SDL_RenderPresent(renderer.get());
-                    }
 
                     SDL_RenderPresent(renderer.get());
                 }
@@ -854,9 +776,9 @@ int main(int argc, char* argv[])
                     // update fps
                     ++fps_frames_num;
                     fps_frames_duration += last_render_stats.duration;
-                    if (fps_frames_duration >= std::chrono::seconds(1))
+                    if (fps_frames_duration >= std::chrono::milliseconds(500))
                     {
-                        current_fps = fps_frames_num / (fps_frames_duration.count() * micro_to_seconds);
+                        current_fps = fps_frames_num / duration_to_seconds(fps_frames_duration);
                         fps_frames_num = 0;
                         fps_frames_duration = {};
                     }
@@ -865,17 +787,18 @@ int main(int argc, char* argv[])
                     render_task = render_async();
                 }
             }
-            
+
             // update timers
             auto now = chrono::steady_clock::now();
             auto delta = chrono::duration_cast<chrono::microseconds>(now - update_begin);
-            time += static_cast<float>(delta.count() * micro_to_seconds * time_scale);
+
+            time += static_cast<float>(duration_to_seconds(delta) * time_scale);
             update_begin = now;
             
             printf(VT100_UP(STATS_LINES) "\r");
             printf(VT100_CLEARLINE "--- Last frame stats ---\n");
             printf(VT100_CLEARLINE "timestamp:       %.2f s\n", last_frame_timestamp);
-            printf(VT100_CLEARLINE "duration:        %lg s\n", micro_to_seconds * last_render_stats.duration.count());
+            printf(VT100_CLEARLINE "duration:        %lg s\n", duration_to_seconds(last_render_stats.duration));
             printf(VT100_CLEARLINE " - per pixel:    %lg ms\n", static_cast<double>(last_render_stats.duration.count()) / (last_render_stats.num_pixels));
             printf(VT100_CLEARLINE "threads:         %d\n", last_render_stats.num_threads);
             printf(VT100_CLEARLINE "\n");
@@ -883,7 +806,6 @@ int main(int argc, char* argv[])
             printf(VT100_CLEARLINE "time:            %.2f s%s\n", time, time_scale > 0 ? "" : " (paused)");
             printf(VT100_CLEARLINE "frames:          %d\n", num_frames);
             printf(VT100_CLEARLINE "resolution:      %dx%d\n", target_surface->w, target_surface->h);
-            printf(VT100_CLEARLINE "viewport:        %d %d %d %d\n", viewport.x, viewport.y, viewport.w, viewport.h);
             printf(VT100_CLEARLINE "fps:             %lg\n", current_fps);
         }
 
@@ -932,4 +854,14 @@ static int result_ENABLE_VIRTUAL_TERMINAL_PROCESSING = []() -> int {
     }
     return 0;
 }();
+
+static int result_SetProcessDPIAware = []() -> int {
+    if (!SetProcessDPIAware()) 
+    {
+        return GetLastError();
+    }
+    return 0;
+}();
+
+
 #endif
