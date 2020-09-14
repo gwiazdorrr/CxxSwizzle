@@ -57,31 +57,6 @@ struct sdl_deleter
     }
 };
 
-struct sdl_aligned_deleter
-{
-    void operator()(SDL_Surface* ptr)
-    {
-        delete ptr->userdata;
-        SDL_FreeSurface(ptr);
-    }
-};
-
-struct void_deleter
-{
-    void operator()(void* ptr)
-    {
-        delete ptr;
-    }
-};
-
-
-using surface_ptr = std::unique_ptr<SDL_Surface, sdl_deleter>;
-using window_ptr = std::unique_ptr<SDL_Window, sdl_deleter>;
-using texture_ptr = std::unique_ptr<SDL_Texture, sdl_deleter>;
-using renderer_ptr = std::unique_ptr<SDL_Renderer, sdl_deleter>;
-using void_unique_ptr = std::unique_ptr<void, void_deleter>;
-
-
 struct render_stats
 {
     std::chrono::microseconds duration;
@@ -97,7 +72,15 @@ struct sampler_data : swizzle::naive_sampler_data
 
 struct aligned_render_target_base 
 {
-    void_unique_ptr memory;
+    struct void_deleter
+    {
+        void operator()(void* ptr)
+        {
+            delete ptr;
+        }
+    };
+
+    std::unique_ptr<void, void_deleter> memory;
     void* first_row = nullptr;
     size_t pitch = 0;
     int width = 0;
@@ -147,15 +130,7 @@ struct render_target_float : aligned_render_target_base
     }
 };
 
-
-using pixel_func = swizzle::vec4(*)(const shader_inputs& input, swizzle::vec2 fragCoord, swizzle::vec4 fragColor, swizzle::bool_type* discarded);
-
-
-using uint32_traits = detail::batch_traits<swizzle::uint_type>;
-using float_traits = ::swizzle::detail::batch_traits<swizzle::float_type>;
-
-
-constexpr auto pixels_per_batch = static_cast<int>(float_traits::size);
+constexpr auto pixels_per_batch = static_cast<int>(::swizzle::detail::batch_traits<swizzle::float_type>::size);
 static_assert(pixels_per_batch == 1 || pixels_per_batch % 2 == 0, "1 or even scalar count");
 constexpr auto columns_per_batch = pixels_per_batch > 1 ? pixels_per_batch / 2 : 1;
 constexpr auto rows_per_batch = pixels_per_batch > 1 ? 2 : 1;
@@ -169,8 +144,7 @@ static render_stats render(PixelFunc func, shader_inputs uniforms, RenderTarget&
 
     using ::swizzle::detail::static_for;
     using namespace ::swizzle;
-
-    static_assert(float_traits::size == uint32_traits::size);
+    using float_traits = ::swizzle::detail::batch_traits<swizzle::float_type>;
 
     auto render_begin = std::chrono::steady_clock::now();
 
@@ -259,11 +233,7 @@ void set_textures(shader_inputs& inputs, const sampler_data ptr[4])
 #define VT100_DOWN(x)   "\33[" STR2(x) "B"
 #define STATS_LINES 11
 
-const double seconds_to_micro = 1000000.0;
-const double micro_to_seconds = 1 / seconds_to_micro;
-
-
-void from_rendertarget(swizzle::naive_sampler_data& sampler, render_target_float& rt)
+void make_naive_sampler_data(swizzle::naive_sampler_data& sampler, render_target_float& rt)
 {
     sampler.bytes = reinterpret_cast<uint8_t*>(rt.first_row);
     sampler.width = rt.width;
@@ -273,7 +243,7 @@ void from_rendertarget(swizzle::naive_sampler_data& sampler, render_target_float
     sampler.is_floating_point = true;
 }
 
-void from_surface(swizzle::naive_sampler_data& sampler, const SDL_Surface* surface)
+void make_naive_sampler_data(swizzle::naive_sampler_data& sampler, const SDL_Surface* surface)
 {
     sampler.bytes = reinterpret_cast<uint8_t*>(surface->pixels);
     sampler.width = surface->w;
@@ -313,7 +283,7 @@ bool load_texture(swizzle::naive_sampler_data& sampler, const char* name)
     }
     else
     {
-        from_surface(sampler, img);
+        make_naive_sampler_data(sampler, img);
         return true;
     }
 #else
@@ -322,7 +292,11 @@ bool load_texture(swizzle::naive_sampler_data& sampler, const char* name)
 #endif
 }
 
-
+template <class Rep, class Period>
+constexpr auto duration_to_seconds(const std::chrono::duration<Rep, Period>& d)
+{
+    return std::chrono::duration<double>(d).count();
+}
 
 
 template <typename T>
@@ -551,14 +525,12 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    
-
     try 
     { 
-        window_ptr window(SDL_CreateWindow("CxxSwizzle sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, resolution.x, resolution.y, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI));
-        renderer_ptr renderer(SDL_CreateRenderer(window.get(), -1, 0));
-        surface_ptr target_surface;
-        texture_ptr target_texture;
+        std::unique_ptr<SDL_Window, sdl_deleter> window(SDL_CreateWindow("CxxSwizzle sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, resolution.x, resolution.y, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI));
+        std::unique_ptr<SDL_Renderer, sdl_deleter> renderer(SDL_CreateRenderer(window.get(), -1, 0));
+        std::unique_ptr<SDL_Surface, sdl_deleter> target_surface;
+        std::unique_ptr<SDL_Texture, sdl_deleter> target_texture;
 
         render_target_rgba32 target_surface_data;
         render_target_float buffer_surfaces[4][2];
@@ -662,7 +634,7 @@ int main(int argc, char* argv[])
                 {
                     if (data.buffer_index >= 0)
                     {
-                        from_rendertarget(data, buffer_surfaces[data.buffer_index][buffer_surface_index]);
+                        make_naive_sampler_data(data, buffer_surfaces[data.buffer_index][buffer_surface_index]);
                     }
                 }
             }
@@ -804,9 +776,9 @@ int main(int argc, char* argv[])
                     // update fps
                     ++fps_frames_num;
                     fps_frames_duration += last_render_stats.duration;
-                    if (fps_frames_duration >= std::chrono::seconds(1))
+                    if (fps_frames_duration >= std::chrono::milliseconds(500))
                     {
-                        current_fps = fps_frames_num / (fps_frames_duration.count() * micro_to_seconds);
+                        current_fps = fps_frames_num / duration_to_seconds(fps_frames_duration);
                         fps_frames_num = 0;
                         fps_frames_duration = {};
                     }
@@ -815,17 +787,18 @@ int main(int argc, char* argv[])
                     render_task = render_async();
                 }
             }
-            
+
             // update timers
             auto now = chrono::steady_clock::now();
             auto delta = chrono::duration_cast<chrono::microseconds>(now - update_begin);
-            time += static_cast<float>(delta.count() * micro_to_seconds * time_scale);
+
+            time += static_cast<float>(duration_to_seconds(delta) * time_scale);
             update_begin = now;
             
             printf(VT100_UP(STATS_LINES) "\r");
             printf(VT100_CLEARLINE "--- Last frame stats ---\n");
             printf(VT100_CLEARLINE "timestamp:       %.2f s\n", last_frame_timestamp);
-            printf(VT100_CLEARLINE "duration:        %lg s\n", micro_to_seconds * last_render_stats.duration.count());
+            printf(VT100_CLEARLINE "duration:        %lg s\n", duration_to_seconds(last_render_stats.duration));
             printf(VT100_CLEARLINE " - per pixel:    %lg ms\n", static_cast<double>(last_render_stats.duration.count()) / (last_render_stats.num_pixels));
             printf(VT100_CLEARLINE "threads:         %d\n", last_render_stats.num_threads);
             printf(VT100_CLEARLINE "\n");

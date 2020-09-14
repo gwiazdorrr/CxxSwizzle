@@ -39,8 +39,6 @@ namespace swizzle
         unsigned pitch_bytes = 0;
 
         bool is_floating_point = false;
-
-        const size_t checkers_size = 16;
     };
 
     //! A really naive implemenation of a sampler

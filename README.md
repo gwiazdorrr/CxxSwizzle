@@ -128,9 +128,6 @@ If you intend to move back and forth between CxxSwizzle and Shadertoy, add this 
     #define ARRAY(name, type, ...) type name[] = type[] ( __VA_ARGS__ )
     #endif
 
-
-
-
 - function declarations: `void foo();`
 Workaround: Just remove them or:
     #ifndef CXXSWIZZLE
