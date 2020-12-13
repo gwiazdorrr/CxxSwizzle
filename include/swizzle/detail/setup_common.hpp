@@ -54,5 +54,5 @@ namespace swizzle
     using mat3 = mat3x3;
     using mat4 = mat4x4;
 
-    using sampler2D = naive_sampler2D<float_type, int_type, uint_type>;
+    using sampler2D = naive_sampler_generic<float_type, int_type, uint_type>;
 }

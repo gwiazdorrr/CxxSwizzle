@@ -43,9 +43,9 @@ namespace swizzle
 
     //! A really naive implemenation of a sampler
     template <typename FloatType, typename Int32Type, typename UInt32Type>
-    struct naive_sampler2D
+    struct naive_sampler_generic
     {
-        using this_type = naive_sampler2D;
+        using this_type = naive_sampler_generic;
 
         using float_type = FloatType;
         using uint32_type = UInt32Type;
@@ -61,6 +61,8 @@ namespace swizzle
         static inline const naive_sampler_data empty_data = {};
 
         const naive_sampler_data* data = &empty_data;
+        size_t face_count = 1;
+
 
         inline friend vec4 textureLod(const this_type& sampler, const vec2& uv, const float_type& lod)
         {
@@ -85,7 +87,7 @@ namespace swizzle
         // pretend to be a 3D sampler
         inline friend vec4 texture(const this_type& sampler, const vec3& uv)
         {
-            return sampler.sample(uv.xy);
+            return sampler.sample(uv);
         }
 
         inline friend ivec2 textureSize(const this_type& sampler, int)
@@ -93,6 +95,123 @@ namespace swizzle
             return { sampler.data->width, sampler.data->height };
         }
     private:
+
+        std::tuple<float, float, float, float> sample_single_nowrapmode(float x, float y, const naive_sampler_data* data) const 
+        {
+            int ix = static_cast<int>(x * data->width);
+            int iy = static_cast<int>(y * data->height);
+            ix = max(0, min(static_cast<int>(data->width) - 1, ix));
+            iy = max(0, min(static_cast<int>(data->height) - 1, iy));
+
+            int index = (data->height - 1 - iy) * data->pitch_bytes + ix * data->bytes_per_pixel;
+            auto ptr = data->bytes + index;
+
+            if (data->is_floating_point) {
+                return std::make_tuple(
+                    reinterpret_cast<const float*>(ptr)[0],
+                    reinterpret_cast<const float*>(ptr)[1],
+                    reinterpret_cast<const float*>(ptr)[2],
+                    reinterpret_cast<const float*>(ptr)[3]
+                );
+            }
+            else 
+            {
+                uint32_t pixel = 0;
+                // TODO: are cache reads aligned?
+                // TODO: still crashing
+                switch (data->bytes_per_pixel)
+                {
+                    case 4: pixel |= (ptr[3] << (3 * 8));
+                    case 3: pixel |= (ptr[2] << (2 * 8));
+                    case 2: pixel |= (ptr[1] << (1 * 8));
+                    case 1: pixel |= (ptr[0] << (0 * 8));
+                }
+
+                // TODO: a faster cast is possible
+                return std::make_tuple(
+                    static_cast<float>((pixel & data->rmask) >> data->rshift) / 255.0f,
+                    static_cast<float>((pixel & data->gmask) >> data->gshift) / 255.0f,
+                    static_cast<float>((pixel & data->bmask) >> data->bshift) / 255.0f,
+                    static_cast<float>(data->amask ? ((pixel & data->amask) >> data->ashift) / 255.0f : 1.0f)
+                );
+            }
+        }
+
+
+        vec4 sample(const vec3& _coord) const
+        {
+            // this shit is going to be problematic...
+            vec3 coord = coord.call_normalize(_coord);
+            vec3 sign = coord.call_sign(coord);
+            vec3 abs = coord.call_abs(coord);
+
+            vec3 recip = 1 / coord;
+
+            //vec3 T1 = recip * (-0.5f);
+            //vec3 T2 = recip * (0.5f);
+            //vec3 abs = T1.call_min(T1, T2);
+
+
+            vec2 face_coord;
+            int face_index;
+
+            if (abs.x >= abs.y && abs.x >= abs.z)
+            {
+                face_index = 0 + (sign.x > 0 ? 0 : 1);
+                face_coord = coord.zy * recip.x;
+                face_coord.x *= -1;
+                face_coord.y *=  sign.x;
+            }
+            else if (abs.y >= abs.x && abs.y >= abs.z)
+            {
+                face_index = 2 + (sign.y > 0 ? 0 : 1);
+                face_coord = coord.xz * recip.y;
+                face_coord.x *= sign.y;
+                face_coord.y *= -1;
+            }
+            else
+            {
+                face_index = 4 + (sign.z > 0 ? 0 : 1);
+                face_coord = coord.xy * recip.z;
+                face_coord.y *=  sign.z;
+                
+            }
+
+            
+            face_coord *= 0.5f;
+            face_coord += 0.5f;
+            
+
+            /*vec2 res_x = coord.yz * recip.x + 0.5f;
+            vec2 res_y = coord.xz * recip.y + 0.5f;
+            vec2 res_z = coord.xy * recip.z + 0.5f;
+
+            vec2 face_coord;
+
+            int max_component;
+            int face_index;
+
+            if (abs.x >= abs.y && abs.x >= abs.z) 
+            {
+                face_index = 0 + (sign.x > 0 ? 1 : 0);
+                face_coord = res_x;
+            }
+            else if (abs.y >= abs.x && abs.y >= abs.z) 
+            {
+                face_index = 2 + (sign.y > 0 ? 1 : 0);
+                face_coord = res_y;
+            }
+            else
+            {
+                face_index = 4 + (sign.z > 0 ? 1 : 0);
+                face_coord = res_z;
+            }*/
+
+            float r, g, b, a;
+            std::tie(r, g, b, a) = sample_single_nowrapmode(face_coord.x, face_coord.y, data + face_index);
+            return vec4(r, g, b, a);
+        }
+
         vec4 sample(const vec2& coord) const
         {
             vec2 uv;

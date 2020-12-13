@@ -64,15 +64,15 @@ namespace swizzle
     }
 
     template <typename T, typename = std::enable_if_t<std::is_fundamental_v<T>>>
-    inline void load_aligned(T& value, const T* ptr)
+    inline void load_aligned(T& value, const void* ptr)
     {
-        value = *ptr;
+        value = *reinterpret_cast<const T*>(ptr);
     }
 
     template <typename T, typename = std::enable_if_t<std::is_fundamental_v<T>>>
-    inline void store_aligned(const T& value, T* ptr)
+    inline void store_aligned(const T& value, void* ptr)
     {
-        *ptr = value;
+        *reinterpret_cast<T*>(ptr) = value;
     }
 
     inline void store_rgba8_aligned(float r, float g, float b, float a, uint8_t* ptr, size_t) {

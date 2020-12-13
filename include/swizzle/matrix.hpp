@@ -19,9 +19,6 @@ namespace swizzle
         matrix_<ScalarType, NumRows, Columns...> make_matrix_type_helper(std::index_sequence<Columns...>);
     }
 
-    template <class ScalarType, size_t NumRows, size_t NumColumns>
-    using matrix = decltype(detail::make_matrix_type_helper<ScalarType, NumRows>(std::make_index_sequence<NumColumns>{}));
-
     //! A naive matrix implementation.
     //! Stores data as an array of vertices.
     template <class ScalarType, size_t NumRows, size_t... Columns >
