@@ -8,6 +8,7 @@ using namespace shadertoy;
 
 // TODO: wrong mouse clicks
 // TODO: texture sampling in simd?
+// TODO: inout = a.xxxx
 
 
 static_assert(sizeof(vec2) == sizeof(swizzle::float_type[2]), "Too big");
@@ -682,6 +683,13 @@ int main(int argc, char* argv[])
             inputs.iMouse.y = mouse_y / static_cast<float>(s->h);
             inputs.iMouse.z = mouse_pressed ? 1.0f : 0.0f;
             inputs.iMouse.w = 0.0f;
+
+            std::time_t t = std::time(0);   // get time now
+            std::tm* now = std::localtime(&t);
+            inputs.iDate.x = 1900 + now->tm_year;
+            inputs.iDate.y = now->tm_mon;
+            inputs.iDate.z = now->tm_mday;
+            inputs.iDate.w = (now->tm_hour * 60 + now->tm_min) * 60 + now->tm_sec;
 
             return std::async(render_all, inputs, std::ref(abort_render_token));
         };

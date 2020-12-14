@@ -25,7 +25,7 @@ namespace shadertoy
         swizzle::sampler2D iChannel1;
         swizzle::sampler2D iChannel2;
         swizzle::sampler2D iChannel3;
-        //vec4 iDate;                   // (year, month, day, time in seconds)
+        swizzle::vec4 iDate;                        // (year, month, day, time in seconds)
         //float_type iSampleRate;       // sound sample rate (i.e., 44100)
     };
 

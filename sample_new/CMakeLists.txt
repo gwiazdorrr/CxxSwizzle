@@ -36,7 +36,7 @@ macro(download_file url path msg)
     file(DOWNLOAD ${url} ${path})
 endmacro()
 
-macro(download_shadertoy shader_id api_key)
+macro(download_shadertoy shader_id api_key download_error_is_fatal)
     set(SHADERTOY_JSON_PATH "${CMAKE_CURRENT_BINARY_DIR}/${shader_id}.json")
     set(SHADERTOY_QUERY "https://www.shadertoy.com/api/v1/shaders/${shader_id}?key=${api_key}")
         
@@ -47,110 +47,153 @@ macro(download_shadertoy shader_id api_key)
     sbeParseJson(SHADER SHADERTOY_JSON)
 
     if (SHADER.Error)
-        if (SHADER.Error STREQUAL "Shader not found")
-            message(FATAL_ERROR "Shartoy API returned an error: ${SHADER.Error}.\nThis happens if shader is not published "
-            "as public+api. Anyway, this shader needs to be downloaded manually (see README.md for instructions)")
+        if (${download_error_is_fatal})
+            if (SHADER.Error STREQUAL "Shader not found")
+                message(FATAL_ERROR "Shartoy API returned an error: ${SHADER.Error}.\nThis happens if shader is not published "
+                "as public+api. Anyway, this shader needs to be downloaded manually (see README.md for instructions)")
+            else()
+                message(FATAL_ERROR "Shartoy API returned an error: ${SHADER.Error}.")
+            endif()
         else()
-            message(FATAL_ERROR "Shartoy API returned an error: ${SHADER.Error}.")
+            if (SHADER.Error STREQUAL "Shader not found")
+                message(WARNING "Shartoy API returned an error: ${SHADER.Error}.\nThis happens if shader is not published "
+                "as public+api. Anyway, this shader needs to be downloaded manually (see README.md for instructions)")
+            else()
+                message(WARNING "Shartoy API returned an error: ${SHADER.Error}.")
+            endif()
         endif()
-    endif()
+    else()
 
-    # debug
-    # foreach(var ${SHADER})
-    #     message("${var} = ${${var}}") 
-    # endforeach()
+        # debug
+        # foreach(var ${SHADER})
+        #     message("${var} = ${${var}}") 
+        # endforeach()
 
-    set(SHADER_NAME ${SHADER.Shader.info.name})
+        set(SHADER_NAME ${SHADER.Shader.info.name})
 
-    # create directory
-    sanitize_name(SHADER_NAME_SANITIZED ${SHADER_NAME})
+        # create directory
+        sanitize_name(SHADER_NAME_SANITIZED ${SHADER_NAME})
     
-    set(SHADER_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_NAME_SANITIZED}")
+        set(SHADER_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_NAME_SANITIZED}")
 
-    file(MAKE_DIRECTORY ${SHADER_DIRECTORY})
-    create_file("${SHADER_DIRECTORY}/README.md" "https://www.shadertoy.com/view/${shader_id}" "" )
+        file(MAKE_DIRECTORY ${SHADER_DIRECTORY})
+        create_file("${SHADER_DIRECTORY}/README.md" "https://www.shadertoy.com/view/${shader_id}" "" )
 
-    foreach(r ${SHADER.Shader.renderpass})
-        set(RENDERPASS SHADER.Shader.renderpass_${r})
+        foreach(r ${SHADER.Shader.renderpass})
+            set(RENDERPASS SHADER.Shader.renderpass_${r})
             
-        if (${RENDERPASS}.name)
-            sanitize_name(RENDER_PASS_NAME ${${RENDERPASS}.name})
-        else()
-            # seems this fallback is needed sometimes
-            sanitize_name(RENDER_PASS_NAME ${${RENDERPASS}.type})
-        endif()
-
-        string(REPLACE "buf_" "buffer_" RENDER_PASS_NAME ${RENDER_PASS_NAME})
-
-        message(STATUS "Creating ${SHADER_DIRECTORY}/${RENDER_PASS_NAME}.frag (Shader pass)")
-        file(WRITE "${SHADER_DIRECTORY}/${RENDER_PASS_NAME}.frag" "${${RENDERPASS}.code}")
-            
-        set(INPUT_PREFIX "${RENDER_PASS_NAME}_")
-        if(RENDER_PASS_NAME STREQUAL "image")
-            set(INPUT_PREFIX "")
-        endif()
-
-
-        foreach(i ${${RENDERPASS}.inputs})
-            set(INPUT ${RENDERPASS}.inputs_${i})
-            set(INPUT_INDEX ${${INPUT}.channel})
-            if (${INPUT}.ctype STREQUAL "texture")
-                get_filename_component(INPUT_EXTENSION ${${INPUT}.src} EXT)
-                download_file("https://www.shadertoy.com${${INPUT}.src}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}${INPUT_EXTENSION}" "")
-            elseif (${INPUT}.ctype STREQUAL "cubemap")
-                get_filename_component(INPUT_EXTENSION ${${INPUT}.src} EXT)
-                get_filename_component(INPUT_NAME      ${${INPUT}.src} NAME_WE)
-                get_filename_component(INPUT_DIR       ${${INPUT}.src} DIRECTORY)
-                download_file("https://www.shadertoy.com${${INPUT}.src}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}${INPUT_EXTENSION}" "")
-                download_file("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_1${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_1${INPUT_EXTENSION}" "")
-                download_file("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_2${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_2${INPUT_EXTENSION}" "")
-                download_file("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_3${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_3${INPUT_EXTENSION}" "")
-                download_file("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_4${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_4${INPUT_EXTENSION}" "")
-                download_file("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_5${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_5${INPUT_EXTENSION}" "")
-            elseif(${INPUT}.ctype STREQUAL "buffer")
-                set(TARGET_FILE "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}.txt")
-                if(${INPUT}.src STREQUAL "/media/previz/buffer00.png")
-                    create_file("${TARGET_FILE}" "buffer_a" "(Redirecting to buffer_a)")
-                elseif(${INPUT}.src STREQUAL "/media/previz/buffer01.png")
-                    create_file("${TARGET_FILE}" "buffer_b" "(Redirecting to buffer_b)")
-                elseif(${INPUT}.src STREQUAL "/media/previz/buffer02.png")
-                    create_file("${TARGET_FILE}" "buffer_c" "(Redirecting to buffer_c)")
-                elseif(${INPUT}.src STREQUAL "/media/previz/buffer03.png")
-                    create_file("${TARGET_FILE}" "buffer_d" "(Redirecting to buffer_d)")
-                else()
-                    message(WARNING "Unable to guess buffer index: ${${INPUT}.src} (channel ${INPUT_INDEX})")
-                endif()
-            elseif(${INPUT}.ctype STREQUAL "keyboard")
-                set(TARGET_FILE "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}.txt")
-                create_file("${TARGET_FILE}" "keyboard" "(Redirecting to keyboard)")
-            elseif(${INPUT}.ctype)
-                message(WARNING "Channel type ${${INPUT}.ctype} not supported (channel ${INPUT_INDEX})")
+            if (${RENDERPASS}.name)
+                sanitize_name(RENDER_PASS_NAME ${${RENDERPASS}.name})
+            else()
+                # seems this fallback is needed sometimes
+                sanitize_name(RENDER_PASS_NAME ${${RENDERPASS}.type})
             endif()
 
+            string(REPLACE "buf_" "buffer_" RENDER_PASS_NAME ${RENDER_PASS_NAME})
+
+            message(STATUS "Creating ${SHADER_DIRECTORY}/${RENDER_PASS_NAME}.frag (Shader pass)")
+            file(WRITE "${SHADER_DIRECTORY}/${RENDER_PASS_NAME}.frag" "${${RENDERPASS}.code}")
+            
+            set(INPUT_PREFIX "${RENDER_PASS_NAME}_")
+            if(RENDER_PASS_NAME STREQUAL "image")
+                set(INPUT_PREFIX "")
+            endif()
+
+
+            foreach(i ${${RENDERPASS}.inputs})
+                set(INPUT ${RENDERPASS}.inputs_${i})
+                set(INPUT_INDEX ${${INPUT}.channel})
+                if (${INPUT}.ctype STREQUAL "texture")
+                    get_filename_component(INPUT_EXTENSION ${${INPUT}.src} EXT)
+                    download_file("https://www.shadertoy.com${${INPUT}.src}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}${INPUT_EXTENSION}" "")
+                elseif (${INPUT}.ctype STREQUAL "cubemap")
+                    get_filename_component(INPUT_EXTENSION ${${INPUT}.src} EXT)
+                    get_filename_component(INPUT_NAME      ${${INPUT}.src} NAME_WE)
+                    get_filename_component(INPUT_DIR       ${${INPUT}.src} DIRECTORY)
+                    download_file("https://www.shadertoy.com${${INPUT}.src}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}${INPUT_EXTENSION}" "")
+                    download_file("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_1${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_1${INPUT_EXTENSION}" "")
+                    download_file("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_2${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_2${INPUT_EXTENSION}" "")
+                    download_file("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_3${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_3${INPUT_EXTENSION}" "")
+                    download_file("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_4${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_4${INPUT_EXTENSION}" "")
+                    download_file("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_5${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_5${INPUT_EXTENSION}" "")
+                elseif(${INPUT}.ctype STREQUAL "buffer")
+                    set(TARGET_FILE "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}.txt")
+                    if(${INPUT}.src STREQUAL "/media/previz/buffer00.png")
+                        create_file("${TARGET_FILE}" "buffer_a" "(Redirecting to buffer_a)")
+                    elseif(${INPUT}.src STREQUAL "/media/previz/buffer01.png")
+                        create_file("${TARGET_FILE}" "buffer_b" "(Redirecting to buffer_b)")
+                    elseif(${INPUT}.src STREQUAL "/media/previz/buffer02.png")
+                        create_file("${TARGET_FILE}" "buffer_c" "(Redirecting to buffer_c)")
+                    elseif(${INPUT}.src STREQUAL "/media/previz/buffer03.png")
+                        create_file("${TARGET_FILE}" "buffer_d" "(Redirecting to buffer_d)")
+                    else()
+                        message(WARNING "Unable to guess buffer index: ${${INPUT}.src} (channel ${INPUT_INDEX})")
+                    endif()
+                elseif(${INPUT}.ctype STREQUAL "keyboard")
+                    set(TARGET_FILE "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}.txt")
+                    create_file("${TARGET_FILE}" "keyboard" "(Redirecting to keyboard)")
+                elseif(${INPUT}.ctype)
+                    message(WARNING "Channel type ${${INPUT}.ctype} not supported (channel ${INPUT_INDEX})")
+                endif()
+
+            endforeach()
+
         endforeach()
-
-    endforeach()
-
+    endif()
     sbeClearJson(SHADER)
 endmacro()
+
+
+
+macro(download_shadertoy_list sort_type api_key out_list)
+    set(SHADERTOY_JSON_PATH "${CMAKE_CURRENT_BINARY_DIR}/sort_${sort_type}.json")
+    set(SHADERTOY_QUERY "https://www.shadertoy.com/api/v1/shaders/query/string?sort=${sort_type}&key=${api_key}")
+
+    download_file(${SHADERTOY_QUERY} ${SHADERTOY_JSON_PATH} "(Shadertoy JSON shader list)")
+
+    message(STATUS "Parsing ${SHADERTOY_JSON_PATH}")
+    file(READ "${SHADERTOY_JSON_PATH}" SHADERTOY_JSON)
+    sbeParseJson(SHADER_LIST SHADERTOY_JSON)
+
+    if (SHADER_LIST.Error)
+        message(FATAL_ERROR "Shartoy API returned an error: ${SHADER_LIST.Error}.")
+    endif()
+
+    message(STATUS "Found ${SHADER_LIST.Shaders} shaders")
+
+    foreach(shader_index ${SHADER_LIST.Results})
+        set(SHADER_ID SHADER_LIST.Results_${shader_index})
+        list(APPEND ${out_list} "${${SHADER_ID}}")
+    endforeach()
+
+endmacro()
+
 
 
 set(SHADERTOY_API_KEY "BtntM7" CACHE STRING "Shadertoy API Key (go to https://www.shadertoy.com/howto#q2 for details)")
 mark_as_advanced(SHADERTOY_API_KEY)
 
-set(SHADERTOY_SHADER_ID "" CACHE STRING "Download Shader")
+set(SHADERTOY_DOWNLOAD "none" CACHE STRING "Download Shader")
+set_property(CACHE SHADERTOY_DOWNLOAD PROPERTY STRINGS none explicit_ids top_love top_popular top_newest top_hot)
 
+set(SHADERTOY_DOWNLOAD_EXPLICIT_IDS "" CACHE STRING "Download Shader Explicit Ids")
 
-option(SHADERTOY_DOWNLOAD_SHADER "Download shader defined with SHADERTOY_SHADER_ID. Shader needs to be public and not unlisted.")
-if (SHADERTOY_DOWNLOAD_SHADER)
-    if (NOT SHADERTOY_SHADER_ID)
-        message(FATAL_ERROR "SHADERTOY_SHADER_ID needs to be set")
+if (SHADERTOY_DOWNLOAD STREQUAL "explicit_ids")
+    if (NOT SHADERTOY_DOWNLOAD_EXPLICIT_IDS)
+        message(FATAL_ERROR "SHADERTOY_DOWNLOAD_EXPLICIT_IDS needs to be set")
     else()
-        foreach (id ${SHADERTOY_SHADER_ID})
-            download_shadertoy(${id} ${SHADERTOY_API_KEY})
+        foreach (id ${SHADERTOY_DOWNLOAD_EXPLICIT_IDS})
+            download_shadertoy(${id} ${SHADERTOY_API_KEY} True)
         endforeach()
     endif()
+elseif(SHADERTOY_DOWNLOAD MATCHES "^top_")
+    string (REPLACE "top_" "" SHADERTOY_DOWNLOAD_LIST_TYPE ${SHADERTOY_DOWNLOAD})
+    download_shadertoy_list(${SHADERTOY_DOWNLOAD_LIST_TYPE} ${SHADERTOY_API_KEY} SHADERTOY_SHADER_LIST)
+    foreach (id ${SHADERTOY_SHADER_LIST})
+        download_shadertoy(${id} ${SHADERTOY_API_KEY} False)
+    endforeach()
 endif()
+
 
 macro(get_subdir_list result curdir)
     file(GLOB children RELATIVE ${curdir} ${curdir}/*)
