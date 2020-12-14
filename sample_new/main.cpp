@@ -6,6 +6,9 @@
 using namespace swizzle;
 using namespace shadertoy;
 
+// TODO: wrong mouse clicks
+// TODO: texture sampling in simd?
+
 
 static_assert(sizeof(vec2) == sizeof(swizzle::float_type[2]), "Too big");
 static_assert(sizeof(vec3) == sizeof(swizzle::float_type[3]), "Too big");
@@ -198,7 +201,7 @@ static render_stats render(PixelFunc func, shader_inputs uniforms, RenderTarget&
             if (cancelled)
                 continue;
 
-            swizzle::float_type frag_coord_y = static_cast<float>(rt.height - 1 - y) + y_offsets;
+            swizzle::float_type frag_coord_y = static_cast<float>(rt.height - y) - y_offsets;
 
             uint8_t* ptr = reinterpret_cast<uint8_t*>(rt.first_row) + y * rt.pitch;
 
@@ -634,15 +637,15 @@ int main(int argc, char* argv[])
             duration += render(shadertoy::buffer_a, inputs, buffer_surfaces[0][buffer_surface_index], cancel).duration;
 #endif
 #ifdef SAMPLE_HAS_BUFFER_B
-            set_textures(inputs, &textures[8]);
+            init_samplers(inputs, &textures[8]);
             duration += render(shadertoy::buffer_b, inputs, buffer_surfaces[1][buffer_surface_index], cancel).duration;
 #endif
 #ifdef SAMPLE_HAS_BUFFER_C
-            set_textures(inputs, &textures[12]);
+            init_samplers(inputs, &textures[12]);
             duration += render(shadertoy::buffer_c, inputs, buffer_surfaces[2][buffer_surface_index], cancel).duration;
 #endif
 #ifdef SAMPLE_HAS_BUFFER_D
-            set_textures(inputs, &textures[16]);
+            init_samplers(inputs, &textures[16]);
             duration += render(shadertoy::buffer_d, inputs, buffer_surfaces[3][buffer_surface_index], cancel).duration;
 #endif
             init_samplers(inputs, &textures[0]);

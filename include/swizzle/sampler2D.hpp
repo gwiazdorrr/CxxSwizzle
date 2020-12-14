@@ -84,7 +84,6 @@ namespace swizzle
             return sampler.fetch(p);
         }
 
-        // pretend to be a 3D sampler
         inline friend vec4 texture(const this_type& sampler, const vec3& uv)
         {
             return sampler.sample(uv);
@@ -96,14 +95,24 @@ namespace swizzle
         }
     private:
 
-        std::tuple<float, float, float, float> sample_single_nowrapmode(float x, float y, const naive_sampler_data* data) const 
-        {
-            int ix = static_cast<int>(x * data->width);
-            int iy = static_cast<int>(y * data->height);
-            ix = max(0, min(static_cast<int>(data->width) - 1, ix));
-            iy = max(0, min(static_cast<int>(data->height) - 1, iy));
+        template <typename IntType, typename FloatType>
+        std::tuple<IntType, IntType> uv_to_icoord(FloatType u, FloatType v, const naive_sampler_data* data) const {
+            using std::min;
+            auto ix = static_cast<IntType>(u * data->width);
+            auto iy = static_cast<IntType>(v * data->height);
+            ix = min(IntType((int)data->width - 1), ix);
+            iy = min(IntType((int)data->height - 1), iy);
+            return std::make_tuple(ix, iy);
+        }
 
-            int index = (data->height - 1 - iy) * data->pitch_bytes + ix * data->bytes_per_pixel;
+        template <typename IntType>
+        IntType icoord_to_index(IntType x, IntType y, const naive_sampler_data* data) const
+        {
+            return (data->height - 1 - y) * data->pitch_bytes + x * data->bytes_per_pixel;
+        }
+
+        std::tuple<float, float, float, float> fetch_pixel(int index, const naive_sampler_data* data) const
+        {
             auto ptr = data->bytes + index;
 
             if (data->is_floating_point) {
@@ -114,17 +123,17 @@ namespace swizzle
                     reinterpret_cast<const float*>(ptr)[3]
                 );
             }
-            else 
+            else
             {
                 uint32_t pixel = 0;
                 // TODO: are cache reads aligned?
                 // TODO: still crashing
                 switch (data->bytes_per_pixel)
                 {
-                    case 4: pixel |= (ptr[3] << (3 * 8));
-                    case 3: pixel |= (ptr[2] << (2 * 8));
-                    case 2: pixel |= (ptr[1] << (1 * 8));
-                    case 1: pixel |= (ptr[0] << (0 * 8));
+                case 4: pixel |= (ptr[3] << (3 * 8));
+                case 3: pixel |= (ptr[2] << (2 * 8));
+                case 2: pixel |= (ptr[1] << (1 * 8));
+                case 1: pixel |= (ptr[0] << (0 * 8));
                 }
 
                 // TODO: a faster cast is possible
@@ -137,79 +146,78 @@ namespace swizzle
             }
         }
 
-
         vec4 sample(const vec3& _coord) const
         {
             // this shit is going to be problematic...
             vec3 coord = coord.call_normalize(_coord);
-            vec3 sign = coord.call_sign(coord);
-            vec3 abs = coord.call_abs(coord);
 
-            vec3 recip = 1 / coord;
+            using namespace swizzle::detail;
 
-            //vec3 T1 = recip * (-0.5f);
-            //vec3 T2 = recip * (0.5f);
-            //vec3 abs = T1.call_min(T1, T2);
+            alignas(batch_traits<float_type>::align) float px[batch_traits<float_type>::size];
+            alignas(batch_traits<float_type>::align) float py[batch_traits<float_type>::size];
+            alignas(batch_traits<float_type>::align) float pz[batch_traits<float_type>::size];
+            alignas(batch_traits<float_type>::align) float pr[batch_traits<float_type>::size];
+            alignas(batch_traits<float_type>::align) float pg[batch_traits<float_type>::size];
+            alignas(batch_traits<float_type>::align) float pb[batch_traits<float_type>::size];
+            alignas(batch_traits<float_type>::align) float pa[batch_traits<float_type>::size];
 
+            store_aligned(coord.x, px);
+            store_aligned(coord.y, py);
+            store_aligned(coord.z, pz);
 
-            vec2 face_coord;
-            int face_index;
-
-            if (abs.x >= abs.y && abs.x >= abs.z)
+            static_for<0, batch_traits<float_type>::size>([&](size_t i)
             {
-                face_index = 0 + (sign.x > 0 ? 0 : 1);
-                face_coord = coord.zy * recip.x;
-                face_coord.x *= -1;
-                face_coord.y *=  sign.x;
-            }
-            else if (abs.y >= abs.x && abs.y >= abs.z)
-            {
-                face_index = 2 + (sign.y > 0 ? 0 : 1);
-                face_coord = coord.xz * recip.y;
-                face_coord.x *= sign.y;
-                face_coord.y *= -1;
-            }
-            else
-            {
-                face_index = 4 + (sign.z > 0 ? 0 : 1);
-                face_coord = coord.xy * recip.z;
-                face_coord.y *=  sign.z;
+                float x = px[i];
+                float y = py[i];
+                float z = pz[i];
                 
-            }
+                float ax = std::abs(x);
+                float ay = std::abs(y);
+                float az = std::abs(z);
 
-            
-            face_coord *= 0.5f;
-            face_coord += 0.5f;
-            
+                int face_index;
+                float u;
+                float v;
 
-            /*vec2 res_x = coord.yz * recip.x + 0.5f;
-            vec2 res_y = coord.xz * recip.y + 0.5f;
-            vec2 res_z = coord.xy * recip.z + 0.5f;
+                if (ax >= ay && ax >= az ) 
+                {
+                    float s = x > 0 ? 1 : -1;
+                    face_index = 0 + (s > 0 ? 0 : 1);
+                    u = -1 * z / x;
+                    v =  s * y / x;
+                }
+                else if (ay >= az && ay >= az) 
+                {
+                    float s = y > 0 ? 1 : -1;
+                    face_index = 2 + (s > 0 ? 0 : 1);
+                    u =  s * x / y;
+                    v = -s * z / y;
+                }
+                else
+                {
+                    float s = z > 0 ? 1 : -1;
+                    face_index = 4 + (s > 0 ? 0 : 1);
+                    u = 1 * x / z;
+                    v = s * y / z;
+                }
 
-            vec2 face_coord;
+                u *= 0.5f;
+                v *= 0.5f;
+                u += 0.5f;
+                v += 0.5f;
 
-            int max_component;
-            int face_index;
+                auto face_data = data + face_index;
+                int ix, iy;
+                std::tie(ix, iy) = uv_to_icoord<int>(u, v, face_data);
+                std::tie(pr[i], pg[i], pb[i], pa[i]) = fetch_pixel(icoord_to_index(ix, iy, face_data), face_data);
+            });
 
-            if (abs.x >= abs.y && abs.x >= abs.z) 
-            {
-                face_index = 0 + (sign.x > 0 ? 1 : 0);
-                face_coord = res_x;
-            }
-            else if (abs.y >= abs.x && abs.y >= abs.z) 
-            {
-                face_index = 2 + (sign.y > 0 ? 1 : 0);
-                face_coord = res_y;
-            }
-            else
-            {
-                face_index = 4 + (sign.z > 0 ? 1 : 0);
-                face_coord = res_z;
-            }*/
-
-            float r, g, b, a;
-            std::tie(r, g, b, a) = sample_single_nowrapmode(face_coord.x, face_coord.y, data + face_index);
-            return vec4(r, g, b, a);
+            vec4 result;
+            load_aligned(result.r, pr);
+            load_aligned(result.g, pg);
+            load_aligned(result.b, pb);
+            load_aligned(result.a, pa);
+            return result;
         }
 
         vec4 sample(const vec2& coord) const
@@ -229,17 +237,13 @@ namespace swizzle
                 break;
             }
 
-            // OGL uses left-bottom corner as origin...
-            //uv.y = 1.0f - uv.y;
-
             ivec2 icoord;
-            icoord.x = static_cast<int32_type>(uv.x * data->width);
-            icoord.y = static_cast<int32_type>(uv.y * data->height);
-            icoord.x = max(0, min(static_cast<int>(data->width) - 1, icoord.x));
-            icoord.y = max(0, min(static_cast<int>(data->height) - 1, icoord.y));
-
+            std::tie(icoord.x, icoord.y) = uv_to_icoord<int32_type>(uv.x, uv.y, data);
             return fetch(icoord);
         }
+
+
+
 
         vec4 fetch(const ivec2& coord) const
         {
@@ -251,72 +255,28 @@ namespace swizzle
             {
                 using namespace swizzle::detail;
 
-                typename batch_traits<int32_type>::aligned_storage_type istorage;
-                auto ibuffer = reinterpret_cast<int32_t*>(&istorage);
+                alignas(batch_traits<int32_type>::align) int ibuffer[batch_traits<int32_type>::size];
                 {
-                    int32_type index = (data->height - 1 - coord.y) * data->pitch_bytes + coord.x * data->bytes_per_pixel;
+                    int32_type index = icoord_to_index(coord.x, coord.y, data);
                     store_aligned(index, ibuffer);
                 }
 
-                typename batch_traits<float_type>::aligned_storage_type rstorage;
-                typename batch_traits<float_type>::aligned_storage_type gstorage;
-                typename batch_traits<float_type>::aligned_storage_type bstorage;
-                typename batch_traits<float_type>::aligned_storage_type astorage;
+                alignas(batch_traits<float_type>::align) float pr[batch_traits<float_type>::size];
+                alignas(batch_traits<float_type>::align) float pg[batch_traits<float_type>::size];
+                alignas(batch_traits<float_type>::align) float pb[batch_traits<float_type>::size];
+                alignas(batch_traits<float_type>::align) float pa[batch_traits<float_type>::size];
 
-                auto rbuffer = reinterpret_cast<float*>(&rstorage);
-                auto gbuffer = reinterpret_cast<float*>(&gstorage);
-                auto bbuffer = reinterpret_cast<float*>(&bstorage);
-                auto abuffer = reinterpret_cast<float*>(&astorage);
-
-                if (data->is_floating_point)
+                static_for<0, batch_traits<int32_type>::size>([&](size_t i)
                 {
-                    static_for<0, batch_traits<int32_type>::size>([&](size_t i)
-                    {
-                        auto ptr = data->bytes + ibuffer[i];
-                        rbuffer[i] = reinterpret_cast<const float*>(ptr)[0];
-                        gbuffer[i] = reinterpret_cast<const float*>(ptr)[1];
-                        bbuffer[i] = reinterpret_cast<const float*>(ptr)[2];
-                        abuffer[i] = reinterpret_cast<const float*>(ptr)[3];
-                    });
+                    std::tie(pr[i], pg[i], pb[i], pa[i]) = fetch_pixel(ibuffer[i], data);
+                });
 
-                    vec4 result;
-                    load_aligned(result.r, rbuffer);
-                    load_aligned(result.g, gbuffer);
-                    load_aligned(result.b, bbuffer);
-                    load_aligned(result.a, abuffer);
-                    return result;
-                }
-                else
-                {
-                    static_for<0, batch_traits<int32_type>::size>([&](size_t i)
-                    {
-                        auto ptr = data->bytes + ibuffer[i];
-                        uint32_t pixel = 0;
-                        // TODO: are cache reads aligned?
-                        // TODO: still crashing
-                        switch (data->bytes_per_pixel)
-                        {
-                        case 4: pixel |= (ptr[3] << (3 * 8));
-                        case 3: pixel |= (ptr[2] << (2 * 8));
-                        case 2: pixel |= (ptr[1] << (1 * 8));
-                        case 1: pixel |= (ptr[0] << (0 * 8));
-                        }
-
-                        // TODO: a faster cast is possible
-                        rbuffer[i] = static_cast<float>((pixel & data->rmask) >> data->rshift);
-                        gbuffer[i] = static_cast<float>((pixel & data->gmask) >> data->gshift);
-                        bbuffer[i] = static_cast<float>((pixel & data->bmask) >> data->bshift);
-                        abuffer[i] = static_cast<float>(data->amask ? ((pixel & data->amask) >> data->ashift) : 255);
-                    });
-
-                    vec4 result;
-                    load_aligned(result.r, rbuffer);
-                    load_aligned(result.g, gbuffer);
-                    load_aligned(result.b, bbuffer);
-                    load_aligned(result.a, abuffer);
-                    result /= 255.0f;
-                    return result;
-                }
+                vec4 result;
+                load_aligned(result.r, pr);
+                load_aligned(result.g, pg);
+                load_aligned(result.b, pb);
+                load_aligned(result.a, pa);
+                return result;
             }
         }
     };
