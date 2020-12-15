@@ -522,6 +522,7 @@ int main(int argc, char* argv[])
             inputs.iMouse.y = mouse_y / static_cast<float>(s->h);
             inputs.iMouse.z = mouse_pressed ? 1.0f : 0.0f;
             inputs.iMouse.w = 0.0f;
+            inputs.iSampleRate = 44100.0f;
 
             inputs.iChannel0.data = &textures[0];
             inputs.iChannel1.data = &textures[1];

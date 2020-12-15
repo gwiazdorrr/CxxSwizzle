@@ -11,10 +11,10 @@ namespace swizzle
 {
     //! A wrapper for a vector reference. Makes inout and out parameters work with proxies, but at a cost
     //! of std::function call (and likely an alloc, too).
-    template <class VectorType>
-    struct inout_wrapper : public detail::clean_up_before_other_destructors<inout_wrapper<VectorType>>, public VectorType
+    template <class TVector>
+    struct inout_wrapper : public detail::clean_up_before_other_destructors<inout_wrapper<TVector>>, public TVector
     {
-        typedef VectorType vector_type;
+        typedef TVector vector_type;
         using this_type = inout_wrapper;
 
         inout_wrapper(vector_type& value)
@@ -26,9 +26,9 @@ namespace swizzle
             };
         }
 
-        template <typename SomeVectorType, typename SomeDataType, typename SomeScalarType, size_t... Index>
-        inout_wrapper(detail::indexed_proxy<SomeVectorType, SomeDataType, SomeScalarType, Index...>& value,
-            std::enable_if_t<sizeof...(Index) == vector_type::num_of_components && std::is_same_v<SomeScalarType, typename vector_type::scalar_type>, bool> = false)
+        template <typename TSomeVector, typename TSomeData, typename TSomeScalar, size_t... TIndices>
+        inout_wrapper(detail::indexed_proxy<TSomeVector, TSomeData, TSomeScalar, TIndices...>& value,
+            std::enable_if_t<sizeof...(TIndices) == vector_type::num_of_components && std::is_same_v<TSomeScalar, typename vector_type::scalar_type>, bool> = false)
             : vector_type(value.decay())
         {
             this->cleanup = [&value](this_type& v) -> void

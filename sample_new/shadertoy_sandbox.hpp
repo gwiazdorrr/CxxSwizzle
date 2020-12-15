@@ -18,15 +18,15 @@ namespace shadertoy
         swizzle::float_type iTime;               // shader playback time (in seconds)
         swizzle::float_type iTimeDelta;          // render time (in seconds)
         swizzle::int_type iFrame;                // shader playback frame
-        //float_type     iChannelTime[4];       // channel playback time (in seconds)
+        swizzle::float_type iChannelTime[4];     // channel playback time (in seconds) NOT SUPPORTED YET
         swizzle::vec3 iChannelResolution[4];     // channel resolution (in pixels)
         swizzle::vec4 iMouse;                    // mouse pixel coords. xy: current (if MLB down), zw: click
         swizzle::sampler2D iChannel0;            // input channel. XX = 2D/Cube
         swizzle::sampler2D iChannel1;
         swizzle::sampler2D iChannel2;
         swizzle::sampler2D iChannel3;
-        swizzle::vec4 iDate;                        // (year, month, day, time in seconds)
-        //float_type iSampleRate;       // sound sample rate (i.e., 44100)
+        swizzle::vec4 iDate;                     // (year, month, day, time in seconds)
+        swizzle::float_type iSampleRate;         // sound sample rate (i.e., 44100)
     };
 
     swizzle::vec4 image(const shader_inputs& uniforms, swizzle::vec2 fragCoord, swizzle::vec4 prevFragColor, swizzle::bool_type* discarded);

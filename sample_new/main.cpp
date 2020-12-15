@@ -236,6 +236,10 @@ void init_samplers(shader_inputs& inputs, const sampler_data ptr[4])
     ptr[1].init_sampler(inputs.iChannel1, inputs.iChannelResolution[1]);
     ptr[2].init_sampler(inputs.iChannel2, inputs.iChannelResolution[2]);
     ptr[3].init_sampler(inputs.iChannel3, inputs.iChannelResolution[3]);
+    for (auto& f : inputs.iChannelTime) 
+    {
+        f = 0.0f;
+    }
 }
 
 #define STR1(x) #x
@@ -616,6 +620,7 @@ int main(int argc, char* argv[])
         int mouse_press_x = 0, mouse_press_y = 0;
         bool pending_resize = false;
         bool mouse_pressed = false;
+        bool mouse_clicked = false;
 
         render_stats last_render_stats = { };
         float last_frame_timestamp = 0.0f;
@@ -677,19 +682,29 @@ int main(int argc, char* argv[])
 
             shader_inputs inputs = {};
             inputs.iTime = time;
+            inputs.iTimeDelta = static_cast<float>(duration_to_seconds(last_render_stats.duration));
             inputs.iFrame = num_frames;
             inputs.iResolution = vec3(static_cast<float>(s->w), static_cast<float>(s->h), 0.0f);
-            inputs.iMouse.x = mouse_x / static_cast<float>(s->w);
-            inputs.iMouse.y = mouse_y / static_cast<float>(s->h);
-            inputs.iMouse.z = mouse_pressed ? 1.0f : 0.0f;
-            inputs.iMouse.w = 0.0f;
+            inputs.iMouse.x = static_cast<float>(mouse_x);
+            inputs.iMouse.y = static_cast<float>(s->h - 1 - mouse_y);
+            inputs.iMouse.z = (mouse_pressed ? 1.0f : -1.0f) * mouse_press_x;
+            inputs.iMouse.w = (mouse_clicked ? 1.0f : -1.0f) * (s->h - 1 - mouse_press_y);
+            mouse_clicked = false;
 
-            std::time_t t = std::time(0);   // get time now
-            std::tm* now = std::localtime(&t);
-            inputs.iDate.x = 1900 + now->tm_year;
-            inputs.iDate.y = now->tm_mon;
-            inputs.iDate.z = now->tm_mday;
-            inputs.iDate.w = (now->tm_hour * 60 + now->tm_min) * 60 + now->tm_sec;
+
+            {
+                using sc = std::chrono::system_clock;
+                auto now = sc::now();
+                auto seconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
+                auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(now - seconds).count();
+                
+                auto t = sc::to_time_t(now);
+                std::tm* lt = std::localtime(&t);
+                inputs.iDate.x = static_cast<float>(1900 + lt->tm_year);
+                inputs.iDate.y = static_cast<float>(lt->tm_mon);
+                inputs.iDate.z = static_cast<float>(lt->tm_mday);
+                inputs.iDate.w = static_cast<float>((lt->tm_hour * 60 + lt->tm_min) * 60 + lt->tm_sec + microseconds / 1000000.0);
+            }
 
             return std::async(render_all, inputs, std::ref(abort_render_token));
         };
@@ -700,7 +715,6 @@ int main(int argc, char* argv[])
         {
             bool blit_now = false;
             bool quit = false;
-            
 
             // process events
             SDL_Event event;
@@ -757,9 +771,9 @@ int main(int argc, char* argv[])
                     }
                     break;
                 case SDL_MOUSEBUTTONDOWN:
-                    mouse_pressed = true;
-                    mouse_x = event.button.x;
-                    mouse_y = event.button.y;
+                    mouse_clicked = mouse_pressed = true;
+                    mouse_press_x = mouse_x = event.button.x;
+                    mouse_press_y = mouse_y = event.button.y;
                     break;
                 case SDL_MOUSEBUTTONUP:
                     mouse_pressed = false;

@@ -79,6 +79,11 @@ namespace swizzle
             return sampler.sample(uv);
         }
 
+        inline friend vec4 textureGrad(const this_type& sampler, const vec2& uv, const vec2& dPdx, const vec2& dPdy)
+        {
+            return sampler.sample(uv);
+        }
+
         inline friend vec4 texelFetch(const this_type& sampler, const ivec2& p, int32_type lod)
         {
             return sampler.fetch(p);

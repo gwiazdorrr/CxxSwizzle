@@ -47,7 +47,15 @@ namespace swizzle
     using bvec4 = vector<bool_type, 4>;
 
     using mat2x2 = matrix<float_type, 2, 2>;
+    using mat2x3 = matrix<float_type, 2, 3>;
+    using mat2x4 = matrix<float_type, 2, 4>;
+
+    using mat3x2 = matrix<float_type, 3, 2>;
     using mat3x3 = matrix<float_type, 3, 3>;
+    using mat3x4 = matrix<float_type, 3, 4>;
+
+    using mat4x2 = matrix<float_type, 4, 2>;
+    using mat4x3 = matrix<float_type, 4, 3>;
     using mat4x4 = matrix<float_type, 4, 4>;
 
     using mat2 = mat2x2;

@@ -125,10 +125,10 @@ Workaroud: `vec2 p = flag ? (vec2)v.xy : v.xz`;
 Workaround: Rename the variable (e.g. `float cs = cos(x);`).
 
 - array syntax: `int a[2] = int[](0, 1);`
-Workaround: ARRAY(float, a, 0, 1);
+Workaround: CXXSWIZZLE_ARRAY(float, a, 0, 1);
 If you intend to move back and forth between CxxSwizzle and Shadertoy, add this to your shader too:
-    #ifndef ARRAY
-    #define ARRAY(name, type, ...) type name[] = type[] ( __VA_ARGS__ )
+    #ifndef CXXSWIZZLE_ARRAY
+    #define CXXSWIZZLE_ARRAY(type, name, ...) type name[] = type[] ( __VA_ARGS__ )
     #endif
 
 - function declarations: `void foo();`
@@ -139,3 +139,6 @@ Workaround: Just remove them or:
 
 - SIMD: array indexing with int (unless an actual int constant)
 Workaround: Hopeless.
+
+- const int used for array size: `const int ArraySize=10; vec3 Array[ArraySize];`
+Workaround: ???

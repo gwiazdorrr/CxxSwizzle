@@ -1,4 +1,5 @@
 #include <shadertoy_sandbox.hpp>
+#include <tuple>
 
 using namespace swizzle;
 
@@ -73,7 +74,7 @@ namespace
     #define condition(x) CXXSWIZZLE_OVERRIDE_CONDITION(x)
     #endif
 
-    #define VA_COUNT(...) detail::va_count(__VA_ARGS__)
+    #define CXXSWIZZLE_VA_COUNT(...) std::tuple_size<decltype(std::make_tuple(__VA_ARGS__))>::value
 
     namespace detail
     {
@@ -82,7 +83,7 @@ namespace
     }
 
     #define CXXSWIZZLE
-    #define ARRAY(type, name, ...) type name[VA_COUNT(__VA_ARGS__)] = { __VA_ARGS__ }
+    #define CXXSWIZZLE_ARRAY(type, name, ...) type name[CXXSWIZZLE_VA_COUNT(__VA_ARGS__)] = { __VA_ARGS__ }
 
     #pragma warning(push)
     #pragma warning(disable: 4244) // disable return implicit conversion warning

@@ -15,22 +15,22 @@
 
 namespace swizzle
 {
-    template <typename ScalarType, size_t... Index>
-    struct vector_  : detail::vector_base_type<ScalarType, sizeof...(Index)>
+    template <typename TScalarType, size_t... TIndices>
+    struct vector_  : detail::vector_base_type<TScalarType, sizeof...(TIndices)>
     {
     public:
-        using base_type = detail::vector_base_type<ScalarType, sizeof...(Index)>;
+        using base_type = detail::vector_base_type<TScalarType, sizeof...(TIndices)>;
         using base_type::data;
 
         using this_type = vector_;
         using this_type_arg = const this_type&;
 
-        using scalar_type = ScalarType;
+        using scalar_type = TScalarType;
         using scalar_arg = const scalar_type&;
 
-        static const bool scalar_is_bool = detail::batch_traits<ScalarType>::is_bool;
-        static const bool scalar_is_integral = detail::batch_traits<ScalarType>::is_integral;
-        static const bool scalar_is_floating_point = detail::batch_traits<ScalarType>::is_floating_point;
+        static const bool scalar_is_bool = detail::batch_traits<TScalarType>::is_bool;
+        static const bool scalar_is_integral = detail::batch_traits<TScalarType>::is_integral;
+        static const bool scalar_is_floating_point = detail::batch_traits<TScalarType>::is_floating_point;
         static const bool scalar_is_number = scalar_is_integral || scalar_is_floating_point;
 
         using number_scalar_arg = detail::only_if< scalar_is_number, scalar_arg >;
@@ -43,8 +43,8 @@ namespace swizzle
         using integral_scalar_arg = detail::only_if< scalar_is_integral, scalar_arg >;
         using integral_vector_arg = detail::only_if< scalar_is_integral, this_type_arg >;
 
-        using bool_type = typename detail::batch_traits<ScalarType>::bool_type;
-        using bool_vector_type = vector_<bool_type, Index...>;
+        using bool_type = typename detail::batch_traits<TScalarType>::bool_type;
+        using bool_vector_type = vector_<bool_type, TIndices...>;
         using bool_scalar_arg = detail::only_if< scalar_is_bool, this_type_arg >;
         using bool_vector_arg = detail::only_if< scalar_is_bool, this_type_arg >;
 
@@ -58,7 +58,7 @@ namespace swizzle
         //! externally is different than the internal one (well, hello SIMD)
         using internal_scalar_type = std::remove_reference_t<decltype(std::declval<base_type>().data[0])>;
 
-        static const size_t num_of_components = sizeof...(Index);
+        static const size_t num_of_components = sizeof...(TIndices);
         static const bool are_scalar_types_same = std::is_same_v< internal_scalar_type, scalar_type>;
         static_assert(are_scalar_types_same || sizeof(scalar_type) == sizeof(internal_scalar_type), "scalar_type and internal_scalar_type can't be safely converted");
 
@@ -103,47 +103,47 @@ namespace swizzle
         //! Implicit from int (yep, it's needed for stuff like cos(0) to work
         inline vector_(detail::only_if<num_of_components == 1, int, __LINE__> s)
         {
-            ((at_rvalue(Index) = scalar_type(s)), ...);
+            ((at_rvalue(TIndices) = scalar_type(s)), ...);
         }
 
         //! Implicit from double (for stuff like cos(0.0) to work
         inline vector_(detail::only_if<num_of_components == 1 && scalar_is_floating_point, double, __LINE__> s)
         {
-            ((at_rvalue(Index) = scalar_type(s)), ...);
+            ((at_rvalue(TIndices) = scalar_type(s)), ...);
         }
 
         //! When more than 1 component implicit construction is not possible
         inline explicit vector_(detail::only_if<num_of_components != 1 && !std::is_same_v<scalar_type, int> && !std::is_same_v<scalar_type, double>, scalar_type, __LINE__> s)
         {
-            ((at_rvalue(Index) = s), ...);
+            ((at_rvalue(TIndices) = s), ...);
         }
 
         //! For vec2(0)
         inline explicit vector_(detail::only_if<num_of_components != 1, int, __LINE__> s)
         {
-            ((at_rvalue(Index) = scalar_type(s)), ...);
+            ((at_rvalue(TIndices) = scalar_type(s)), ...);
         }
 
         //! For vec2(0.0)
         inline explicit vector_(detail::only_if<num_of_components != 1 && scalar_is_floating_point, double, __LINE__> s)
         {
-            ((at_rvalue(Index) = scalar_type(s)), ...);
+            ((at_rvalue(TIndices) = scalar_type(s)), ...);
         }
 
-        template <class LikelyOtherScalarType, size_t MoreIndexStart, size_t... MoreIndex>
-        inline explicit vector_(const vector_<LikelyOtherScalarType, Index..., MoreIndexStart, MoreIndex...>& t0)
+        template <class TLikelyOtherScalar, size_t TMoreIndexStart, size_t... TMoreIndices>
+        inline explicit vector_(const vector_<TLikelyOtherScalar, TIndices..., TMoreIndexStart, TMoreIndices...>& t0)
         {
             compose<0>(t0);
         }
 
-        template <class LikelyOtherScalarType>
-        inline explicit vector_(const vector_<LikelyOtherScalarType, Index...>& t0)
+        template <class TLikelyOtherScalar>
+        inline explicit vector_(const vector_<TLikelyOtherScalar, TIndices...>& t0)
         {
             compose<0>(t0);
         }
 
-        template <class ProxyVectorType, class ProxyDataType, class ProxyScalarType, size_t... ProxyIndices, class = std::enable_if_t<sizeof...(ProxyIndices) == num_of_components>>
-        inline explicit vector_(const detail::indexed_proxy<ProxyVectorType, ProxyDataType, ProxyScalarType, ProxyIndices...>& t0)
+        template <class TProxyVector, class TProxyData, class TProxyScalar, size_t... TProxyIndices, class = std::enable_if_t<sizeof...(TProxyIndices) == num_of_components>>
+        inline explicit vector_(const detail::indexed_proxy<TProxyVector, TProxyData, TProxyScalar, TProxyIndices...>& t0)
         {
             compose<0>(t0.decay());
         }
@@ -182,11 +182,11 @@ namespace swizzle
         }
 
 
-        template <typename SomeBatchedType, typename = std::enable_if_t<detail::batch_traits<SomeBatchedType>::is_integral && detail::batch_traits<SomeBatchedType>::size == detail::batch_traits<scalar_type>::size> >
-        scalar_type operator[](const SomeBatchedType& b) const
+        template <typename TSomeBatchedType, typename = std::enable_if_t<detail::batch_traits<TSomeBatchedType>::is_integral && detail::batch_traits<TSomeBatchedType>::size == detail::batch_traits<scalar_type>::size> >
+        scalar_type operator[](const TSomeBatchedType& b) const
         {
             scalar_type result;
-            masked_read(b, result, at(Index)...);
+            masked_read(b, result, at(TIndices)...);
             return result;
         }
 
@@ -230,55 +230,55 @@ namespace swizzle
         }
 
     private:
-        template <size_t Offset, typename T0, typename... Tail>
+        template <size_t TOffset, typename T0, typename... Tail>
         void construct(T0&& t0, Tail&&... tail)
         {
-            compose<Offset>(detail::decay(std::forward<T0>(t0)));
-            construct<Offset + detail::get_total_component_count_v<T0>>(std::forward<Tail>(tail)...);
+            compose<TOffset>(detail::decay(std::forward<T0>(t0)));
+            construct<TOffset + detail::get_total_component_count_v<T0>>(std::forward<Tail>(tail)...);
         }
 
         template <size_t>
         void construct(detail::nothing)
         {}
 
-        template <size_t Index_, typename SomeScalarType>
-        void compose(SomeScalarType&& scalar, std::enable_if_t<std::is_constructible_v<scalar_type, SomeScalarType>>* = nullptr)
+        template <size_t TIndex, typename TSomeScalar>
+        void compose(TSomeScalar&& scalar, std::enable_if_t<std::is_constructible_v<scalar_type, TSomeScalar>>* = nullptr)
         {
-            at_rvalue(Index_) = scalar_type(std::forward<SomeScalarType>(scalar));
+            at_rvalue(TIndex) = scalar_type(std::forward<TSomeScalar>(scalar));
         }
 
         ////! Puts scalar at given position. Used only during construction.
-        //template <size_t Index>
+        //template <size_t TIndices>
         //void compose(scalar_arg v)
         //{
-        //    data[Index] = static_cast<internal_scalar_type>(v);
+        //    data[TIndices] = static_cast<internal_scalar_type>(v);
         //}
 
         ////! For construction from int literal to work
-        //template <size_t Index>
+        //template <size_t TIndices>
         //void compose(detail::only_if<!std::is_same_v<scalar_type, int>, int, __LINE__> v)
         //{
-        //    compose<Index>(scalar_type(v));
+        //    compose<TIndices>(scalar_type(v));
         //}
 
         ////! For construction from double literal to work
-        //template <size_t Index>
+        //template <size_t TIndices>
         //void compose(detail::only_if<build_info::scalar_is_floating_point, double> v)
         //{
-        //    compose<Index>(scalar_type(v));
+        //    compose<TIndices>(scalar_type(v));
         //}
 
-        template <size_t Index_, typename OtherScalarType, size_t... OtherIndex>
-        void compose(const vector_<OtherScalarType, OtherIndex...>& v)
+        template <size_t TIndex, typename TOtherScalar, size_t... TOtherIndices>
+        void compose(const vector_<TOtherScalar, TOtherIndices...>& v)
         {
-            const size_t limit = sizeof...(OtherIndex) > num_of_components - Index_ ? (num_of_components - Index_) : sizeof...(OtherIndex);
-            compose_impl<Index_>(v, detail::take_n<limit, OtherIndex...> {});
+            const size_t limit = sizeof...(TOtherIndices) > num_of_components - TIndex ? (num_of_components - TIndex) : sizeof...(TOtherIndices);
+            compose_impl<TIndex>(v, detail::take_n<limit, TOtherIndices...> {});
         }
 
-        template <size_t Offset, typename DataTypeB, size_t... DataIndex>
-        inline void compose_impl(const DataTypeB& src, std::index_sequence<DataIndex...>)
+        template <size_t TOffset, typename TDataB, size_t... TDataIndices>
+        inline void compose_impl(const TDataB& src, std::index_sequence<TDataIndices...>)
         {
-            (std::move(at(DataIndex + Offset) = scalar_type(src.at(DataIndex))), ...);
+            (std::move(at(TDataIndices + TOffset) = scalar_type(src.at(TDataIndices))), ...);
         }
 
     public:
@@ -287,244 +287,244 @@ namespace swizzle
 
         static this_type call_radians(float_vector_arg degrees)
         {
-            return this_type(radians(degrees.at(Index))...);
+            return this_type(radians(degrees.at(TIndices))...);
         }
         static this_type call_degrees(float_vector_arg radians)
         {
-            return this_type(degrees(radians.at(Index))...);
+            return this_type(degrees(radians.at(TIndices))...);
         }
         static this_type call_cos(float_vector_arg angle)
         {
-            return this_type(cos(angle.at(Index))...);
+            return this_type(cos(angle.at(TIndices))...);
         }
         static this_type call_tan(float_vector_arg angle)
         {
-            return this_type(tan(angle.at(Index))...);
+            return this_type(tan(angle.at(TIndices))...);
         }
         static this_type call_sin(float_vector_arg angle)
         {
-            return this_type(sin(angle.at(Index))...);
+            return this_type(sin(angle.at(TIndices))...);
         }
         static this_type call_asin(float_vector_arg x)
         {
-            return this_type(asin(x.at(Index))...);
+            return this_type(asin(x.at(TIndices))...);
         }
         static this_type call_acos(float_vector_arg x)
         {
-            return this_type(acos(x.at(Index))...);
+            return this_type(acos(x.at(TIndices))...);
         }
         static this_type call_atan(float_vector_arg y_over_x)
         {
-            return this_type(atan(y_over_x.at(Index))...);
+            return this_type(atan(y_over_x.at(TIndices))...);
         }
         static this_type call_atan(float_vector_arg y, float_vector_arg x)
         {
-            return this_type(atan(y.at(Index), x.at(Index))...);
+            return this_type(atan(y.at(TIndices), x.at(TIndices))...);
         }
         static this_type call_sinh(float_vector_arg x)
         {
-            return this_type(sinh(x.at(Index))...);
+            return this_type(sinh(x.at(TIndices))...);
         }
         static this_type call_cosh(float_vector_arg x)
         {
-            return this_type(cosh(x.at(Index))...);
+            return this_type(cosh(x.at(TIndices))...);
         }
         static this_type call_tanh(float_vector_arg x)
         {
-            return this_type(tanh(x.at(Index))...);
+            return this_type(tanh(x.at(TIndices))...);
         }
         static this_type call_asinh(float_vector_arg x)
         {
-            return this_type(asinh(x.at(Index))...);
+            return this_type(asinh(x.at(TIndices))...);
         }
         static this_type call_acosh(float_vector_arg x)
         {
-            return this_type(acosh(x.at(Index))...);
+            return this_type(acosh(x.at(TIndices))...);
         }
         static this_type call_atanh(float_vector_arg x)
         {
-            return this_type(atanh(x.at(Index))...);
+            return this_type(atanh(x.at(TIndices))...);
         }
 
         // 8.2
 
         static this_type call_pow(float_vector_arg x, float_vector_arg y)
         {
-            return this_type(pow(x.at(Index), y.at(Index))...);
+            return this_type(pow(x.at(TIndices), y.at(TIndices))...);
         }
         static this_type call_exp(float_vector_arg x)
         {
-            return this_type(exp(x.at(Index))...);
+            return this_type(exp(x.at(TIndices))...);
         }
         static this_type call_log(float_vector_arg x)
         {
-            return this_type(log(x.at(Index))...);
+            return this_type(log(x.at(TIndices))...);
         }
 
         static this_type call_exp2(float_vector_arg x)
         {
-            return this_type(exp2(x.at(Index))...);
+            return this_type(exp2(x.at(TIndices))...);
         }
         static this_type call_log2(float_vector_arg x)
         {
-            return this_type(log2(x.at(Index))...);
+            return this_type(log2(x.at(TIndices))...);
         }
         static this_type call_sqrt(float_vector_arg x)
         {
-            return this_type(sqrt(x.at(Index))...);
+            return this_type(sqrt(x.at(TIndices))...);
         }
         static this_type call_inversesqrt(float_vector_arg x)
         {
-            return this_type(inversesqrt(x.at(Index))...);
+            return this_type(inversesqrt(x.at(TIndices))...);
         }
 
         // 8.3
 
         static this_type call_abs(number_vector_arg x)
         {
-            return this_type(abs(x.at(Index))...);
+            return this_type(abs(x.at(TIndices))...);
         }
         static this_type call_sign(number_vector_arg x)
         {
-            return this_type(sign(x.at(Index))...);
+            return this_type(sign(x.at(TIndices))...);
         }
         static this_type call_floor(float_vector_arg x)
         {
-            return this_type(floor(x.at(Index))...);
+            return this_type(floor(x.at(TIndices))...);
         }
         static this_type call_trunc(float_vector_arg x)
         {
-            return this_type(trunc(x.at(Index))...);
+            return this_type(trunc(x.at(TIndices))...);
         }
         static this_type call_round(float_vector_arg x)
         {
-            return this_type(round(x.at(Index))...);
+            return this_type(round(x.at(TIndices))...);
         }
         static this_type call_roundEven(float_vector_arg x)
         {
-            return this_type(roundEven(x.at(Index))...);
+            return this_type(roundEven(x.at(TIndices))...);
         }
         static this_type call_ceil(float_vector_arg x)
         {
-            return this_type(ceil(x.at(Index))...);
+            return this_type(ceil(x.at(TIndices))...);
         }
         static this_type call_fract(float_vector_arg x)
         {
-            return this_type(fract(x.at(Index))...);
+            return this_type(fract(x.at(TIndices))...);
         }
         static this_type call_mod(float_vector_arg x, float_scalar_arg y)
         {
-            return this_type(mod(x.at(Index), y)...);
+            return this_type(mod(x.at(TIndices), y)...);
         }
         static this_type call_mod(float_vector_arg x, float_vector_arg y)
         {
-            return this_type(mod(x.at(Index), y.at(Index))...);
+            return this_type(mod(x.at(TIndices), y.at(TIndices))...);
         }
         static this_type call_modf(float_vector_arg x, this_type& i)
         {
-            return this_type(modf(x.at(Index), &i.at(Index))...);
+            return this_type(modf(x.at(TIndices), &i.at(TIndices))...);
         }
         static this_type call_modf(detail::only_if<num_of_components == 1, float_vector_arg> x, float& i)
         {
             // TODO: batch detection
-            return this_type(modf(x.at(Index), &i)...);
+            return this_type(modf(x.at(TIndices), &i)...);
         }
 
         static this_type call_min(number_vector_arg x, number_vector_arg y)
         {
-            return this_type(min(x.at(Index), y.at(Index))...);
+            return this_type(min(x.at(TIndices), y.at(TIndices))...);
         }
         static this_type call_min(number_vector_arg x, number_scalar_arg y)
         {
-            return this_type(min(x.at(Index), y)...);
+            return this_type(min(x.at(TIndices), y)...);
         }
         static this_type call_max(number_vector_arg x, number_vector_arg y)
         {
-            return this_type(max(x.at(Index), y.at(Index))...);
+            return this_type(max(x.at(TIndices), y.at(TIndices))...);
         }
         static this_type call_max(number_vector_arg x, number_scalar_arg y)
         {
-            return this_type(max(x.at(Index), y)...);
+            return this_type(max(x.at(TIndices), y)...);
         }
         static this_type call_clamp(number_vector_arg x, number_scalar_arg_cond minVal, number_scalar_arg_cond maxVal)
         {
-            return this_type(min(max(x.at(Index), minVal), maxVal)...);
+            return this_type(min(max(x.at(TIndices), minVal), maxVal)...);
         }
         static this_type call_clamp(number_vector_arg x, number_vector_arg minVal, number_vector_arg maxVal)
         {
-            return this_type(min(max(x.at(Index), minVal.at(Index)), maxVal.at(Index))...);
+            return this_type(min(max(x.at(TIndices), minVal.at(TIndices)), maxVal.at(TIndices))...);
         }
         static this_type call_mix(float_vector_arg x, float_vector_arg y, float_scalar_arg_cond a)
         {
-            return this_type(x.at(Index) + a * (y.at(Index) - x.at(Index))...);
+            return this_type(x.at(TIndices) + a * (y.at(TIndices) - x.at(TIndices))...);
         }
         static this_type call_mix(float_vector_arg x, float_vector_arg y, double a)
         {
-            return this_type(x.at(Index) + scalar_type(a) * (y.at(Index) - x.at(Index))...);
+            return this_type(x.at(TIndices) + scalar_type(a) * (y.at(TIndices) - x.at(TIndices))...);
         }
         static this_type call_mix(float_vector_arg x, float_vector_arg y, float_vector_arg a)
         {
-            return this_type(x.at(Index) + a.at(Index) * (y.at(Index) - x.at(Index))...);
+            return this_type(x.at(TIndices) + a.at(TIndices) * (y.at(TIndices) - x.at(TIndices))...);
         }
         static this_type call_mix(float_vector_arg x, float_vector_arg y, const bool_vector_type& a)
         {
-            return this_type(mix(x.at(Index), y.at(Index), a.at(Index))...);
+            return this_type(mix(x.at(TIndices), y.at(TIndices), a.at(TIndices))...);
         }
 
         static this_type call_step(float_vector_arg edge, float_vector_arg x)
         {
             // we'll delegate step to "outside" because there can't be branches here
-            return this_type(step(edge.at(Index), x.at(Index))...);
+            return this_type(step(edge.at(TIndices), x.at(TIndices))...);
         }
 
         static this_type call_step(float_scalar_arg edge, float_vector_arg x)
         {
             // we'll delegate step to "outside" because there can't be branches here
-            return this_type(step(edge, x.at(Index))...);
+            return this_type(step(edge, x.at(TIndices))...);
         }
 
         static this_type call_smoothstep(float_vector_arg_cond edge0, float_vector_arg_cond edge1, float_vector_arg x)
         {
-            return this_type(smoothstep_helper(edge0.at(Index), edge1.at(Index), x.at(Index))...);
+            return this_type(smoothstep_helper(edge0.at(TIndices), edge1.at(TIndices), x.at(TIndices))...);
         }
         static this_type call_smoothstep(float_scalar_arg edge0, float_scalar_arg edge1, float_vector_arg x)
         {
-            return this_type(smoothstep_helper(edge0, edge1, x.at(Index))...);
+            return this_type(smoothstep_helper(edge0, edge1, x.at(TIndices))...);
         }
 
         static bool_vector_type call_isnan(float_vector_arg x)
         {
-            return bool_vector_type(isnan(x.at(Index))...);
+            return bool_vector_type(isnan(x.at(TIndices))...);
         }
         static bool_vector_type call_isinf(float_vector_arg x)
         {
-            return bool_vector_type(isinf(x.at(Index))...);
+            return bool_vector_type(isinf(x.at(TIndices))...);
         }
 
         //static auto call_floatBitsToInt(float_vector_arg value)
         //{
         //    using int_vector_type = vector<decltype(floatBitsToInt(0)), num_of_components>;
-        //    return int_vector_type{ (floatBitsToInt(value.data[Index]))... };
+        //    return int_vector_type{ (floatBitsToInt(value.data[TIndices]))... };
         //}
 
         //static uint_vector_type call_floatBitsToUint(float_vector_arg value)
         //{
         //    uint_vector_type result;
-        //    ((bitcast(value.data[Index], &result.data[Index])), ...);
+        //    ((bitcast(value.data[TIndices], &result.data[TIndices])), ...);
         //    return result;
         //}
 
         //static this_type call_intBitsToFloat(detail::only_if<build_info::scalar_is_floating_point, int_vector_type> value)
         //{
         //    this_type result;
-        //    ((bitcast(value.data[Index], &result.data[Index])), ...);
+        //    ((bitcast(value.data[TIndices], &result.data[TIndices])), ...);
         //    return result;
         //}
 
         //static uint_vector_type call_uintBitsToFloat(detail::only_if<build_info::scalar_is_floating_point, uint_vector_type> value)
         //{
         //    this_type result;
-        //    ((bitcast(value.data[Index], &result.data[Index])), ...);
+        //    ((bitcast(value.data[TIndices], &result.data[TIndices])), ...);
         //    return result;
         //}
 
@@ -542,7 +542,7 @@ namespace swizzle
 
         static scalar_type call_dot(float_vector_arg x, float_vector_arg y)
         {
-            return ((x.at(Index) * y.at(Index)) + ...);
+            return ((x.at(TIndices) * y.at(TIndices)) + ...);
         }
 
         static typename detail::only_if<num_of_components == 3, this_type> call_cross(float_vector_arg x, float_vector_arg y)
@@ -580,55 +580,55 @@ namespace swizzle
         // 8.6
         static bool_vector_type call_lessThan(number_vector_arg x, number_vector_arg y)
         {
-            return bool_vector_type(x.at(Index) < y.at(Index)...);
+            return bool_vector_type(x.at(TIndices) < y.at(TIndices)...);
         }
         static bool_vector_type call_lessThanEqual(number_vector_arg x, number_vector_arg y)
         {
-            return bool_vector_type(x.at(Index) <= y.at(Index)...);
+            return bool_vector_type(x.at(TIndices) <= y.at(TIndices)...);
         }
         static bool_vector_type call_greaterThan(number_vector_arg x, number_vector_arg y)
         {
-            return bool_vector_type(x.at(Index) > y.at(Index)...);
+            return bool_vector_type(x.at(TIndices) > y.at(TIndices)...);
         }
         static bool_vector_type call_greaterThanEqual(number_vector_arg x, number_vector_arg y)
         {
-            return bool_vector_type(x.at(Index) >= y.at(Index)...);
+            return bool_vector_type(x.at(TIndices) >= y.at(TIndices)...);
         }
 
         static bool_vector_type call_equal(this_type_arg x, this_type_arg y)
         {
-            return bool_vector_type(x.at(Index) == y.at(Index)...);
+            return bool_vector_type(x.at(TIndices) == y.at(TIndices)...);
         }
         static bool_vector_type call_notEqual(this_type_arg x, this_type_arg y)
         {
-            return bool_vector_type(x.at(Index) != y.at(Index)...);
+            return bool_vector_type(x.at(TIndices) != y.at(TIndices)...);
         }
 
         static scalar_type call_any(bool_vector_arg x)
         {
-            return ((x.at(Index)) || ...);
+            return ((x.at(TIndices)) || ...);
         }
         static scalar_type call_all(bool_vector_arg x)
         {
-            return ((x.at(Index)) && ...);
+            return ((x.at(TIndices)) && ...);
         }
         static this_type call_not(bool_vector_arg x)
         {
-            return this_type(!x.at(Index)...);
+            return this_type(!x.at(TIndices)...);
         }
 
         // 8.8
         static this_type call_dFdx(float_vector_arg x)
         {
-            return this_type(dFdx(x.at(Index))...);
+            return this_type(dFdx(x.at(TIndices))...);
         }
         static this_type call_dFdy(float_vector_arg x)
         {
-            return this_type(dFdy(x.at(Index))...);
+            return this_type(dFdy(x.at(TIndices))...);
         }
         static this_type call_fwidth(float_vector_arg x)
         {
-            return this_type(fwidth(x.at(Index))...);
+            return this_type(fwidth(x.at(TIndices))...);
         }
 
         // operators
@@ -644,68 +644,68 @@ namespace swizzle
         }
 
 
-        this_type& operator=(this_type_arg other)      & { return ((at(Index) = other.at(Index)), ..., *this);  }
-        this_type& operator+=(number_vector_arg other) & { return ((at(Index) += other.at(Index)), ..., *this); }
-        this_type& operator-=(number_vector_arg other) & { return ((at(Index) -= other.at(Index)), ..., *this); }
-        this_type& operator*=(number_vector_arg other) & { return ((at(Index) *= other.at(Index)), ..., *this); }
-        this_type& operator/=(number_vector_arg other) & { return ((at(Index) /= other.at(Index)), ..., *this); }
-        this_type& operator+=(number_scalar_arg other) & { return ((at(Index) += other), ..., *this); }
-        this_type& operator-=(number_scalar_arg other) & { return ((at(Index) -= other), ..., *this); }
-        this_type& operator*=(number_scalar_arg other) & { return ((at(Index) *= other), ..., *this); }
-        this_type& operator/=(number_scalar_arg other) & { return ((at(Index) /= other), ..., *this); }
+        this_type& operator=(this_type_arg other)      & { return ((at(TIndices) = other.at(TIndices)), ..., *this);  }
+        this_type& operator+=(number_vector_arg other) & { return ((at(TIndices) += other.at(TIndices)), ..., *this); }
+        this_type& operator-=(number_vector_arg other) & { return ((at(TIndices) -= other.at(TIndices)), ..., *this); }
+        this_type& operator*=(number_vector_arg other) & { return ((at(TIndices) *= other.at(TIndices)), ..., *this); }
+        this_type& operator/=(number_vector_arg other) & { return ((at(TIndices) /= other.at(TIndices)), ..., *this); }
+        this_type& operator+=(number_scalar_arg other) & { return ((at(TIndices) += other), ..., *this); }
+        this_type& operator-=(number_scalar_arg other) & { return ((at(TIndices) -= other), ..., *this); }
+        this_type& operator*=(number_scalar_arg other) & { return ((at(TIndices) *= other), ..., *this); }
+        this_type& operator/=(number_scalar_arg other) & { return ((at(TIndices) /= other), ..., *this); }
 
-        this_type& operator=(this_type_arg other)      && { return ((at_rvalue(Index) = other.at(Index)), ..., *this);  }
-        this_type& operator+=(number_vector_arg other) && { return ((at_rvalue(Index) += other.at(Index)), ..., *this); }
-        this_type& operator-=(number_vector_arg other) && { return ((at_rvalue(Index) -= other.at(Index)), ..., *this); }
-        this_type& operator*=(number_vector_arg other) && { return ((at_rvalue(Index) *= other.at(Index)), ..., *this); }
-        this_type& operator/=(number_vector_arg other) && { return ((at_rvalue(Index) /= other.at(Index)), ..., *this); }
-        this_type& operator+=(number_scalar_arg other) && { return ((at_rvalue(Index) += other), ..., *this); }
-        this_type& operator-=(number_scalar_arg other) && { return ((at_rvalue(Index) -= other), ..., *this); }
-        this_type& operator*=(number_scalar_arg other) && { return ((at_rvalue(Index) *= other), ..., *this); }
-        this_type& operator/=(number_scalar_arg other) && { return ((at_rvalue(Index) /= other), ..., *this); }
+        this_type& operator=(this_type_arg other)      && { return ((at_rvalue(TIndices) = other.at(TIndices)), ..., *this);  }
+        this_type& operator+=(number_vector_arg other) && { return ((at_rvalue(TIndices) += other.at(TIndices)), ..., *this); }
+        this_type& operator-=(number_vector_arg other) && { return ((at_rvalue(TIndices) -= other.at(TIndices)), ..., *this); }
+        this_type& operator*=(number_vector_arg other) && { return ((at_rvalue(TIndices) *= other.at(TIndices)), ..., *this); }
+        this_type& operator/=(number_vector_arg other) && { return ((at_rvalue(TIndices) /= other.at(TIndices)), ..., *this); }
+        this_type& operator+=(number_scalar_arg other) && { return ((at_rvalue(TIndices) += other), ..., *this); }
+        this_type& operator-=(number_scalar_arg other) && { return ((at_rvalue(TIndices) -= other), ..., *this); }
+        this_type& operator*=(number_scalar_arg other) && { return ((at_rvalue(TIndices) *= other), ..., *this); }
+        this_type& operator/=(number_scalar_arg other) && { return ((at_rvalue(TIndices) /= other), ..., *this); }
 
-        friend this_type operator+(number_vector_arg_cond a, number_vector_arg_cond b) { return this_type(a.at(Index)+b.at(Index)...); }
-        friend this_type operator-(number_vector_arg_cond a, number_vector_arg_cond b) { return this_type(a.at(Index)-b.at(Index)...); }
-        friend this_type operator*(number_vector_arg_cond a, number_vector_arg_cond b) { return this_type(a.at(Index)*b.at(Index)...); }
-        friend this_type operator/(number_vector_arg_cond a, number_vector_arg_cond b) { return this_type(a.at(Index)/b.at(Index)...); }
+        friend this_type operator+(number_vector_arg_cond a, number_vector_arg_cond b) { return this_type(a.at(TIndices)+b.at(TIndices)...); }
+        friend this_type operator-(number_vector_arg_cond a, number_vector_arg_cond b) { return this_type(a.at(TIndices)-b.at(TIndices)...); }
+        friend this_type operator*(number_vector_arg_cond a, number_vector_arg_cond b) { return this_type(a.at(TIndices)*b.at(TIndices)...); }
+        friend this_type operator/(number_vector_arg_cond a, number_vector_arg_cond b) { return this_type(a.at(TIndices)/b.at(TIndices)...); }
 
-        friend this_type operator+(number_vector_arg_cond a, number_scalar_arg b) { return this_type(a.at(Index)+b...); }
-        friend this_type operator-(number_vector_arg_cond a, number_scalar_arg b) { return this_type(a.at(Index)-b...); }
-        friend this_type operator*(number_vector_arg_cond a, number_scalar_arg b) { return this_type(a.at(Index)*b...); }
-        friend this_type operator/(number_vector_arg_cond a, number_scalar_arg b) { return this_type(a.at(Index)/b...); }
+        friend this_type operator+(number_vector_arg_cond a, number_scalar_arg b) { return this_type(a.at(TIndices)+b...); }
+        friend this_type operator-(number_vector_arg_cond a, number_scalar_arg b) { return this_type(a.at(TIndices)-b...); }
+        friend this_type operator*(number_vector_arg_cond a, number_scalar_arg b) { return this_type(a.at(TIndices)*b...); }
+        friend this_type operator/(number_vector_arg_cond a, number_scalar_arg b) { return this_type(a.at(TIndices)/b...); }
         friend this_type operator+(number_scalar_arg a, number_vector_arg_cond b) { return b + a; }
-        friend this_type operator-(number_scalar_arg a, number_vector_arg_cond b) { return this_type(a-b.at(Index)...); }
+        friend this_type operator-(number_scalar_arg a, number_vector_arg_cond b) { return this_type(a-b.at(TIndices)...); }
         friend this_type operator*(number_scalar_arg a, number_vector_arg_cond b) { return b * a; }
-        friend this_type operator/(number_scalar_arg a, number_vector_arg_cond b) { return this_type(a/b.at(Index)...); }
+        friend this_type operator/(number_scalar_arg a, number_vector_arg_cond b) { return this_type(a/b.at(TIndices)...); }
 
-        friend this_type operator+(number_vector_arg_cond a, literal_arg b) { return this_type(a.at(Index)+b...); }
-        friend this_type operator-(number_vector_arg_cond a, literal_arg b) { return this_type(a.at(Index)-b...); }
-        friend this_type operator*(number_vector_arg_cond a, literal_arg b) { return this_type(a.at(Index)*b...); }
-        friend this_type operator/(number_vector_arg_cond a, literal_arg b) { return this_type(a.at(Index)/b...); }
+        friend this_type operator+(number_vector_arg_cond a, literal_arg b) { return this_type(a.at(TIndices)+b...); }
+        friend this_type operator-(number_vector_arg_cond a, literal_arg b) { return this_type(a.at(TIndices)-b...); }
+        friend this_type operator*(number_vector_arg_cond a, literal_arg b) { return this_type(a.at(TIndices)*b...); }
+        friend this_type operator/(number_vector_arg_cond a, literal_arg b) { return this_type(a.at(TIndices)/b...); }
         friend this_type operator+(literal_arg a, number_vector_arg_cond b) { return b + a; }
-        friend this_type operator-(literal_arg a, number_vector_arg_cond b) { return this_type(a-b.at(Index)...); }
+        friend this_type operator-(literal_arg a, number_vector_arg_cond b) { return this_type(a-b.at(TIndices)...); }
         friend this_type operator*(literal_arg a, number_vector_arg_cond b) { return b * a; }
-        friend this_type operator/(literal_arg a, number_vector_arg_cond b) { return this_type(a/b.at(Index)...); }
+        friend this_type operator/(literal_arg a, number_vector_arg_cond b) { return this_type(a/b.at(TIndices)...); }
 
 
-        this_type& operator&=(integral_vector_arg other)& { return ((at(Index) &= other.at(Index)), ..., *this); }
-        this_type& operator|=(integral_vector_arg other)& { return ((at(Index) |= other.at(Index)), ..., *this); }
-        this_type& operator&=(integral_scalar_arg other)& { return ((at(Index) &= other.at(Index)), ..., *this); }
-        this_type& operator|=(integral_scalar_arg other)& { return ((at(Index) |= other.at(Index)), ..., *this); }
+        this_type& operator&=(integral_vector_arg other)& { return ((at(TIndices) &= other.at(TIndices)), ..., *this); }
+        this_type& operator|=(integral_vector_arg other)& { return ((at(TIndices) |= other.at(TIndices)), ..., *this); }
+        this_type& operator&=(integral_scalar_arg other)& { return ((at(TIndices) &= other.at(TIndices)), ..., *this); }
+        this_type& operator|=(integral_scalar_arg other)& { return ((at(TIndices) |= other.at(TIndices)), ..., *this); }
 
-        this_type& operator&=(integral_vector_arg other)&& { return ((at_rvalue(Index) &= other.at(Index)), ..., *this); }
-        this_type& operator|=(integral_vector_arg other)&& { return ((at_rvalue(Index) |= other.at(Index)), ..., *this); }
-        this_type& operator&=(integral_scalar_arg other)&& { return ((at_rvalue(Index) &= other.at(Index)), ..., *this); }
-        this_type& operator|=(integral_scalar_arg other)&& { return ((at_rvalue(Index) |= other.at(Index)), ..., *this); }
+        this_type& operator&=(integral_vector_arg other)&& { return ((at_rvalue(TIndices) &= other.at(TIndices)), ..., *this); }
+        this_type& operator|=(integral_vector_arg other)&& { return ((at_rvalue(TIndices) |= other.at(TIndices)), ..., *this); }
+        this_type& operator&=(integral_scalar_arg other)&& { return ((at_rvalue(TIndices) &= other.at(TIndices)), ..., *this); }
+        this_type& operator|=(integral_scalar_arg other)&& { return ((at_rvalue(TIndices) |= other.at(TIndices)), ..., *this); }
 
-        friend this_type operator&(integral_vector_arg_cond a, integral_vector_arg_cond b) { return this_type(a.at(Index) & b.at(Index)...); }
-        friend this_type operator|(integral_vector_arg_cond a, integral_vector_arg_cond b) { return this_type(a.at(Index) | b.at(Index)...); }
-        friend this_type operator&(integral_vector_arg_cond a, integral_scalar_arg b) { return this_type(a.at(Index) & b...); }
-        friend this_type operator|(integral_vector_arg_cond a, integral_scalar_arg b) { return this_type(a.at(Index) | b...); }
+        friend this_type operator&(integral_vector_arg_cond a, integral_vector_arg_cond b) { return this_type(a.at(TIndices) & b.at(TIndices)...); }
+        friend this_type operator|(integral_vector_arg_cond a, integral_vector_arg_cond b) { return this_type(a.at(TIndices) | b.at(TIndices)...); }
+        friend this_type operator&(integral_vector_arg_cond a, integral_scalar_arg b) { return this_type(a.at(TIndices) & b...); }
+        friend this_type operator|(integral_vector_arg_cond a, integral_scalar_arg b) { return this_type(a.at(TIndices) | b...); }
         friend this_type operator&(integral_scalar_arg a, integral_vector_arg_cond b) { return b & a; }
         friend this_type operator|(integral_scalar_arg a, integral_vector_arg_cond b) { return b | a; }
-        friend this_type operator&(integral_vector_arg_cond a, literal_arg b) { return this_type(a.at(Index) & b...); }
-        friend this_type operator|(integral_vector_arg_cond a, literal_arg b) { return this_type(a.at(Index) | b...); }
+        friend this_type operator&(integral_vector_arg_cond a, literal_arg b) { return this_type(a.at(TIndices) & b...); }
+        friend this_type operator|(integral_vector_arg_cond a, literal_arg b) { return this_type(a.at(TIndices) | b...); }
         friend this_type operator&(literal_arg a, integral_vector_arg_cond b) { return b & a; }
         friend this_type operator|(literal_arg a, integral_vector_arg_cond b) { return b | a; }
 
@@ -713,7 +713,7 @@ namespace swizzle
         inline detail::only_if<scalar_is_number, this_type> operator-() const
         {
             this_type result;
-            ((result.at_rvalue(Index) = -at(Index)), ...);
+            ((result.at_rvalue(TIndices) = -at(TIndices)), ...);
             return result;
         }
 
@@ -733,7 +733,7 @@ namespace swizzle
         inline bool_type are_components_equal(this_type_arg other) const
         {
             // for some reason this can't be used in friend inline function
-            return ((at(Index) == other.at(Index)) && ...);
+            return ((at(TIndices) == other.at(TIndices)) && ...);
         }
 
         // STL COMPABILITY (not needed, but useful for testing)
@@ -764,7 +764,7 @@ namespace swizzle
         template <class Func>
         static void visit_index(Func func)
         {
-            ((func(Index)), ...);
+            ((func(TIndices)), ...);
         }
 
         //! As an inline friend function, because thanks to that all convertibles will use same function.
@@ -792,10 +792,10 @@ namespace swizzle
 
     namespace detail
     {
-        template <typename ScalarType, size_t... Index>
-        struct get_vector_type_impl< ::swizzle::vector_<ScalarType, Index...> >
+        template <typename TScalarType, size_t... TIndices>
+        struct get_vector_type_impl< ::swizzle::vector_<TScalarType, TIndices...> >
         {
-            typedef ::swizzle::vector_<ScalarType, Index...> type;
+            typedef ::swizzle::vector_<TScalarType, TIndices...> type;
         };
     }
 }

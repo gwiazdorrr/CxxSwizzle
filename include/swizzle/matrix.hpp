@@ -10,30 +10,30 @@
 
 namespace swizzle
 {
-    template <class ScalarType, size_t NumRows, size_t... Columns >
+    template <class TScalar, size_t TNumRows, size_t... TColumns >
     struct matrix_;
 
     namespace detail
     {
-        template <class ScalarType, size_t NumRows, size_t... Columns> 
-        matrix_<ScalarType, NumRows, Columns...> make_matrix_type_helper(std::index_sequence<Columns...>);
+        template <class TScalar, size_t TNumRows, size_t... TColumns> 
+        matrix_<TScalar, TNumRows, TColumns...> make_matrix_type_helper(std::index_sequence<TColumns...>);
     }
 
     //! A naive matrix implementation.
     //! Stores data as an array of vertices.
-    template <class ScalarType, size_t NumRows, size_t... Columns >
-    struct matrix_ : detail::common_binary_operators<matrix_<ScalarType, NumRows, Columns...>, ScalarType>
+    template <class TScalar, size_t TNumRows, size_t... TColumns >
+    struct matrix_ : detail::common_binary_operators<matrix_<TScalar, TNumRows, TColumns...>, TScalar>
     {
     public:
-        static const size_t num_rows = NumRows;
-        static const size_t num_columns = sizeof...(Columns);
+        static const size_t num_rows = TNumRows;
+        static const size_t num_columns = sizeof...(TColumns);
 
         static_assert(num_rows > 1 && num_columns > 1, "1");
 
         typedef matrix_ matrix_type;
-        typedef vector<ScalarType, num_columns> row_type;
-        typedef vector<ScalarType, num_rows> column_type;
-        typedef ScalarType scalar_type;
+        typedef vector<TScalar, num_columns> row_type;
+        typedef vector<TScalar, num_rows> column_type;
+        typedef TScalar scalar_type;
 
     // CONSTRUCTION
     public:
@@ -48,36 +48,36 @@ namespace swizzle
             data = other.data;
         }
 
-        template <size_t Index>
-        column_type set_return(column_type src, ScalarType value)
+        template <size_t TIndex>
+        column_type set_return(column_type src, TScalar value)
         {
-            src[Index] = value;
+            src[TIndex] = value;
             return src;
         }
 
-        template <size_t NumOfComponents, typename SomeVectorType>
-        column_type pad_with_zeros(const SomeVectorType& src)
+        template <size_t TNumOfComponents, typename TSomeVector>
+        column_type pad_with_zeros(const TSomeVector& src)
         {
-            return column_type((Columns < NumOfComponents ? src[Columns] : 0)...);
+            return column_type((TColumns < TNumOfComponents ? src[TColumns] : 0)...);
         }
 
         // This should work but doesn't (I'm tired)
         ////! Constructor for matrices smaller than current one
-        //template <size_t OtherNumColumns, size_t OtherNumRows>
-        //matrix_(const matrix<VectorType, ScalarType, OtherNumRows, OtherNumColumns>& other)
+        //template <size_t OtherNumColumns, size_t TOtherNumRows>
+        //matrix_(const matrix<VectorType, TScalar, TOtherNumRows, OtherNumColumns>& other)
         //{
         //    static_assert(OtherNumColumns <= num_columns);
-        //    static_assert(OtherNumRows <= num_rows);
+        //    static_assert(TOtherNumRows <= num_rows);
 
         //    // copy columns
-        //    ((Columns < OtherNumColumns ? data[Columns] = pad_with_zeros<OtherNumRows>(other.data[Columns]) : set_return<Columns>(zero, 1)), ...);
+        //    ((TColumns < OtherNumColumns ? data[TColumns] = pad_with_zeros<TOtherNumRows>(other.data[TColumns]) : set_return<TColumns>(zero, 1)), ...);
         //}
 
         //! Init with s diagonally
         matrix_(const scalar_type& s)
         {
-            column_type zero((Columns, 0)...);
-            ((Columns < num_rows ? data[Columns] = set_return<Columns>(zero, s) : zero), ...);
+            column_type zero((TColumns, 0)...);
+            ((TColumns < num_rows ? data[TColumns] = set_return<TColumns>(zero, s) : zero), ...);
         }
 
         template <class T0, class T1, class... T,
@@ -92,10 +92,10 @@ namespace swizzle
         }
 
         
-        template <typename OtherMatrixType>
-        static matrix_type make_transposed(OtherMatrixType& other)
+        template <typename TOtherMatrix>
+        static matrix_type make_transposed(TOtherMatrix& other)
         {
-            return matrix_type(other.row(Columns)...);
+            return matrix_type(other.row(TColumns)...);
         }
 
 
@@ -119,34 +119,34 @@ namespace swizzle
 
         matrix_type& operator+=(const scalar_type& v)
         {
-            return ((column(Columns) += v), ..., *this);
+            return ((column(TColumns) += v), ..., *this);
         }
 
         matrix_type& operator-=(const scalar_type& v)
         {
-            return ((column(Columns) -= v), ..., *this);
+            return ((column(TColumns) -= v), ..., *this);
         }
 
         matrix_type& operator*=(const scalar_type& v)
         {
-            return ((column(Columns) *= v), ..., *this);
+            return ((column(TColumns) *= v), ..., *this);
         }
 
         matrix_type& operator/=(const scalar_type& v)
         {
-            return ((column(Columns) /= v), ..., *this);
+            return ((column(TColumns) /= v), ..., *this);
         }
 
         // Matrix operators
 
         matrix_type& operator+=(const matrix_type& v)
         {
-            return ((column(Columns) += v.column(Columns)), ..., *this);
+            return ((column(TColumns) += v.column(TColumns)), ..., *this);
         }
 
         matrix_type& operator-=(const matrix_type& v)
         {
-            return ((column(Columns) -= v.column(Columns)), ..., *this);
+            return ((column(TColumns) -= v.column(TColumns)), ..., *this);
         }
 
         matrix_type& operator*=(const matrix_type& v)
@@ -157,14 +157,14 @@ namespace swizzle
 
         matrix_type& operator/=(const matrix_type& v)
         {
-            return ((column(Columns) /= v.column(Columns)), ..., *this);
+            return ((column(TColumns) /= v.column(TColumns)), ..., *this);
         }
 
         // Other operators
 
         bool operator==(const matrix_type& o) const
         {
-            return ((column(Columns) == o.column(Columns)) && ...);
+            return ((column(TColumns) == o.column(TColumns)) && ...);
         }
 
         bool operator!=(const matrix_type& o) const
@@ -203,7 +203,7 @@ namespace swizzle
 
         row_type row(size_t i) const
         {
-            return row_type(cell(i, Columns)...);
+            return row_type(cell(i, TColumns)...);
         }
 
         scalar_type& cell(size_t row, size_t col)
@@ -216,9 +216,9 @@ namespace swizzle
             return data[col][row];
         }
 
-        inline friend matrix<ScalarType, num_columns, num_rows> transpose(const matrix_type& m)
+        inline friend matrix<TScalar, num_columns, num_rows> transpose(const matrix_type& m)
         {
-            return matrix<ScalarType, num_columns, num_rows>::make_transposed(m);
+            return matrix<TScalar, num_columns, num_rows>::make_transposed(m);
         }
 
         //! Matrix-vector multiplication.
@@ -228,28 +228,28 @@ namespace swizzle
         }
 
         //! Matrix-matrix multiplication.
-        template <size_t OtherNumRows>
-        static matrix<ScalarType, OtherNumRows, num_columns> mul(const matrix<ScalarType, OtherNumRows, num_rows>& m1, const matrix_type& m2)
+        template <size_t TOtherNumRows>
+        static matrix<TScalar, TOtherNumRows, num_columns> mul(const matrix<TScalar, TOtherNumRows, num_rows>& m1, const matrix_type& m2)
         {
             // TODO: questionable
             auto tr = transpose(m1);
-            return matrix<ScalarType, OtherNumRows, num_columns>((m2.column(Columns) * tr)...);
+            return matrix<TScalar, TOtherNumRows, num_columns>((m2.column(TColumns) * tr)...);
         }
 
         //! Matrix-vector multiplication.
         static row_type mul(const column_type& v, const matrix_type& m)
         {
-            return row_type(v.call_dot(v, m.column(Columns))...);
+            return row_type(v.call_dot(v, m.column(TColumns))...);
         }
 
     private:
 
-        template <size_t offset, class T0, class... Tail>
+        template <size_t TOffset, class T0, class... Tail>
         void construct(T0&& t0, Tail&&... tail)
         {
             // the pyramid of MSVC shame
-            compose<offset>(detail::decay(std::forward<T0>(t0)));
-            construct<offset + detail::get_total_component_count_v<T0> >(std::forward<Tail>(tail)...);
+            compose<TOffset>(detail::decay(std::forward<T0>(t0)));
+            construct<TOffset + detail::get_total_component_count_v<T0> >(std::forward<Tail>(tail)...);
         }
 
         template <size_t>
@@ -257,33 +257,33 @@ namespace swizzle
         {}
 
         //! Optimised setter used when setting whole column
-        template <size_t CellIdx>
-        typename std::enable_if<CellIdx % num_rows == 0, void>::type compose(const column_type& v)
+        template <size_t TCellIdx>
+        typename std::enable_if<TCellIdx % num_rows == 0, void>::type compose(const column_type& v)
         {
-            column( CellIdx / num_rows ) = v;
+            column( TCellIdx / num_rows ) = v;
         }
 
-        //! Vector fallback setter, when CellIdx is not aligned
-        template <size_t CellIdx, class VectorScalarType, size_t VectorSize>
-        typename std::enable_if<CellIdx % num_rows != 0 || VectorSize != num_rows, void>::type compose(const vector<VectorScalarType, VectorSize>& v)
+        //! Vector fallback setter, when TCellIdx is not aligned
+        template <size_t TCellIdx, class TVectorScalar, size_t TVectorSize>
+        typename std::enable_if<TCellIdx % num_rows != 0 || TVectorSize != num_rows, void>::type compose(const vector<TVectorScalar, TVectorSize>& v)
         {
             // do not go over the matrix size!
-            const size_t c_limit = (CellIdx + VectorSize > num_rows * num_columns) ? (num_rows * num_columns) : (CellIdx + VectorSize);
-            detail::static_for<CellIdx, c_limit>([&](size_t i) -> void { cell(i % num_rows, i / num_rows) = v[i - CellIdx]; });
+            const size_t c_limit = (TCellIdx + TVectorSize > num_rows * num_columns) ? (num_rows * num_columns) : (TCellIdx + TVectorSize);
+            detail::static_for<TCellIdx, c_limit>([&](size_t i) -> void { cell(i % num_rows, i / num_rows) = v[i - TCellIdx]; });
         }
 
-        template <size_t CellIdx, typename SomeScalarType>
-        void compose(SomeScalarType&& scalar, std::enable_if_t<std::is_constructible_v<scalar_type, SomeScalarType>>* = nullptr)
+        template <size_t TCellIdx, typename TSomeScalar>
+        void compose(TSomeScalar&& scalar, std::enable_if_t<std::is_constructible_v<scalar_type, TSomeScalar>>* = nullptr)
         {
-            cell(CellIdx % num_rows, CellIdx / num_rows) = scalar_type(std::forward<SomeScalarType>(scalar));
+            cell(TCellIdx % num_rows, TCellIdx / num_rows) = scalar_type(std::forward<TSomeScalar>(scalar));
         }
 
     private:
         std::array< column_type, num_columns > data; 
     };
 
-    //template <class ScalarType, size_t M, size_t NumRows, size_t OtherNumColumns>
-    //matrix<VectorType, ScalarType, NumRows, OtherNumColumns> operator*(const matrix<VectorType, ScalarType, N, M>& m1, const matrix<VectorType, ScalarType, M, OtherNumColumns>& m2 )
+    //template <class TScalar, size_t M, size_t TNumRows, size_t OtherNumColumns>
+    //matrix<VectorType, TScalar, TNumRows, OtherNumColumns> operator*(const matrix<VectorType, TScalar, N, M>& m1, const matrix<VectorType, TScalar, M, OtherNumColumns>& m2 )
     //{
     //    return m1.mul(m1, m2);
     //}
