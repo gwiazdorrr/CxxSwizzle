@@ -69,11 +69,21 @@ struct render_stats
     int num_threads;
 };
 
+enum class sampler_type {
+    none,
+    texture,
+    buffer_a,
+    buffer_b, 
+    buffer_c,
+    buffer_d,
+    keyboard,
+};
+
 struct sampler_data
 {
     const char* path = nullptr;
     
-    int buffer_index = -1;
+    sampler_type type = sampler_type::none;
     std::unique_ptr<SDL_Surface, sdl_deleter> images[6];
     swizzle::naive_sampler_data faces[6];
     size_t faces_count = 1;
@@ -101,22 +111,25 @@ struct aligned_render_target_base
     size_t pitch = 0;
     int width = 0;
     int height = 0;
+    size_t pixels_size;
 
     aligned_render_target_base() = default;
     aligned_render_target_base(int width, int height, int bpp, int align) : width(width), height(height)
     {
         const int mask = align - 1;
 
-        // each row has to be allocated
+        // each row has to be aligned
         pitch = (width * bpp + mask) & (~mask);
-        size_t pixels_size = static_cast<size_t>(pitch) * height;
+        pixels_size = static_cast<size_t>(pitch) * height;
         size_t alloc_size = pixels_size + align - 1;
 
         // alloc and align
         memory.reset(::operator new (alloc_size));
         first_row = memory.get();
         first_row = std::align(align, pixels_size, first_row, alloc_size);
+        memset(memory.get(), 0, alloc_size);
     }
+
 };
 
 struct render_target_rgba32 : aligned_render_target_base
@@ -133,9 +146,32 @@ struct render_target_rgba32 : aligned_render_target_base
     }
 };
 
+struct render_target_a8 : aligned_render_target_base
+{
+    static const int bytes_per_pixel = 1;
+
+    render_target_a8() = default;
+    render_target_a8(int width, int height) : aligned_render_target_base(width, height, bytes_per_pixel, 32) {}
+
+    ptrdiff_t offset(int x, int y) const
+    {
+        return (height - 1 - y) * pitch + x * bytes_per_pixel;
+    }
+
+    uint8_t get(int x, int y) const
+    {
+        return *(reinterpret_cast<uint8_t*>(first_row) + offset(x, y));
+    }
+
+    void set(int x, int y, uint8_t value)
+    {
+        *(reinterpret_cast<uint8_t*>(first_row) + offset(x, y)) = value;
+    }
+};
+
 struct render_target_float : aligned_render_target_base
 {
-    static const int bytes_per_pixel = 16;
+    static const int bytes_per_pixel = 4 * sizeof(float);
 
     render_target_float() = default;
     render_target_float(int width, int height) : aligned_render_target_base(width, height, bytes_per_pixel, 32) {}
@@ -144,6 +180,22 @@ struct render_target_float : aligned_render_target_base
     {
         store_rgba32f_aligned(color.r, color.g, color.b, color.a, ptr, pitch);
     }
+
+    void set(int x, int y, float r, float g, float b, float a)
+    {
+        float* p = reinterpret_cast<float*>(reinterpret_cast<uint8_t*>(first_row) + y * pitch + x * bytes_per_pixel);
+        p[0] = r;
+        p[1] = g;
+        p[2] = b;
+        p[3] = a;
+    }
+
+    std::tuple<float, float, float, float> get(int x, int y)
+    {
+        float* p = reinterpret_cast<float*>(reinterpret_cast<uint8_t*>(first_row) + y * pitch + x * bytes_per_pixel);
+        return std::make_tuple(p[0], p[1], p[2], p[3]);
+    }
+
 };
 
 constexpr auto pixels_per_batch = static_cast<int>(::swizzle::detail::batch_traits<swizzle::float_type>::size);
@@ -377,6 +429,39 @@ SDL_Rect fix_rect(SDL_Rect rect)
     return rect;
 }
 
+int SDL_Keysym_to_Ascii(SDL_Keysym keysym) {
+
+    if (keysym.sym >= SDLK_a && keysym.sym <= SDLK_z)
+    {
+        if (keysym.mod & KMOD_SHIFT)
+        {
+            return int('A') + keysym.sym - 'a';
+        }
+        else
+        {
+            return keysym.sym;
+        }
+    }
+
+    if (keysym.sym < 256)
+    {
+        return keysym.sym;
+    }
+
+    switch (keysym.sym)
+    {
+    case SDLK_PAGEUP:  return 33;
+    case SDLK_PAGEDOWN:  return 34;
+    case SDLK_END:  return 35;
+    case SDLK_HOME: return 36;
+    case SDLK_LEFT: return 37;
+    case SDLK_UP: return 38;
+    case SDLK_RIGHT: return 39;
+    case SDLK_DOWN: return 40;
+    default:
+        return -1;
+    }
+}
 
 
 int main(int argc, char* argv[])
@@ -494,26 +579,32 @@ int main(int argc, char* argv[])
     {
         if (!texture.path || strlen(texture.path) == 0)
         {
+            texture.type = sampler_type::none;
             texture.path = nullptr;
         }
         else if (!strcmp(texture.path, "buffer_a")) 
         {
-            texture.buffer_index = 0;
+            texture.type = sampler_type::buffer_a;
         }
         else if (!strcmp(texture.path, "buffer_b"))
         {
-            texture.buffer_index = 1;
+            texture.type = sampler_type::buffer_b;
         }
         else if (!strcmp(texture.path, "buffer_c"))
         {
-            texture.buffer_index = 2;
+            texture.type = sampler_type::buffer_c;
         }
         else if (!strcmp(texture.path, "buffer_d"))
         {
-            texture.buffer_index = 3;
+            texture.type = sampler_type::buffer_d;
+        }
+        else if (!strcmp(texture.path, "keyboard"))
+        {
+            texture.type = sampler_type::keyboard;
         }
         else
         {
+            texture.type = sampler_type::texture;
             load_texture(texture, texture.path);
         }
     }
@@ -562,8 +653,8 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    try 
-    { 
+    try
+    {
         std::unique_ptr<SDL_Window, sdl_deleter> window(SDL_CreateWindow("CxxSwizzle sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, resolution.x, resolution.y, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI));
         std::unique_ptr<SDL_Renderer, sdl_deleter> renderer(SDL_CreateRenderer(window.get(), -1, 0));
         std::unique_ptr<SDL_Surface, sdl_deleter> target_surface;
@@ -571,6 +662,10 @@ int main(int argc, char* argv[])
 
         render_target_rgba32 target_surface_data;
         render_target_float buffer_surfaces[4][2];
+        render_target_a8 keyboard_surface_data(256, 3);
+        render_target_a8 keyboard_surface_data_used(256, 3);
+        std::unique_ptr<SDL_Surface, sdl_deleter> keyboard_surface(SDL_CreateRGBSurfaceWithFormatFrom(keyboard_surface_data_used.first_row, keyboard_surface_data_used.width, keyboard_surface_data_used.height, 32, keyboard_surface_data_used.pitch, SDL_PIXELFORMAT_INDEX8));
+
 
         // a function used to resize the target_surface
         auto resize_or_create_surfaces = [&](int w, int h) -> void
@@ -665,15 +760,31 @@ int main(int argc, char* argv[])
         {
             abort_render_token = false;
             
+            // bring about keyboard changes
+            memcpy(keyboard_surface_data_used.first_row, keyboard_surface_data.first_row, keyboard_surface_data.pixels_size);
+            
+            // clear down flag
+            for (int i = 0; i < 256; ++i) 
+            {
+                keyboard_surface_data.set(i, 1, 0);
+            }
+
+
             {
                 int buffer_surface_index = num_frames & 1;
                 // sort out buffer textures
                 for (auto& data : textures)
                 {
-                    if (data.buffer_index >= 0)
+                    if (data.type >= sampler_type::buffer_a && data.type <= sampler_type::buffer_d)
+                    {
+                        int buffer_index = static_cast<int>(data.type) - static_cast<int>(sampler_type::buffer_a);
+                        data.faces_count = 1;
+                        make_naive_sampler_data(data.faces[0], buffer_surfaces[buffer_index][buffer_surface_index]);
+                    }
+                    else if (data.type == sampler_type::keyboard)
                     {
                         data.faces_count = 1;
-                        make_naive_sampler_data(data.faces[0], buffer_surfaces[data.buffer_index][buffer_surface_index]);
+                        make_naive_sampler_data(data.faces[0], keyboard_surface.get());
                     }
                 }
             }
@@ -683,12 +794,14 @@ int main(int argc, char* argv[])
             shader_inputs inputs = {};
             inputs.iTime = time;
             inputs.iTimeDelta = static_cast<float>(duration_to_seconds(last_render_stats.duration));
+            inputs.iFrameRate = static_cast<int>(current_fps);
             inputs.iFrame = num_frames;
             inputs.iResolution = vec3(static_cast<float>(s->w), static_cast<float>(s->h), 0.0f);
             inputs.iMouse.x = static_cast<float>(mouse_x);
             inputs.iMouse.y = static_cast<float>(s->h - 1 - mouse_y);
             inputs.iMouse.z = (mouse_pressed ? 1.0f : -1.0f) * mouse_press_x;
             inputs.iMouse.w = (mouse_clicked ? 1.0f : -1.0f) * (s->h - 1 - mouse_press_y);
+
             mouse_clicked = false;
 
 
@@ -737,6 +850,17 @@ int main(int argc, char* argv[])
                         abort_render_token = quit = true;
                     }
                     break; 
+
+                case SDL_KEYUP:
+                    {
+                        int ascii = SDL_Keysym_to_Ascii(event.key.keysym);
+                        if (ascii > 0) 
+                        {
+                            keyboard_surface_data.set(ascii, 0, 0);
+                        }
+                    }
+                    break;
+
                 case SDL_KEYDOWN:
                     switch ( event.key.keysym.sym ) 
                     {
@@ -762,6 +886,17 @@ int main(int argc, char* argv[])
                     default:
                         break;
                     }
+
+                    {
+                        int ascii = SDL_Keysym_to_Ascii(event.key.keysym);
+                        if (ascii > 0) 
+                        {
+                            keyboard_surface_data.set(ascii, 0, 0xFF);
+                            keyboard_surface_data.set(ascii, 1, 0xFF);
+                            keyboard_surface_data.set(ascii, 2, keyboard_surface_data.get(ascii, 2) ? 0 : 0xFF);
+                        }
+                    }
+                    
                     break;
                 case SDL_MOUSEMOTION:
                     if (mouse_pressed)

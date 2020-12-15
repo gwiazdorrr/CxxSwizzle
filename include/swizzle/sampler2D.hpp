@@ -119,6 +119,11 @@ namespace swizzle
         std::tuple<float, float, float, float> fetch_pixel(int index, const naive_sampler_data* data) const
         {
             auto ptr = data->bytes + index;
+            if (index < 0 || index > data->height * data->pitch_bytes) 
+            {
+                // TODO: verify what's shadertoy's take on oob fetches
+                return std::make_tuple(0.0f, 0.0f, 0.0f, 1.0f);
+            }
 
             if (data->is_floating_point) {
                 return std::make_tuple(
