@@ -121,6 +121,9 @@ Workaround: Add `Foo` to `CUSTOM_STRUCTS` CMake list
 - ternary operator involving swizzles, like `vec2 p = flag ? v.xy : v.xz;`
 Workaroud: `vec2 p = flag ? (vec2)v.xy : v.xz`;
 
+- shadowing: `float cos = cos(x);`
+Workaround: Rename the variable (e.g. `float cs = cos(x);`).
+
 - array syntax: `int a[2] = int[](0, 1);`
 Workaround: ARRAY(float, a, 0, 1);
 If you intend to move back and forth between CxxSwizzle and Shadertoy, add this to your shader too:

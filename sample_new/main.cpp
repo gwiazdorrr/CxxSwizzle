@@ -6,6 +6,9 @@
 using namespace swizzle;
 using namespace shadertoy;
 
+// TODO: wrong mouse clicks
+// TODO: texture sampling in simd?
+
 
 static_assert(sizeof(vec2) == sizeof(swizzle::float_type[2]), "Too big");
 static_assert(sizeof(vec3) == sizeof(swizzle::float_type[3]), "Too big");
@@ -21,6 +24,7 @@ static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 #include <mutex>
 #include <condition_variable>
 #include <future>
+#include <filesystem>
 
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
@@ -64,10 +68,21 @@ struct render_stats
     int num_threads;
 };
 
-struct sampler_data : swizzle::naive_sampler_data 
+struct sampler_data
 {
     const char* path = nullptr;
+    
     int buffer_index = -1;
+    std::unique_ptr<SDL_Surface, sdl_deleter> images[6];
+    swizzle::naive_sampler_data faces[6];
+    size_t faces_count = 1;
+
+    void init_sampler(sampler2D& sampler, vec3& resolution) const
+    {
+        sampler.data = &faces[0];
+        sampler.face_count = faces_count;
+        resolution = vec3(faces[0].width, faces[0].height, 0.0f);
+    }
 };
 
 struct aligned_render_target_base 
@@ -186,7 +201,7 @@ static render_stats render(PixelFunc func, shader_inputs uniforms, RenderTarget&
             if (cancelled)
                 continue;
 
-            swizzle::float_type frag_coord_y = static_cast<float>(rt.height - 1 - y) + y_offsets;
+            swizzle::float_type frag_coord_y = static_cast<float>(rt.height - y) - y_offsets;
 
             uint8_t* ptr = reinterpret_cast<uint8_t*>(rt.first_row) + y * rt.pitch;
 
@@ -214,16 +229,12 @@ static render_stats render(PixelFunc func, shader_inputs uniforms, RenderTarget&
     return render_stats { std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - render_begin), num_pixels, num_threads };
 }
 
-void set_textures(shader_inputs& inputs, const sampler_data ptr[4])
+void init_samplers(shader_inputs& inputs, const sampler_data ptr[4])
 {
-    inputs.iChannel0.data = ptr;
-    inputs.iChannel1.data = ptr + 1;
-    inputs.iChannel2.data = ptr + 2;
-    inputs.iChannel3.data = ptr + 3;
-    for (int i = 0; i < 4; ++i)
-    {
-        inputs.iChannelResolution[i] = vec3(ptr[i].width, ptr[i].height, 0.0f);
-    }
+    ptr[0].init_sampler(inputs.iChannel0, inputs.iChannelResolution[0]);
+    ptr[1].init_sampler(inputs.iChannel1, inputs.iChannelResolution[1]);
+    ptr[2].init_sampler(inputs.iChannel2, inputs.iChannelResolution[2]);
+    ptr[3].init_sampler(inputs.iChannel3, inputs.iChannelResolution[3]);
 }
 
 #define STR1(x) #x
@@ -272,7 +283,7 @@ void make_naive_sampler_data(swizzle::naive_sampler_data& sampler, const SDL_Sur
     }
 }
 // TODO: sound
-bool load_texture(swizzle::naive_sampler_data& sampler, const char* name)
+bool load_texture(sampler_data& sampler, const char* name)
 {
 #ifdef SAMPLE_SDL2IMAGE_FOUND
     auto img = IMG_Load(name);
@@ -283,7 +294,28 @@ bool load_texture(swizzle::naive_sampler_data& sampler, const char* name)
     }
     else
     {
-        make_naive_sampler_data(sampler, img);
+        // check if other faces are available
+        namespace fs = std::filesystem;
+
+        fs::path path = name;
+        sampler.faces_count = 1;
+
+
+        for (int i = 1; i <= 5; ++i) 
+        {
+            fs::path other = path.parent_path() / path.stem();
+            other += fs::path("_" + std::to_string(i));
+            other += path.extension();
+
+            auto face_img = IMG_Load(other.string().c_str());
+            if (face_img) {
+                fprintf(stdout, "omg!!! %s", other.string().c_str());
+                make_naive_sampler_data(sampler.faces[i], face_img);
+                sampler.faces_count = i;
+            }
+        }
+        
+        make_naive_sampler_data(sampler.faces[0], img);
         return true;
     }
 #else
@@ -601,22 +633,22 @@ int main(int argc, char* argv[])
             std::chrono::microseconds duration(0);
 
 #ifdef SAMPLE_HAS_BUFFER_A
-            set_textures(inputs, &textures[4]);
+            init_samplers(inputs, &textures[4]);
             duration += render(shadertoy::buffer_a, inputs, buffer_surfaces[0][buffer_surface_index], cancel).duration;
 #endif
 #ifdef SAMPLE_HAS_BUFFER_B
-            set_textures(inputs, &textures[8]);
+            init_samplers(inputs, &textures[8]);
             duration += render(shadertoy::buffer_b, inputs, buffer_surfaces[1][buffer_surface_index], cancel).duration;
 #endif
 #ifdef SAMPLE_HAS_BUFFER_C
-            set_textures(inputs, &textures[12]);
+            init_samplers(inputs, &textures[12]);
             duration += render(shadertoy::buffer_c, inputs, buffer_surfaces[2][buffer_surface_index], cancel).duration;
 #endif
 #ifdef SAMPLE_HAS_BUFFER_D
-            set_textures(inputs, &textures[16]);
+            init_samplers(inputs, &textures[16]);
             duration += render(shadertoy::buffer_d, inputs, buffer_surfaces[3][buffer_surface_index], cancel).duration;
 #endif
-            set_textures(inputs, &textures[0]);
+            init_samplers(inputs, &textures[0]);
             render_stats result = render(shadertoy::image, inputs, target_surface_data, cancel);
             result.duration += duration;
             return result;
@@ -634,7 +666,8 @@ int main(int argc, char* argv[])
                 {
                     if (data.buffer_index >= 0)
                     {
-                        make_naive_sampler_data(data, buffer_surfaces[data.buffer_index][buffer_surface_index]);
+                        data.faces_count = 1;
+                        make_naive_sampler_data(data.faces[0], buffer_surfaces[data.buffer_index][buffer_surface_index]);
                     }
                 }
             }
