@@ -64,35 +64,58 @@ namespace swizzle
         size_t face_count = 1;
 
 
-        inline friend vec4 textureLod(const this_type& sampler, const vec2& uv, const float_type& lod)
+        // functions
+        // 8.9
+
+        inline friend vec4 texture(const this_type& sampler, const vec2& p)
         {
-            return sampler.sample(uv);
+            return sampler.sample(p);
         }
 
-        inline friend vec4 texture(const this_type& sampler, const vec2& uv, const float_type& bias)
+        inline friend vec4 texture(const this_type& sampler, const vec2& p, const float_type& bias)
         {
-            return sampler.sample(uv);
+            return sampler.sample(p);
         }
 
-        inline friend vec4 texture(const this_type& sampler, const vec2& uv)
+        inline friend vec4 texture(const this_type& sampler, const vec3& p)
         {
-            return sampler.sample(uv);
+            return sampler.sample(p);
         }
 
-        inline friend vec4 textureGrad(const this_type& sampler, const vec2& uv, const vec2& dPdx, const vec2& dPdy)
+        inline friend vec4 texture(const this_type& sampler, const vec3& p, const float_type& bias)
         {
-            return sampler.sample(uv);
+            return sampler.sample(p);
         }
+
+
+        inline friend vec4 textureLod(const this_type& sampler, const vec2& p, const float_type& lod)
+        {
+            return sampler.sample(p);
+        }
+
+        inline friend vec4 textureLod(const this_type& sampler, const vec3& p, const float_type& lod)
+        {
+            return sampler.sample(p);
+        }
+
 
         inline friend vec4 texelFetch(const this_type& sampler, const ivec2& p, int32_type lod)
         {
             return sampler.fetch(p);
         }
 
-        inline friend vec4 texture(const this_type& sampler, const vec3& uv)
+
+
+        inline friend vec4 textureGrad(const this_type& sampler, const vec2& p, const vec2& dPdx, const vec2& dPdy)
+        {
+            return sampler.sample(p);
+        }
+
+        inline friend vec4 textureGrad(const this_type& sampler, const vec3& p, const vec3& dPdx, const vec3& dPdy)
         {
             return sampler.sample(uv);
         }
+
 
         inline friend ivec2 textureSize(const this_type& sampler, int)
         {

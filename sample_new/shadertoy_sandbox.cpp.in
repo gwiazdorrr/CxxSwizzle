@@ -84,6 +84,7 @@ namespace
 
     #define CXXSWIZZLE
     #define CXXSWIZZLE_ARRAY(type, name, ...) type name[CXXSWIZZLE_VA_COUNT(__VA_ARGS__)] = { __VA_ARGS__ }
+    #define CXXSWIZZLE_STATIC static
 
     #pragma warning(push)
     #pragma warning(disable: 4244) // disable return implicit conversion warning

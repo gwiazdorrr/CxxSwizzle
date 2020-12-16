@@ -1,144 +1,334 @@
-CxxSwizzle
-==========
+# CxxSwizzle
 
-2015.02.17 Update: The library now comes with SIMD support. More info soon.
+This project provides dependency-free headers that replicate GLSL language syntax and built-in functions in C++17, as completely as possible. Basically, you can do this in C++ now:
+```glsl
+vec4 foo(0);                        // 0,0,0,0
+foo.yx = vec2(2, 1);                // 1,2,0,0
+foo.zw = foo.xy * 2;                // 1,2,2,4
+vec2 bar = max(foo.xw, foo.yz).yx;  // 4,2
+bar = clamp(foo.xw, 0, 2);          // 1,2  
+mat2 m(foo.xyz, 1);                 // 1,2,2,1
+bar *= m;                           // 5,2
+```
 
-CxxSwizzle (a reality-friendly way of writing down "C++ Swizzle") is a header-only, dependency free extensible library bringing shader languages' (GLSL, HSLS) vector "swizzle" syntax into C++. Basically, you can do this in C++ now:
+Sample project provides Shadertoy integration and is able to download and compile a complete Shadertoy (shaders & textures), provided its visibility is set to `public+api`. Out of 100 most popular shaders:
 
-    vec4 foo(0);                        // 0,0,0,0
-    foo.yx = vec2(2, 1);                // 1,2,0,0
-    foo.zw = foo.xy * 2;                // 1,2,2,4
-    vec2 bar = max(foo.xw, foo.yz).yx;  // 4,2
-    bar = clamp(foo.xw, 0, 2);          // 1,2  
-    mat2 m(foo.xyz, 1);                 // 1,2,2,1
-    bar *= m;                           // 5,2
-    // etc.
+- XX% compiled without any alterations
+- XX% needed minor tweaks
+- XX% were impossible to port
 
-What's the use? Familiar and easy to use syntax for non-critical pieces of code. Also, given GLSL/HLSL similarity to C you can execute most shaders directly as C++ code, with just a little help from the preprocessor (keyword substitution). That gives debugging and flexibility capabilities unpararelled by existing shader debugging solutions - you can use IDE of your choice, add logging, assertions, breakpoints (even conditional ones!), unit tests for functions etc.
+## GLSL support status
 
-The following snippet will compile both in C++ and GLSL.
+Parts of [GLSL Lang Spec 4.60](https://www.khronos.org/registry/OpenGL/specs/gl/GLSLangSpec.4.60.pdf) CxxSwizzle attempted at replicating:
 
-    #ifdef __cplusplus
-    #include <cassert>
-    #include <iostream>
-    #else
-    #define assert(x)
-    #define CPP_DO(x)
-    #endif
+- [ ] Baisc Types [4.1]
+  - [x] scalar types
+  - [x] `vec2..4`
+  - [x] `ivec2..4`
+  - [x] `uvec2..4`
+  - [x] `bvec2..4`
+  - [ ] `dvec2..4`
+  - [x] `mat2..4`
+  - [x] `mat2..4x2..4`
+  - [ ] `dmat2..4`
+  - [ ] `dmat2..4x2..4`
+  - [x] `sampler1D` *(as sampler_naive_generic)*
+  - [x] `sampler2D` *(as sampler_naive_generic)*
+  - [x] `samplerCube` *(as sampler_naive_generic)*
+  - [ ] `sampler3D`
+  - [ ] other sampler types 
+- [ ] Implicit Conversions [4.1.10]
+- [x] Parameter Qualifiers [4.6]
+  - [x] `const`
+  - [x] `in`
+  - [x] `out`
+  - [x] `inout`
+- [x] Precision Qualifiers [4.7]
+  - [x] `highp` *(no effect)*
+  - [x] `mediump` *(no effect)*
+  - [x] `lowp` *(no effect)*
+- [ ] Operators [5.1]
+- [x] Constructors [5.4]
+  - [ ] Conversion and Scalar Constructors [5.4.1] *needs tests*
+  - [ ] Vector and Matrix Constructors [5.4.2] *needs tests*
+  - [ ] Structure Constructors [5.4.3] *(see Workarounds)*
+  - [ ] Array Constructors [5.4.4] 
+    - [x] One-dimensional  *(see Workarounds)*
+    - [ ] Multi-dimensional
+- [x] Vector and Scalar Components and Length [5.5]
+  - [x] Swizzling
+  - [x] Vector `length` method
+  - [ ] Scalar `x` compoment
+- [x] Matrix Components [5.6]
+- [x] Structure and Array Operations [5.7]
+  - [ ] Array length method
+  - [ ] Equality operator
+  - [x] Other operators
+- [x] Vector and Matrix Operations [5.10] *needs more tests*
+- [x] Function Definitions [6.1]
+  - [x] Prototypes *(see Workarounds)*
+  - [x] Definitions
+- [x] Jumps [6.4]
+  - [x] `discard`
+- [ ] Built-in Variables [7]
+  - [x] `gl_FragCoord`
+  - [x] `gl_FragColor`
+  - [ ] Other variables
+- [ ] Built-in Functions
+  - [x] Angle and Trigonometry Functions [8.1]
+  - [x] Exponential Functions [8.2]
+  - [ ] Common Functions [8.3]
+    - [ ] `floatBitsToInt`, `floatBitsToUInt`, 
+    - [ ] `intBitsToFloat`, `uintBitsToFloat`
+    - [ ] `fma`
+    - [ ] `frexp`, `ldexp`
+    - [x] Other functions
+  - [ ] Floating-Point Pack and Unpack Functions [8.4]
+  - [ ] Geometric Functions [8.5]
+    - [ ] `ftransform`
+    - [x] Other functions
+  - [x] Matrix Functions [8.6]
+    - [ ] `matrixCompMult`
+    - [ ] `outerProduct`
+    - [x] `transpose`
+    - [ ] `determinant`
+    - [ ] `inverse`
+  - [x] Vector Relational Functions [8.7]
+  - [ ] Integer Functions [8.8]
+  - [ ] Texture Functions [8.9] *(sampler ignores lod and partial derivatives)*
+    - [x] `textureSize`
+    - [x] `texture`
+    - [x] `texelFetch` 
+    - [x] `textureLod`
+    - [x] `textureGrad`
+    - [ ] Other  functions
+  - [ ] Fragment Processing Functions [8.13] *(SIMD only)*
+    - [x] `dfDx`
+    - [x] `dfDy`
+    - [x] `fwidth`
+    - [ ] Coarse and Fine derivatives
+    - [ ] Interpolation Functions
 
-    void test_sin(vec4 a)
-    {
-        vec4 b = sin(a);
+## Shadertoy integration status
 
-        // sanity checks
-        assert( all(lessThanEqual(b, vec4(1))) );
-        assert( all(greaterThanEqual(b, vec4(-1))) );
-
-        // print out
-        CPP_DO( std::cout << "sin(" << a << ") == " << b << "\n"; )
-
-        #ifdef __cplusplus
-        
-        // test trigonometric symmetry
-        const float c_pi = 3.14159265358979323846f;
-        const vec4 c_eps = vec4(0.0001);
-
-        vec4 c = cos(c_pi/2 - a);
-        if ( any(greaterThan(abs(c - b), c_eps)) )
-        {
-            // programmatic breakpoint
-            __asm int 3;
-        }
-        
-        #endif
-    }
-
-In fact you can pretty much take any shader from http://glsl.heroku.com or http://shadertoy.com (the second one takes loooong to load) and execute it as C++ code. The sample project is a simplistic example of how to do exactly that. For instance, this shader from sample, can be run both as GLSL (try it here: http://glsl.heroku.com/e#10661.0) and as C++ (in sample, shaders/leadlight.frag):
-
-    uniform float time;
-    uniform vec2 mouse;
-    uniform vec2 resolution;
-
-    // Leadlight by @hintz 2013-05-02
-
-    void main()
-    {
-        vec2 position = gl_FragCoord.xy / resolution.x - 0.5;
-        
-        float r = length(position);
-        float a = atan(position.y, position.x);
-        float t = time + 100.0/(r+1.0);
-        
-        float light = 15.0*abs(0.05*(sin(t)+sin(time+a*8.0)));
-        vec3 color = vec3(-sin(r*5.0-a-time+sin(r+t)), sin(r*3.0+a-cos(time)+sin(r+t)), cos(r+a*2.0+log(5.001-(a/4.0))+time)-sin(r+t));
-        
-        gl_FragColor = vec4((normalize(color)+0.3) * light , 1.0);
-    }
-
-Note that contrary to the headers the sample needs SDL library. 
-    
-HLSL can be compiled as well, but likely not without some changes. There's no way to make semantics valid in C++, for instance. Also, named cbuffers would need some work. I am still looking into this.
-
-The library is written in C++11 subset supported by VS2013. It works with g++ 4.8.1 and most likely will work with clang, too. There are no external dependencies.
-
-There is a legacy branch written in C++11 subset supported by VS2010 - most notably the lack of variadic templates was a great pain and limitation. That's why it's no longer maintained.
-
-Compability
----------------------------------------------------
-
-When using g++, following flags must be added to the compiler command line:
-
-    -std=c++11 -fno-operator-names
-
-The less obvious second flag disables alterantive operators names, such as `and` ar `not` which, coincidentally, are also the names of some GLSL functions.
-
-If using CMake, just set CMAKE_CXX_FLAGS variable.
-
-Diferences between GLM
----------------------------------------------------
-
-This shows up a lot in comments - why use CxxSwizzle and not GLM (http://glm.g-truc.net)? Well, here are main differences:
-
-* GLM swizzling seems kind of half done and has its quirks. Bottom line, there's nowhere near as much flexibility as you have with GLSL/HLSL and CxxSwizzle.
-* GLM is highly susceptible to ambiguity errors. In GLSL/HLSL number literals are contextual, i.e. `0.5` can mean any precision floating point number. Not in C++.
-* GLM can't handle some vector construction cases.
-* GLM has more features. Covers greater array of GLSL functions, as well as "support" OGL and GLU functions. Something CxxSwizzle will hopefully catch up soon.
-* GLM has an optional SIMD support. Focus of CxxSwizzle was not a performance; it *is going to be painfully slow* regardless if you are going to emulate shader or even structure your code similarly to shaders. SSE is not going to help here much. However, I do recognise the room for improvement and am aware of naivity of current math implementation - hence the `swizzle::glsl::naive` namespace.
-* GLM is mature
-
-Other, "ideological" differences:
-* GLM is code and macro heavy (for what it provides), while CxxSwizzle is compact, clean and mostly template based
+- [ ] Downloading Shaders with "public+api" visibility
+  - [x] By id
+    - [x] Single
+    - [x] Batch
+  - [x] Query
+    - [x] Name
+    - [x] Sort (Popular, Newest, Love, Hot)
+    - [x] From-To
+    - [ ] Filters
+- [ ] Shader Inputs
+  - [x] iResolution
+  - [x] iTime
+  - [x] iTimeDelta
+  - [x] iFrame
+  - [ ] iChannelTime *Note: always 0*
+  - [x] iChannelResolution
+  - [x] iMouse
+  - [x] iChannel0...3
+  - [x] iDate
+  - [ ] iSampleRate *Note: always 0*
+  - [x] iFrameRate
+- [ ] Sources
+  - [x] Common
+  - [x] Buffer A
+  - [x] Buffer B
+  - [x] Buffer C
+  - [x] Buffer D
+  - [ ] Sound
+  - [ ] Cubemap A
+- [ ] Channels:
+  - [ ] Misc
+    - [x] Keyboard
+    - [ ] Webcam
+    - [ ] Microphone
+    - [ ] Soundcloud
+    - [x] Buffer A
+    - [x] Buffer B
+    - [x] Buffer C
+    - [x] Buffer D
+    - [ ] Cubemap A
+  - [x] Textures
+  - [x] Cubemaps
+  - [ ] Volumes
+  - [ ] Videos
+  - [ ] Music
 
 
-What's not working out of the box
----------------------------------------------------
-- constructors for structs: `struct Foo { float x; float y; }; Foo(0.0, 1.0);`
-Workaround: Add `Foo` to `CUSTOM_STRUCTS` CMake list
+## GLSL bits that do not work out of the box
 
-- `out/inout` argument modifiers for structs: `void foo(out Foo f) {}`
-Workaround: Add `Foo` to `CUSTOM_STRUCTS` CMake list
+### Struct initialization
+```glsl
+struct Foo { float x; float y; }; 
+...
+Foo f(0.0, 1.0);`
+```
+```
+error C2440: 'initializing': cannot convert from 'initializer list' to '`anonymous-namespace'::_cxxswizzle_fragment_shader_image::Foo'
+```
+*Solution*: Add `Foo` to `CUSTOM_STRUCTS` CMake list.
 
-- ternary operator involving swizzles, like `vec2 p = flag ? v.xy : v.xz;`
-Workaroud: `vec2 p = flag ? (vec2)v.xy : v.xz`;
+### `out/inout` argument modifiers for structs:
+```glsl
+void foo(out Foo f) {}
+```
+```
+error C2039: 'Foo': is not a member of '`anonymous-namespace'::_cxxswizzle_fragment_shader_image::inout_proxy'
+``` 
+*Solution*: Add `Foo` to `CUSTOM_STRUCTS` CMake list.
 
-- shadowing: `float cos = cos(x);`
-Workaround: Rename the variable (e.g. `float cs = cos(x);`).
+### Variable being named like a function
+```glsl
+float cos = cos(x);
+```
+```
+error C2064: term does not evaluate to a function taking 1 arguments
+```
+*Solution*:  Rename the variable.
+  ```glsl
+  float cs = cos(x);
+  ```
 
-- array syntax: `int a[2] = int[](0, 1);`
-Workaround: CXXSWIZZLE_ARRAY(float, a, 0, 1);
-If you intend to move back and forth between CxxSwizzle and Shadertoy, add this to your shader too:
-    #ifndef CXXSWIZZLE_ARRAY
-    #define CXXSWIZZLE_ARRAY(type, name, ...) type name[] = type[] ( __VA_ARGS__ )
-    #endif
+### Array intialization
+```glsl
+int a[2] = int[](0, 1);
+```
+```
+error C2059: syntax error: ']'
+```
+*Solution*: a macro needs to be used in place of the initialization.
+  ```glsl
+  CXXSWIZZLE_ARRAY(float, a, 0, 1);
+  ```
+  If you intend to move back and forth between CxxSwizzle and Shadertoy, add this to your shader too:
+  ```glsl
+  #ifndef CXXSWIZZLE_ARRAY
+  #define CXXSWIZZLE_ARRAY(type, name, ...) type name[] = type[] ( __VA_ARGS__ )
+  #endif
+  ```
 
-- function declarations: `void foo();`
-Workaround: Just remove them or:
-    #ifndef CXXSWIZZLE
-    void foo();
-    #endif
+### Function prototypes
+```glsl
+void foo();
+...
+foo();
+```
+```
+error C2535: 'void `anonymous-namespace'::_cxxswizzle_fragment_shader_image::foo(void)': member function already defined or declared
+```
+*Solution*: remove prototypes or wrap with `#ifndef CXXSWIZZLE` if you intend to copy shader back to Shadertoy.
+  ```glsl
+  #ifndef CXXSWIZZLE
+  void foo();
+  #endif
+  ```
 
-- SIMD: array indexing with int (unless an actual int constant)
-Workaround: Hopeless.
+### const int used for array size
+```glsl
+const int ArraySize=10; 
+vec3 Array[ArraySize];
+```
+```
+error C2327: '`anonymous-namespace'::_cxxswizzle_fragment_shader_image::ArraySize': is not a type name, static, or enumerator
+```
+*Solution*: use a macro instead.
+```glsl
+#define ArraySize 10
+```
+If you can't use a macro then use this:
+```glsl
+CXXSWIZZLE_STATIC const int ArraySize = 10;
+```
+If you intend to copy the shader back to Shadertoy you will need to add this as well:
+```glsl
+#ifndef CXXSWIZZLE_STATIC
+#define CXXSWIZZLE_STATIC
+#endif
+```
 
-- const int used for array size: `const int ArraySize=10; vec3 Array[ArraySize];`
-Workaround: ???
+
+
+## Problematic Shadertoys examples
+
+#### E1M1 - Hangar (https://www.shadertoy.com/view/lsSXzD)
+
+Will not work out of the box because of function declarations. C++ obviously has function declarations, but because of how CxxSwizzle samples are set up, they are not going to work and need to be wrapped with an `#ifdef`:
+```glsl
+#ifndef CXXSWIZZLE
+vec3 SampleTexture( const in float fTexture, const in vec2 vUV );
+void MapIntersect( out float fClosestT, out vec4 vHitInfo );
+float hash(float p);
+#endif
+```
+
+
+#### [NV15] 2001 Space Station (https://www.shadertoy.com/view/4lBGRh)
+
+GLSL allows you to have variables and functions of the same name. That is not a case with C++, so each `Rotate` function needs to be fixed and not use `sin` and `cos` as variables:
+```glsl
+vec3 RotateX(vec3 v, float rad)
+{
+  float cs = cos(rad);
+  float sn = sin(rad);
+  //if (RIGHT_HANDED_COORD)
+  return vec3(v.x, cs * v.y + sn * v.z, -sn * v.y + cs * v.z);
+  //else return new float3(x, cos * y - sin * z, sin * y + cos * z);
+}
+vec3 RotateY(vec3 v, float rad)
+{
+  float cs = cos(rad);
+  float sn = sin(rad);
+  //if (RIGHT_HANDED_COORD)
+  return vec3(cs * v.x - sn * v.z, v.y, sn * v.x + cs * v.z);
+  //else return new float3(cos * x + sin * z, y, -sin * x + cos * z);
+}
+vec3 RotateZ(vec3 v, float rad)
+{
+  float cs = cos(rad);
+  float sn = sin(rad);
+  //if (RIGHT_HANDED_COORD)
+  return vec3(cs * v.x + sn * v.y, -sn * v.x + cs * v.y, v.z);
+}
+```
+
+
+#### [SH17C] Physically Based Shading (https://www.shadertoy.com/view/4sSfzK)
+
+This is a fun one. To start with GLSL's syntax for arrays initialization is simply not compatible with C++'s one, so it is macro time:
+
+```glsl
+CXXSWIZZLE_ARRAY(vec3, BASE_COLORS,
+    vec3(0.74),
+    vec3(0.51, 0.72, 0.81),
+    vec3(0.66, .85, .42),
+    vec3(0.87, 0.53, 0.66),
+    vec3(0.51, 0.46, 0.74),
+    vec3(0.78, 0.71, 0.45)
+);
+```
+
+Another thing is struct initialization syntax is also incompatible with C++. But this time a sneaky macro can be generated to work around it, provied you pass add the type name (`SHCoefficients` in this case) to `CUSTOM_STRUCTS` CMake list option.
+
+The last issue is regarding `AppState` struct - it is being passed with `out`. In such case a tiny piece of code needs to be generated - use `CUSTOM_STRUCTS` CMake list.
+
+
+#### [SH17B] Pixel Shader Dungeon (https://www.shadertoy.com/view/Xs2fWD)
+
+Will not compile because of global `const int` being used as an array size. Since in CxxSwizzle global symbols are actually fields of a struct, an equivalent syntax would be `static const int`. So either use a `CXXSWIZZLE_STATIC`:
+
+```glsl
+CXXSWIZZLE_STATIC const int ENEMY_NUM           = 3;
+CXXSWIZZLE_STATIC const int LOG_NUM             = 4;
+```
+
+Or use plain old defines:
+```glsl
+#define ENEMY_NUM 3
+#define LOG_NUM   4
+```
+
+Another reason the shader will not compile is because `GameState` is passed with `inout` - add `GameState` to `CUSTOM_STRUCTS` CMake list.
+
