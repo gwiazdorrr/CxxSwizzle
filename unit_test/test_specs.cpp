@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE(Par_5_5__Vector_and_Scalar_Components_and_Length)
 
     {
         vec3 v;
-        // const int L = v.length();  <-- THIS DOES NOT WORK
+        const int L = v.length();
     }
 }
 
@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE(Par_5_6__Matrix_Components)
 
     {
         mat3x4 v;
-        // const int L = v.length();   <-- THIS DOES NOT WORK
+        const int L = v.length();
     }
 }
 

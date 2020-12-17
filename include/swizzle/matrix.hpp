@@ -28,8 +28,6 @@ namespace swizzle
         static const size_t num_rows = TNumRows;
         static const size_t num_columns = sizeof...(TColumns);
 
-        static_assert(num_rows > 1 && num_columns > 1, "1");
-
         typedef matrix_ matrix_type;
         typedef vector<TScalar, num_columns> row_type;
         typedef vector<TScalar, num_rows> column_type;
@@ -280,7 +278,26 @@ namespace swizzle
 
     private:
         std::array< column_type, num_columns > data; 
+
+
+    public:
+        int length() const
+        {
+            return num_columns;
+        }
     };
+
+    template <class TScalar>
+    struct matrix_<TScalar, 1, 0>;
+
+    template <class TScalar>
+    struct matrix_<TScalar, 0>;
+
+    template <class TScalar, size_t... TColumns>
+    struct matrix_<TScalar, 0, TColumns...>;
+
+    template <class TScalar, size_t TNumRows>
+    struct matrix_<TScalar, TNumRows>;
 
     //template <class TScalar, size_t M, size_t TNumRows, size_t OtherNumColumns>
     //matrix<VectorType, TScalar, TNumRows, OtherNumColumns> operator*(const matrix<VectorType, TScalar, N, M>& m1, const matrix<VectorType, TScalar, M, OtherNumColumns>& m2 )

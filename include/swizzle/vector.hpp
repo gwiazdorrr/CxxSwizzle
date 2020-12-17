@@ -282,6 +282,12 @@ namespace swizzle
         }
 
     public:
+        int length() const
+        {
+            return num_of_components;
+        }
+
+
         // functions
         // 8.1
 
