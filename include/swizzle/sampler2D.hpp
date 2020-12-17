@@ -113,7 +113,7 @@ namespace swizzle
 
         inline friend vec4 textureGrad(const this_type& sampler, const vec3& p, const vec3& dPdx, const vec3& dPdy)
         {
-            return sampler.sample(uv);
+            return sampler.sample(p);
         }
 
 
@@ -123,8 +123,8 @@ namespace swizzle
         }
     private:
 
-        template <typename IntType, typename FloatType>
-        std::tuple<IntType, IntType> uv_to_icoord(FloatType u, FloatType v, const naive_sampler_data* data) const {
+        template <typename IntType, typename SomeFloatType>
+        std::tuple<IntType, IntType> uv_to_icoord(SomeFloatType u, SomeFloatType v, const naive_sampler_data* data) const {
             using std::min;
             auto ix = static_cast<IntType>(u * data->width);
             auto iy = static_cast<IntType>(v * data->height);
