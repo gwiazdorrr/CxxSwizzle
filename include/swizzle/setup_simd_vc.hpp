@@ -92,8 +92,8 @@ namespace swizzle
         auto data = srgba.data();
 
 #if Vc_IMPL_AVX 
-        SSE::float_v(AVX::lo128(srgba)).store(reinterpret_cast<uint16_t*>(ptr));
-        SSE::float_v(AVX::hi128(srgba)).store(reinterpret_cast<uint16_t*>(ptr + pitch));
+        SSE::uint_v(AVX::lo128(data)).store(reinterpret_cast<uint16_t*>(ptr));
+        SSE::uint_v(AVX::hi128(data)).store(reinterpret_cast<uint16_t*>(ptr + pitch));
         return ptr + 16;
 #else
         auto i1 = _mm_extract_epi64(data, 0);;

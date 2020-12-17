@@ -41,6 +41,7 @@ namespace
     #define bool bool_type
     #define lowp
     #define highp
+    #define precision
     #define final final_
     #define discard _cxxswizzle_discarded = true
     // char is not a type in glsl so can be used freely

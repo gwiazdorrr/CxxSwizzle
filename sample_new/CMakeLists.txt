@@ -1,7 +1,6 @@
 # CxxSwizzle
 # Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 cmake_minimum_required(VERSION 3.3)
-cmake_policy(SET CMP0057 NEW)
 
 include(JSONParser.cmake)
 
@@ -144,11 +143,9 @@ macro(download_shadertoy shader_id api_key download_error_is_fatal)
     sbeClearJson(SHADER)
 endmacro()
 
-
-
-macro(download_shadertoy_list sort_type api_key out_list)
+macro(download_shadertoy_list sort_type api_key query max_count out_list)
     set(SHADERTOY_JSON_PATH "${CMAKE_CURRENT_BINARY_DIR}/sort_${sort_type}.json")
-    set(SHADERTOY_QUERY "https://www.shadertoy.com/api/v1/shaders/query/string?sort=${sort_type}&key=${api_key}")
+    set(SHADERTOY_QUERY "https://www.shadertoy.com/api/v1/shaders/query/${query}?sort=${sort_type}&key=${api_key}&from=0&num=${max_count}")
 
     download_file(${SHADERTOY_QUERY} ${SHADERTOY_JSON_PATH} "(Shadertoy JSON shader list)")
 
@@ -169,33 +166,6 @@ macro(download_shadertoy_list sort_type api_key out_list)
 
 endmacro()
 
-
-
-set(SHADERTOY_API_KEY "BtntM7" CACHE STRING "Shadertoy API Key (go to https://www.shadertoy.com/howto#q2 for details)")
-mark_as_advanced(SHADERTOY_API_KEY)
-
-set(SHADERTOY_DOWNLOAD "none" CACHE STRING "Download Shader")
-set_property(CACHE SHADERTOY_DOWNLOAD PROPERTY STRINGS none explicit_ids top_love top_popular top_newest top_hot)
-
-set(SHADERTOY_DOWNLOAD_EXPLICIT_IDS "" CACHE STRING "Download Shader Explicit Ids")
-
-if (SHADERTOY_DOWNLOAD STREQUAL "explicit_ids")
-    if (NOT SHADERTOY_DOWNLOAD_EXPLICIT_IDS)
-        message(FATAL_ERROR "SHADERTOY_DOWNLOAD_EXPLICIT_IDS needs to be set")
-    else()
-        foreach (id ${SHADERTOY_DOWNLOAD_EXPLICIT_IDS})
-            download_shadertoy(${id} ${SHADERTOY_API_KEY} True)
-        endforeach()
-    endif()
-elseif(SHADERTOY_DOWNLOAD MATCHES "^top_")
-    string (REPLACE "top_" "" SHADERTOY_DOWNLOAD_LIST_TYPE ${SHADERTOY_DOWNLOAD})
-    download_shadertoy_list(${SHADERTOY_DOWNLOAD_LIST_TYPE} ${SHADERTOY_API_KEY} SHADERTOY_SHADER_LIST)
-    foreach (id ${SHADERTOY_SHADER_LIST})
-        download_shadertoy(${id} ${SHADERTOY_API_KEY} False)
-    endforeach()
-endif()
-
-
 macro(get_subdir_list result curdir)
     file(GLOB children RELATIVE ${curdir} ${curdir}/*)
     set(dirlist "")
@@ -207,8 +177,33 @@ macro(get_subdir_list result curdir)
     set(${result} ${dirlist})
 endmacro()
 
-set (USE_VCPKG False CACHE BOOL "Use vcpkg")
+set(SHADERTOY_API_KEY "BtntM7" CACHE STRING "Shadertoy API Key (go to https://www.shadertoy.com/howto#q2 for details)")
+mark_as_advanced(SHADERTOY_API_KEY)
+
+set(SHADERTOY_DOWNLOAD "none" CACHE STRING "Download Shader")
+set_property(CACHE SHADERTOY_DOWNLOAD PROPERTY STRINGS none explicit_ids top_love top_popular top_newest top_hot)
+
+set(SHADERTOY_DOWNLOAD_QUERY_PARAM "" CACHE STRING "List of Shadertoys ids (if SHADERTOY_DOWNLOAD is set to explicit_ids) or a search term")
+set(SHADERTOY_DOWNLOAD_MAX_COUNT "10" CACHE STRING "Max Shadertoys to download")
+
+if (SHADERTOY_DOWNLOAD STREQUAL "explicit_ids")
+    if (NOT SHADERTOY_DOWNLOAD_QUERY_PARAM)
+        message(FATAL_ERROR "SHADERTOY_DOWNLOAD_QUERY_PARAM needs to be set")
+    else()
+        foreach (id ${SHADERTOY_DOWNLOAD_QUERY_PARAM})
+            download_shadertoy(${id} ${SHADERTOY_API_KEY} True)
+        endforeach()
+    endif()
+elseif(SHADERTOY_DOWNLOAD MATCHES "^top_")
+    string (REPLACE "top_" "" SHADERTOY_DOWNLOAD_LIST_TYPE ${SHADERTOY_DOWNLOAD})
+    download_shadertoy_list(${SHADERTOY_DOWNLOAD_LIST_TYPE} ${SHADERTOY_API_KEY} "${SHADERTOY_DOWNLOAD_QUERY_PARAM}" ${SHADERTOY_DOWNLOAD_MAX_COUNT} SHADERTOY_SHADER_LIST)
+    foreach (id ${SHADERTOY_SHADER_LIST})
+        download_shadertoy(${id} ${SHADERTOY_API_KEY} False)
+    endforeach()
+endif()
+
 set (USE_OPENMP True CACHE BOOL "Use OpenMP")
+set (BUILD_SIMD_SAMPLE False CACHE BOOL "Build SIMD sample (Vc)")
 
 find_package(SDL2 CONFIG REQUIRED)
 find_package(SDL2-image CONFIG REQUIRED)
@@ -217,6 +212,13 @@ set(SAMPLE_SDL2IMAGE_FOUND True)
 if (USE_OPENMP)
     find_package(OpenMP)
 endif()
+
+if (BUILD_SIMD_SAMPLE)
+    find_package(Vc CONFIG REQUIRED)
+endif()
+
+# find_package(Vc CONFIG REQUIRED) seems to disable this policy somehow, hence it is enabled here
+cmake_policy(SET CMP0057 NEW)
 
 # enable OpenMP
 if (OPENMP_FOUND AND USE_OPENMP)
@@ -244,27 +246,7 @@ elseif(MSVC)
     endif()
 endif()
 
-set (BUILD_SIMD_SAMPLE False CACHE BOOL "BUILD_SIMD_SAMPLE")
-if (BUILD_SIMD_SAMPLE)
-    set (VC_INSTALL ${CMAKE_CURRENT_BINARY_DIR}/Vc-install)
 
-    # TODO: add link
-    if (CMAKE_CONFIGURATION_TYPES)
-        set(PROPAGATE_BUILD_TYPE --config $<CONFIG>)
-    else()
-        set(PROPAGATE_BUILD_TYPE -DCMAKE_BUILD_TYPE=$<CONFIG>)
-    endif()
-
-    ExternalProject_Add(Vc
-        GIT_REPOSITORY    https://github.com/VcDevel/Vc
-        GIT_TAG           1.4
-        CMAKE_ARGS        -DCMAKE_INSTALL_PREFIX:PATH=${VC_INSTALL} -DBUILD_TESTING=OFF ${PROPAGATE_BUILD_TYPE}
-        BUILD_BYPRODUCTS  ${VC_INSTALL}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}Vc${CMAKE_STATIC_LIBRARY_SUFFIX}
-    )
-
-    set (Vc_LIBRARIES ${VC_INSTALL}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}Vc${CMAKE_STATIC_LIBRARY_SUFFIX})
-    set (Vc_INCLUDE_DIR ${VC_INSTALL}/include)
-endif()
 
 get_subdir_list(SAMPLES_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -280,7 +262,7 @@ foreach(STRUCT ${CUSTOM_STRUCTS})
 endforeach()
 set(FRAG_CUSTOM_STRUCTS_SUPPORT     "${FRAG_CUSTOM_STRUCTS_SUPPORT}        };\n")
 foreach(STRUCT ${CUSTOM_STRUCTS})
-    set(FRAG_CUSTOM_STRUCTS_SUPPORT "${FRAG_CUSTOM_STRUCTS_SUPPORT}        #define ${STRUCT}(...) ${STRUCT}\{ __VA_ARGS__ \}\n")
+    set(FRAG_CUSTOM_STRUCTS_SUPPORT "${FRAG_CUSTOM_STRUCTS_SUPPORT}        #define ${STRUCT}(...) ${STRUCT}\\{ __VA_ARGS__ \\}\n")
 endforeach()
 
 
@@ -380,11 +362,10 @@ foreach(SAMPLE_DIR ${SAMPLES_DIRS})
     if (BUILD_SIMD_SAMPLE)
         set(TARGET_NAME "simd_${SAMPLE_NAME}")
         add_executable(${TARGET_NAME} ${TARGET_FILES})
-        target_include_directories(${TARGET_NAME} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include ${GEN_INCLUDE_DIR} ${Vc_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
-        target_link_libraries(${TARGET_NAME} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image ${Vc_LIBRARIES})
+        target_include_directories(${TARGET_NAME} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include ${GEN_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+        target_link_libraries(${TARGET_NAME} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image Vc::Vc)
         set_target_properties(${TARGET_NAME} PROPERTIES CXX_STANDARD 17)
         set_target_properties(${TARGET_NAME} PROPERTIES CXX_STANDARD_REQUIRED ON)
-        add_dependencies(${TARGET_NAME} Vc)
         set_target_properties(${TARGET_NAME} PROPERTIES COMPILE_FLAGS "-DSAMPLE_USE_SIMD_VC")
     endif()
 
