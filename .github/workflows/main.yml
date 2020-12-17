@@ -15,39 +15,41 @@ jobs:
         include:
           - os: windows-latest
             triplet: x64-windows
-            vcpkgCommitId: '0591528cbfde14ccfd3900c3fb19aba382c05349'
-            vcpkgPackages: 'sdl2 sdl2-image'
           - os: ubuntu-latest
             triplet: x64-linux
-            vcpkgCommitId: '0591528cbfde14ccfd3900c3fb19aba382c05349'
-            vcpkgPackages: 'sdl2 sdl2-image'
           - os: macos-latest
             triplet: x64-osx
-            vcpkgCommitId: '0591528cbfde14ccfd3900c3fb19aba382c05349'
-            vcpkgPackages: 'sdl2 sdl2-image'
 
     steps:
       - uses: actions/checkout@v1
         with:
           submodules: true
 
+      # Install latest CMake.
       - uses: lukka/get-cmake@latest
-      - name: dir
-        run: find ${{ runner.workspace }}
-        if: "!contains( matrix.os, 'windows')"
-      - name: dir
-        run: gci -recurse ${{ runner.workspace }}
-        if: contains( matrix.os, 'windows')
-      - name: Restore artifacts, or run vcpkg, build and cache artifacts
-        uses: lukka/run-vcpkg@v2
-        id: runvcpkg
+
+      # Restore from cache the previously built ports. If a "cache miss" occurs, then vcpkg is bootstrapped.
+      - name: Restore artifacts, or setup vcpkg (do not install any package)
+        uses: lukka/run-vcpkg@v6
         with:
-          vcpkgArguments: '${{ matrix.vcpkgPackages }}'
-          vcpkgTriplet: '${{ matrix.triplet }}'
-          vcpkgDirectory: '${{ runner.workspace }}/b/vcpkg'
-          vcpkgGitCommitId: '${{ matrix.vcpkgCommitId }}'
-      - name: Prints outputs of run-vcpkg task
-        run: echo "'${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}' '${{  steps.runvcpkg.outputs.RUNVCPKG_VCPKG_TRIPLET_OUT }}' "
+          # Just install vcpkg for now, do not install any ports in this step yet.
+          setupOnly: true
+          # Location of the vcpkg as submodule of the repository.
+          vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+          # Since the cache must be invalidated when content of the vcpkg.json file changes, let's
+          # compute its hash and append this to the computed cache's key.
+          appendedCacheKey: ${{ hashFiles( '**/vcpkg.json' ) }}
+          vcpkgTriplet: ${{ matrix.triplet }}
+      
+      - name: Run CMake to install the dependencies with vcpkg.json manifest and build the project
+        uses: lukka/run-cmake@v3
+        with:
+          cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+          cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
+          # This will pass to CMake the vcpkg.cmake toolchain file.
+          useVcpkgToolchainFile: true
+          buildWithCMake: true
+         
       - name: (Linux) Install apt dependencies
         if: runner.os == 'Linux'
         run: |
