@@ -227,7 +227,7 @@ endif()
 
 set(COMPILER_SPECIFIC_FILES "")
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    # GLSL has "not" function, so better get rid of C++ operator mnemonics; this is one of
+    # GLSL has "not" function, so better get rid of C++ operator mnemonics
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-operator-names")
 elseif(MSVC)
     # fast math, _vectorcall
@@ -235,17 +235,7 @@ elseif(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fp:fast /Gv -D_ENABLE_EXTENDED_ALIGNED_STORAGE")
     # Add debug visualisers (work great!)	
     set(COMPILER_SPECIFIC_FILES "cxxswizzle.natvis")
-
-    # let user force SIMD architecture
-    set(SIMD_ARCHITECTURE_VALUES Default SSE2 AVX2)
-    set(SIMD_ARCHITECTURE Default CACHE STRING "SIMD architecture (VC++ only)")
-    set_property(CACHE SIMD_ARCHITECTURE PROPERTY STRINGS ${SIMD_ARCHITECTURE_VALUES})
-
-    if(NOT ${SIMD_ARCHITECTURE} STREQUAL "Default")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:${SIMD_ARCHITECTURE}")
-    endif()
 endif()
-
 
 
 get_subdir_list(SAMPLES_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
@@ -347,10 +337,9 @@ foreach(SAMPLE_DIR ${SAMPLES_DIRS})
         list(APPEND TARGET_FILES ${README_PATH})
     endif()
 
-    source_group("shaders" FILES ${SHADERS} ${README_PATH})
+    source_group("" FILES ${SHADERS} ${README_PATH})
     source_group("codegen" FILES ${GEN_SHADERS} ${GEN_CONFIG_PATH} )
-    source_group("codegen-templates" FILES ${CODEGEN_TEMPLATE_FILES} )
-    source_group("" FILES main.cpp shadertoy_sandbox.hpp ${COMPILER_SPECIFIC_FILES})
+    source_group("shared" FILES CMakeList.txt main.cpp shadertoy_sandbox.hpp ${COMPILER_SPECIFIC_FILES} ${CODEGEN_TEMPLATE_FILES})
 
     set(TARGET_NAME "scalar_${SAMPLE_NAME}")
     add_executable(${TARGET_NAME} ${TARGET_FILES})

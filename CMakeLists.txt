@@ -3,11 +3,8 @@
 
 cmake_minimum_required (VERSION 2.6)
 project (CxxSwizzle)
-include(ExternalProject)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS On)
-
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/sdl2)
 
 # add_subdirectory(sample)
 add_subdirectory(sample_new)

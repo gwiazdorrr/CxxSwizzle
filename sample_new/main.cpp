@@ -339,10 +339,9 @@ void make_naive_sampler_data(swizzle::naive_sampler_data& sampler, const SDL_Sur
         sampler.amask = surface->format->Amask;
     }
 }
-// TODO: sound
+
 bool load_texture(sampler_data& sampler, const char* name)
 {
-#ifdef SAMPLE_SDL2IMAGE_FOUND
     auto img = IMG_Load(name);
     if (!img)
     {
@@ -375,10 +374,6 @@ bool load_texture(sampler_data& sampler, const char* name)
         make_naive_sampler_data(sampler.faces[0], img);
         return true;
     }
-#else
-    fprintf(stderr, "ERROR: Failed to load texture %s, SDL_image was not found", name);
-    return false;
-#endif
 }
 
 template <class Rep, class Period>
