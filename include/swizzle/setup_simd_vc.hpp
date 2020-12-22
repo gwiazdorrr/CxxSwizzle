@@ -80,10 +80,10 @@ namespace swizzle
     {
         using namespace Vc;
 
-        uint16_v sr = static_cast<uint16_v>(max(0.0f, min(255.0f, r * 256.0f)));
-        uint16_v sg = static_cast<uint16_v>(max(0.0f, min(255.0f, g * 256.0f)));
-        uint16_v sb = static_cast<uint16_v>(max(0.0f, min(255.0f, b * 256.0f)));
-        uint16_v sa = static_cast<uint16_v>(max(0.0f, min(255.0f, a * 256.0f)));
+        uint16_v sr = simd_cast<uint16_v>(max(0.0f, min(255.0f, r * 256.0f)));
+        uint16_v sg = simd_cast<uint16_v>(max(0.0f, min(255.0f, g * 256.0f)));
+        uint16_v sb = simd_cast<uint16_v>(max(0.0f, min(255.0f, b * 256.0f)));
+        uint16_v sa = simd_cast<uint16_v>(max(0.0f, min(255.0f, a * 256.0f)));
 
         uint16_v srg = sr | (sg << 8);
         uint16_v sba = sb | (sa << 8);
@@ -98,8 +98,8 @@ namespace swizzle
 #else
         auto i1 = _mm_extract_epi64(data, 0);;
         auto i2 = _mm_extract_epi64(data, 1);
-        *reinterpret_cast<int64_t*>(ptr) = i1;
-        *reinterpret_cast<int64_t*>(ptr + pitch) = i2;
+        *reinterpret_cast<::int64_t*>(ptr) = i1;
+        *reinterpret_cast<::int64_t*>(ptr + pitch) = i2;
         return ptr + 8;
 #endif
     }

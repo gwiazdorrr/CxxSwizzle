@@ -203,7 +203,7 @@ elseif(SHADERTOY_DOWNLOAD MATCHES "^top_")
 endif()
 
 set (USE_OPENMP True CACHE BOOL "Use OpenMP")
-set (BUILD_SIMD_SAMPLE False CACHE BOOL "Build SIMD sample (Vc)")
+set (BUILD_SIMD_SAMPLE True CACHE BOOL "Build SIMD sample (Vc)")
 
 find_package(SDL2 CONFIG REQUIRED)
 find_package(SDL2-image CONFIG REQUIRED)
@@ -362,7 +362,7 @@ foreach(SAMPLE_DIR ${SAMPLES_DIRS})
         target_link_libraries(${TARGET_NAME} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image Vc::Vc ${COMPILER_SPECIFIC_LIBS})
         set_target_properties(${TARGET_NAME} PROPERTIES CXX_STANDARD 17)
         set_target_properties(${TARGET_NAME} PROPERTIES CXX_STANDARD_REQUIRED ON)
-        target_compile_options(${TARGET_NAME} PRIVATE "${COMPILER_SPECIFIC_FLAGS} -DSAMPLE_USE_SIMD_VC")
+        target_compile_options(${TARGET_NAME} PRIVATE ${COMPILER_SPECIFIC_FLAGS} "-DSAMPLE_USE_SIMD_VC")
     endif()
 
     #undo variables
