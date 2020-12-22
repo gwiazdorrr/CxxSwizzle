@@ -468,11 +468,11 @@ namespace swizzle
         {
             return this_type(x.at(TIndices) + scalar_type(a) * (y.at(TIndices) - x.at(TIndices))...);
         }
-        static this_type call_mix(float_vector_arg x, float_vector_arg y, float_vector_arg a)
+        static this_type call_mix(number_vector_arg x, number_vector_arg y, number_vector_arg a)
         {
             return this_type(x.at(TIndices) + a.at(TIndices) * (y.at(TIndices) - x.at(TIndices))...);
         }
-        static this_type call_mix(float_vector_arg x, float_vector_arg y, const bool_vector_type& a)
+        static this_type call_mix(number_vector_arg x, number_vector_arg y, const bool_vector_type& a)
         {
             return this_type(mix(x.at(TIndices), y.at(TIndices), a.at(TIndices))...);
         }

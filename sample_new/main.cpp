@@ -102,7 +102,7 @@ struct aligned_render_target_base
     {
         void operator()(void* ptr)
         {
-            delete ptr;
+            ::operator delete(ptr);
         }
     };
 
