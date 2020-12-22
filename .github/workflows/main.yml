@@ -1,23 +1,45 @@
-# Copyright (c) 2019-2020 Luca Cappa
-# Released under the term specified in file LICENSE.txt
-# SPDX short identifier: MIT
-name: hosted-basic-autocache
+name: CI
 on: [push]
 
 jobs:
   job:
-    name: ${{ matrix.os }}-hosted-basic
-    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.name }}-${{ matrix.buildType }}
+    runs-on: ${{ matrix.os }}-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        name: [ubuntu-gcc-8, ubuntu-gcc-9, ubuntu-clang, macos-clang, windows-msvc, windows-mingw]
+        buildType: [Release]
         include:
-          - os: windows-latest
+          - name: windows-msvc
+            os: windows
+            cxx: cl.exe
+            cc: cl.exe
             triplet: x64-windows
-          - os: ubuntu-latest
+          - name: windows-mingw
+            os: windows
+            cxx: gcc.exe
+            cc: g++.exe
+            triplet: x64-windows
+          - name: ubuntu-gcc-8
+            os: ubuntu
+            cxx: g++-8
+            cc: gcc-8
             triplet: x64-linux
-          - os: macos-latest
+          - name: ubuntu-gcc-9
+            os: ubuntu
+            cxx: g++-9
+            cc: gcc-9
+            triplet: x64-linux
+          - name: ubuntu-clang
+            os: ubuntu
+            cxx: clang++
+            cc: clang
+            triplet: x64-linux
+          - name: macos-clang
+            os: macos
+            cxx: clang++
+            cc: clang
             triplet: x64-osx
 
     steps:
@@ -25,47 +47,36 @@ jobs:
         with:
           submodules: true
 
-      # Install latest CMake.
       - uses: lukka/get-cmake@latest
+      - uses: seanmiddleditch/gha-setup-ninja@master
 
-      # Restore from cache the previously built ports. If a "cache miss" occurs, then vcpkg is bootstrapped.
-      - name: Restore artifacts, or setup vcpkg (do not install any package)
+      - name: Set Environment vars
+        run: |
+          echo "CXX=${{ matrix.cxx }}" >> $GITHUB_ENV
+          echo "CC=${{ matrix.cc }}" >> $GITHUB_ENV
+
+      - name: Print Compiler Version
+        if: runner.os != 'Windows'
+        run: |
+          ${{ matrix.cxx }} --version
+
+      - name: Restore artifacts, or run vcpkg, build and cache artifacts
         uses: lukka/run-vcpkg@v6
+        id: runvcpkg
         with:
           # Just install vcpkg for now, do not install any ports in this step yet.
           setupOnly: true
-          # Location of the vcpkg as submodule of the repository.
           vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-          # Since the cache must be invalidated when content of the vcpkg.json file changes, let's
-          # compute its hash and append this to the computed cache's key.
           appendedCacheKey: ${{ hashFiles( '**/vcpkg.json' ) }}
           vcpkgTriplet: ${{ matrix.triplet }}
-      
-      - name: Run CMake to install the dependencies with vcpkg.json manifest and build the project
-        uses: lukka/run-cmake@v3
-        with:
-          cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
-          cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
-          # This will pass to CMake the vcpkg.cmake toolchain file.
-          useVcpkgToolchainFile: true
-          buildWithCMake: true
-         
-      - name: (Linux) Install apt dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt update
-          sudo apt install ninja-build
-      - name: (macOS) Install homebrew dependencies
-        if: runner.os == 'macOS'
-        run: |
-          brew install ninja
-      - name: Run CMake+Ninja without triplet
+
+      - name: Run CMake+Ninja
         uses: lukka/run-cmake@v3
         id: runcmake
         with:
-          cmakeGenerator: 'Ninja'  
-          cmakeListsOrSettingsJson: 'CMakeListsTxtBasic'
           cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
+          vcpkgTriplet: ${{ matrix.triplet }}
           useVcpkgToolchainFile: true
-          buildWithCMakeArgs: '-- -v'
-          buildDirectory: '${{ runner.workspace }}/b/ninja/'
+          cmakeBuildType: ${{matrix.buildType}}
+          buildDirectory: '${{ runner.workspace }}/b/${{ matrix.name }}/'
+
