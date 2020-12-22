@@ -74,7 +74,7 @@ namespace swizzle
         //! Init with s diagonally
         matrix_(const scalar_type& s)
         {
-            column_type zero((TColumns, 0)...);
+            column_type zero(0);
             ((TColumns < num_rows ? data[TColumns] = set_return<TColumns>(zero, s) : zero), ...);
         }
 

@@ -6,38 +6,28 @@
 using namespace swizzle;
 using namespace shadertoy;
 
-// TODO: wrong mouse clicks
-// TODO: texture sampling in simd?
-// TODO: inout = a.xxxx
-
-
 static_assert(sizeof(vec2) == sizeof(swizzle::float_type[2]), "Too big");
 static_assert(sizeof(vec3) == sizeof(swizzle::float_type[3]), "Too big");
 static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 
-// these headers, especially SDL.h & time.h set up names that are in conflict with sandbox'es;
-// sandbox should be moved to a separate h/cpp pair, but out of laziness... including them
-// *after* sandbox solves it too
-
-#include <iostream>
-#include <sstream>
-#include <iomanip>
-#include <mutex>
 #include <condition_variable>
-#include <future>
 #include <filesystem>
+#include <functional>
+#include <future>
+#include <iomanip>
+#include <iostream>
+#include <memory>
+#include <mutex>
+#include <sstream>
 
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
 #include <SDL_video.h>
-
-#ifdef SAMPLE_SDL2IMAGE_FOUND
 #include <SDL_image.h>
-#endif
 
 #include <ctime>
-#include <memory>
-#include <functional>
+
+
 #if SAMPLE_OMP_ENABLED
 #include <omp.h>
 #endif
@@ -108,7 +98,7 @@ struct aligned_render_target_base
 
     std::unique_ptr<void, void_deleter> memory;
     void* first_row = nullptr;
-    size_t pitch = 0;
+    int pitch = 0;
     int width = 0;
     int height = 0;
     size_t pixels_size;
@@ -120,7 +110,7 @@ struct aligned_render_target_base
 
         // each row has to be aligned
         pitch = (width * bpp + mask) & (~mask);
-        pixels_size = static_cast<size_t>(pitch) * height;
+        pixels_size = pitch * height;
         size_t alloc_size = pixels_size + align - 1;
 
         // alloc and align
@@ -306,7 +296,7 @@ void make_naive_sampler_data(swizzle::naive_sampler_data& sampler, render_target
     sampler.bytes = reinterpret_cast<uint8_t*>(rt.first_row);
     sampler.width = rt.width;
     sampler.height = rt.height;
-    sampler.pitch_bytes = rt.pitch;
+    sampler.pitch_bytes = static_cast<unsigned>(rt.pitch);
     sampler.bytes_per_pixel = rt.bytes_per_pixel;
     sampler.is_floating_point = true;
 }
@@ -459,11 +449,14 @@ int SDL_Keysym_to_Ascii(SDL_Keysym keysym) {
 }
 
 
-int main(int argc, char* argv[])
+#ifndef _MSC_VER
+#define __cdecl
+#endif
+
+int __cdecl main(int argc, char* argv[])
 {
     using namespace std;
 
-#ifdef SDLIMAGE_FOUND
     // initialise SDLImage
     int flags = IMG_INIT_JPG | IMG_INIT_PNG;
     int initted = IMG_Init(flags);
@@ -471,7 +464,6 @@ int main(int argc, char* argv[])
     {
         fprintf(stderr, "WARNING: failed to initialize required jpg and png support: %s\n", IMG_GetError());
     }
-#endif
 
     swizzle::vector<int, 2> resolution(512, 288);
     float time = 0.0f;
