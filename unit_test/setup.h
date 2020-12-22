@@ -2,9 +2,9 @@
 // Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 #pragma once
 
+#include <swizzle/setup_scalar.hpp>
 #include <swizzle/vector.hpp>
 #include <swizzle/matrix.hpp>
-#include <swizzle/setup_scalar.hpp>
 #include <swizzle/inout_wrapper.hpp>
 #include <swizzle/define_vector_functions.hpp>
 
