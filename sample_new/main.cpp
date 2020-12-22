@@ -235,14 +235,14 @@ static render_stats render(PixelFunc func, shader_inputs uniforms, RenderTarget&
     }
   
     
-    int max_x = rt.width;
-    int max_y = rt.height;
+    const int max_x = rt.width;
+    const int max_y = rt.height;
 
 #if !SAMPLE_OMP_ENABLED
     {
         num_threads = 1;
 #else
-    #pragma omp parallel default(none) shared(num_threads, num_pixels)
+    #pragma omp parallel default(shared)
     {
         #pragma omp master
         num_threads = omp_get_num_threads();
@@ -254,7 +254,7 @@ static render_stats render(PixelFunc func, shader_inputs uniforms, RenderTarget&
             if (cancelled)
                 continue;
 
-            swizzle::float_type frag_coord_y = static_cast<float>(rt.height - y) - y_offsets;
+            swizzle::float_type frag_coord_y = static_cast<float>(max_y - y) - y_offsets;
 
             uint8_t* ptr = reinterpret_cast<uint8_t*>(rt.first_row) + y * rt.pitch;
 
