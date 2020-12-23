@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        name: [ubuntu-gcc-8, ubuntu-gcc-9, ubuntu-clang, macos-clang, windows-msvc-2019, windows-msvc-2017, windows-gcc]
+        name: [ubuntu-gcc-8, ubuntu-gcc-9, ubuntu-clang, macos-clang, windows-msvc-2019, windows-gcc]
         buildType: [Release]
         include:
           - name: windows-msvc-2019
@@ -17,12 +17,6 @@ jobs:
             cc: cl.exe
             triplet: x64-windows
             generator: Visual Studio 16 2019
-          - name: windows-msvc-2017
-            os: windows
-            cxx: cl.exe
-            cc: cl.exe
-            triplet: x64-windows
-            generator: Visual Studio 15 2017 Win64
           - name: windows-gcc
             os: windows
             cxx: gcc.exe
