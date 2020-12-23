@@ -9,7 +9,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/Modules")
 set_property(GLOBAL PROPERTY USE_FOLDERS On)
 
 add_subdirectory(shadertoys)
-add_subdirectory(sample_new)
+add_subdirectory(sample)
 add_subdirectory(unit_test)
 
 # get all the shaders
