@@ -723,6 +723,11 @@ namespace swizzle
             return result;
         }
 
+        inline detail::only_if<scalar_is_number, this_type> operator+() const
+        {
+            return *this;
+        }
+
         inline this_type& operator*=(const matrix<scalar_type, num_of_components, num_of_components>& mat)
         {
             return *this = mat.mul(*this, mat);
