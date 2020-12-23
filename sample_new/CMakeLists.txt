@@ -3,6 +3,7 @@
 cmake_minimum_required(VERSION 3.3)
 
 include(JSONParser.cmake)
+include(CheckCXXCompilerFlag)
 
 macro(sanitize_name result name)
     string(TOLOWER ${name} ${result})
@@ -177,6 +178,8 @@ macro(get_subdir_list result curdir)
     set(${result} ${dirlist})
 endmacro()
 
+
+# handle downloads
 set(SHADERTOY_API_KEY "BtntM7" CACHE STRING "Shadertoy API Key (go to https://www.shadertoy.com/howto#q2 for details)")
 mark_as_advanced(SHADERTOY_API_KEY)
 
@@ -202,29 +205,38 @@ elseif(SHADERTOY_DOWNLOAD MATCHES "^top_")
     endforeach()
 endif()
 
-set (USE_OPENMP True CACHE BOOL "Use OpenMP")
-set (BUILD_SIMD_SAMPLE True CACHE BOOL "Build SIMD sample (Vc)")
 
+# basic requirements
 find_package(SDL2 CONFIG REQUIRED)
 find_package(SDL2-image CONFIG REQUIRED)
-set(SAMPLE_SDL2IMAGE_FOUND True)
 
+# handle OpenMP
+option(USE_OPENMP "Use OpenMP" ON)
 if (USE_OPENMP)
-    find_package(OpenMP)
-endif()
-
-if (BUILD_SIMD_SAMPLE)
-    find_package(Vc CONFIG REQUIRED)
-endif()
-
-# find_package(Vc CONFIG REQUIRED) seems to disable this policy somehow, hence it is enabled here
-cmake_policy(SET CMP0057 NEW)
-
-# enable OpenMP
-if (OPENMP_FOUND AND USE_OPENMP)
+    find_package(OpenMP REQUIRED)
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -DSAMPLE_OMP_ENABLED")
 endif()
 
+
+# handle -march flag (otherwise g++ fails its GitHub Action)
+option(OPTIMIZE_FOR_NATIVE "Build with -march=native (if compiler supports it)" ON)
+if (OPTIMIZE_FOR_NATIVE)
+    CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
+    if(COMPILER_SUPPORTS_MARCH_NATIVE)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+    endif()
+endif()
+
+# handle VC
+option(BUILD_SIMD_SAMPLE "Build SIMD sample (Vc)" ON)
+if (BUILD_SIMD_SAMPLE)
+    find_package(Vc CONFIG REQUIRED)
+    # find_package(Vc CONFIG REQUIRED) seems to disable this policy somehow, hence it is enabled here
+    cmake_policy(SET CMP0057 NEW)
+endif()
+
+
+# other compiler required options
 set(COMPILER_SPECIFIC_FILES "")
 set(COMPILER_SPECIFIC_FLAGS "")
 set(COMPILER_SPECIFIC_LIBS "")
@@ -244,9 +256,8 @@ elseif(MSVC)
 endif()
 
 
-get_subdir_list(SAMPLES_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
-
-set(CUSTOM_STRUCTS Ray;ray CACHE STRING "Download Shader")
+# handle custom structs
+set(CUSTOM_STRUCTS Ray;ray CACHE STRING "Custom structs that need function-style init or out/inout modifier")
 set(FRAG_CUSTOM_STRUCTS_SUPPORT "")
 foreach(STRUCT ${CUSTOM_STRUCTS})
     set(FRAG_CUSTOM_STRUCTS_SUPPORT "${FRAG_CUSTOM_STRUCTS_SUPPORT}        struct ${STRUCT};\n")
@@ -261,7 +272,8 @@ foreach(STRUCT ${CUSTOM_STRUCTS})
     set(FRAG_CUSTOM_STRUCTS_SUPPORT "${FRAG_CUSTOM_STRUCTS_SUPPORT}        #define ${STRUCT}(...) ${STRUCT}\\{ __VA_ARGS__ \\}\n")
 endforeach()
 
-
+# global shaders
+get_subdir_list(SAMPLES_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
 foreach(SAMPLE_DIR ${SAMPLES_DIRS})
     message(STATUS "Sample ${SAMPLE_DIR}")
 
@@ -371,8 +383,5 @@ foreach(SAMPLE_DIR ${SAMPLES_DIRS})
         string(TOUPPER ${SHADER_NAME_SANITIZED} SHADER_NAME_SANITIZED)
         unset(SAMPLE_HAS_${SHADER_NAME_SANITIZED})
     endforeach()		
-
-
-
 endforeach()
 
