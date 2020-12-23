@@ -384,12 +384,13 @@ bool from_string(const char* str, T& value)
 
 void print_help()
 {
-    printf("-r <width> <height>         set initial resolution\n");
-    printf("-w <x> <y> <width> <height> set initial viewport\n");
-    printf("-t <time>                   set initial time & pause\n");
     printf("-h                          show this message\n");
+    printf("-o <path>                   render one frame, save to <path> (PNG) and quit.");
+    printf("-r <width> <height>         set initial resolution\n");
     printf("-sN <path>                  set texture for sampler N\n");
     printf("-s{a|b|c|d}N <path>         set texture for sampler N for buffer a, b, c or d\n");
+    printf("-t <time>                   set initial time & pause\n");
+    printf("-w <x> <y> <width> <height> set initial viewport\n");
 }
 
 int print_args_error()
@@ -468,6 +469,7 @@ int __cdecl main(int argc, char* argv[])
     swizzle::vector<int, 2> resolution(512, 288);
     float time = 0.0f;
     float time_scale = 1.0f;
+    const char* output_path = nullptr;
 
     static_assert(::shadertoy::num_samplers >= 4);
     sampler_data textures[::shadertoy::num_samplers * (::shadertoy::num_buffers + 1)];
@@ -511,6 +513,17 @@ int __cdecl main(int argc, char* argv[])
             if (i + 1 < argc && from_string(argv[++i], time))
             {
                 time_scale = 0.0f;
+            }
+            else
+            {
+                return print_args_error();
+            }
+        }
+        else if (!strcmp(arg, "-o"))
+        {
+            if (i + 1 < argc) 
+            {
+                output_path = argv[++i];
             }
             else
             {
@@ -602,36 +615,6 @@ int __cdecl main(int argc, char* argv[])
         return 1;
     }
 
-    printf("p           - pause/unpause\n");
-    printf("left arrow  - decrease time by 1 s\n");
-    printf("right arrow - increase time by 1 s\n");
-    printf("space       - blit now! (show incomplete render)\n");
-    printf("esc         - quit\n");
-    printf("\n");
-    printf("--- Textures: ---\n");
-    
-    {
-        const char* channel_prefix[] = 
-        {
-            "",
-            "buffer_a.",
-            "buffer_b.",
-            "buffer_c.",
-            "buffer_d."
-        };
-        for (int i = 0; i < size(textures); ++i)
-        {
-            if (textures[i].path)
-            {
-                printf("%siChannel%d: %s\n", channel_prefix[i / shadertoy::num_samplers], i % shadertoy::num_samplers, textures[i].path);
-            }
-        }
-    }
-    printf("\n");
-
-    for (int i = 0; i < STATS_LINES; ++i)
-        printf("\n");
-
     // initial setup
     SDL_SetMainReady();
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -640,12 +623,11 @@ int __cdecl main(int argc, char* argv[])
         return 1;
     }
 
+
     try
     {
-        std::unique_ptr<SDL_Window, sdl_deleter> window(SDL_CreateWindow("CxxSwizzle sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, resolution.x, resolution.y, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI));
-        std::unique_ptr<SDL_Renderer, sdl_deleter> renderer(SDL_CreateRenderer(window.get(), -1, 0));
         std::unique_ptr<SDL_Surface, sdl_deleter> target_surface;
-        std::unique_ptr<SDL_Texture, sdl_deleter> target_texture;
+        
 
         render_target_rgba32 target_surface_data;
         render_target_float buffer_surfaces[4][2];
@@ -682,12 +664,6 @@ int __cdecl main(int argc, char* argv[])
             if (!target_surface)
             {
                 throw std::runtime_error("Unable to create target_surface");
-            }
-
-            target_texture.reset(SDL_CreateTexture(renderer.get(), SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h));
-            if (!target_texture)
-            {
-                throw std::runtime_error("Unable to create target_texture");
             }
 
             resolution.x = w;
@@ -811,186 +787,239 @@ int __cdecl main(int argc, char* argv[])
 
         std::future<render_stats> render_task = render_async();
 
-        for (auto update_begin = chrono::steady_clock::now();;)
+        if (output_path != nullptr)
         {
-            bool blit_now = false;
-            bool quit = false;
+            render_task.wait();
+            IMG_SavePNG(target_surface.get(), output_path);
+        }
+        else
+        {
+            std::unique_ptr<SDL_Window, sdl_deleter> window(SDL_CreateWindow("CxxSwizzle sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, resolution.x, resolution.y, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI));
+            std::unique_ptr<SDL_Renderer, sdl_deleter> renderer(SDL_CreateRenderer(window.get(), -1, 0));
+            std::unique_ptr<SDL_Texture, sdl_deleter> target_texture;
 
-            // process events
-            SDL_Event event;
-            while (SDL_PollEvent(&event)) 
+            auto resize_or_create_texture = [&](int w, int h) -> void
             {
-                switch (event.type)
+                target_texture.reset(SDL_CreateTexture(renderer.get(), SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h));
+                if (!target_texture)
                 {
-                case SDL_WINDOWEVENT:
-                    switch (event.window.event)
+                    throw std::runtime_error("Unable to create target_texture");
+                }
+            };
+            resize_or_create_texture(resolution.x, resolution.y);
+
+            printf("p           - pause/unpause\n");
+            printf("left arrow  - decrease time by 1 s\n");
+            printf("right arrow - increase time by 1 s\n");
+            printf("space       - blit now! (show incomplete render)\n");
+            printf("esc         - quit\n");
+            printf("\n");
+            printf("--- Textures: ---\n");
+
+            {
+                const char* channel_prefix[] =
+                {
+                    "",
+                    "buffer_a.",
+                    "buffer_b.",
+                    "buffer_c.",
+                    "buffer_d."
+                };
+                for (int i = 0; i < size(textures); ++i)
+                {
+                    if (textures[i].path)
                     {
-                    case SDL_WINDOWEVENT_SIZE_CHANGED:
+                        printf("%siChannel%d: %s\n", channel_prefix[i / shadertoy::num_samplers], i % shadertoy::num_samplers, textures[i].path);
+                    }
+                }
+            }
+            printf("\n");
+
+            for (int i = 0; i < STATS_LINES; ++i)
+                printf("\n");
+
+
+            for (auto update_begin = chrono::steady_clock::now();;)
+            {
+                bool blit_now = false;
+                bool quit = false;
+
+                // process events
+                SDL_Event event;
+                while (SDL_PollEvent(&event))
+                {
+                    switch (event.type)
                     {
-                        abort_render_token = pending_resize = true;
-                    }
-                    break;
-                    }
-                    break;
-                case SDL_QUIT:
+                    case SDL_WINDOWEVENT:
+                        switch (event.window.event)
+                        {
+                        case SDL_WINDOWEVENT_SIZE_CHANGED:
+                        {
+                            abort_render_token = pending_resize = true;
+                        }
+                        break;
+                        }
+                        break;
+                    case SDL_QUIT:
                     {
                         abort_render_token = quit = true;
                     }
-                    break; 
+                    break;
 
-                case SDL_KEYUP:
+                    case SDL_KEYUP:
                     {
                         int ascii = SDL_Keysym_to_Ascii(event.key.keysym);
-                        if (ascii > 0) 
+                        if (ascii > 0)
                         {
                             keyboard_surface_data.set(ascii, 0, 0);
                         }
                     }
                     break;
 
-                case SDL_KEYDOWN:
-                    switch ( event.key.keysym.sym ) 
-                    {
-                    case SDLK_SPACE:
-                        blit_now = true;
-                        break;
-                    case SDLK_ESCAPE:
+                    case SDL_KEYDOWN:
+                        switch (event.key.keysym.sym)
+                        {
+                        case SDLK_SPACE:
+                            blit_now = true;
+                            break;
+                        case SDLK_ESCAPE:
                         {
                             abort_render_token = quit = true;
                         }
                         break;
-                    case SDLK_f:
+                        case SDLK_f:
+                            break;
+                        case SDLK_p:
+                            time_scale = (time_scale > 0 ? 0.0f : 1.0f);
+                            break;
+                        case SDLK_LEFT:
+                            time = std::max(0.0f, time - 1.0f);
+                            break;
+                        case SDLK_RIGHT:
+                            time += 1.0f;
+                            break;
+                        default:
+                            break;
+                        }
+
+                        {
+                            int ascii = SDL_Keysym_to_Ascii(event.key.keysym);
+                            if (ascii > 0)
+                            {
+                                keyboard_surface_data.set(ascii, 0, 0xFF);
+                                keyboard_surface_data.set(ascii, 1, 0xFF);
+                                keyboard_surface_data.set(ascii, 2, keyboard_surface_data.get(ascii, 2) ? 0 : 0xFF);
+                            }
+                        }
+
                         break;
-                    case SDLK_p:
-                        time_scale = (time_scale > 0 ? 0.0f : 1.0f);
+                    case SDL_MOUSEMOTION:
+                        if (mouse_pressed)
+                        {
+                            mouse_x = event.button.x;
+                            mouse_y = event.button.y;
+                        }
                         break;
-                    case SDLK_LEFT:
-                        time = std::max(0.0f, time - 1.0f);
+                    case SDL_MOUSEBUTTONDOWN:
+                        mouse_clicked = mouse_pressed = true;
+                        mouse_press_x = mouse_x = event.button.x;
+                        mouse_press_y = mouse_y = event.button.y;
                         break;
-                    case SDLK_RIGHT:
-                        time += 1.0f;
+                    case SDL_MOUSEBUTTONUP:
+                        mouse_pressed = false;
                         break;
+
                     default:
                         break;
                     }
+                }
 
+                if (quit)
+                {
+                    break;
+                }
+
+                bool frameReady = !(bool)render_task.wait_for(chrono::microseconds{ 33 });
+
+                if (pending_resize)
+                {
+                    if (frameReady)
                     {
-                        int ascii = SDL_Keysym_to_Ascii(event.key.keysym);
-                        if (ascii > 0) 
+                        int w, h;
+                        SDL_GetWindowSize(window.get(), &w, &h);
+
+                        resize_or_create_surfaces(w, h);
+                        resize_or_create_texture(w, h);
+
+                        pending_resize = false;
+
+                        current_frame_timestamp = time;
+                        render_task = render_async();
+                    }
+                }
+                else
+                {
+                    if (blit_now || frameReady)
+                    {
+                        SDL_Rect rect;
+                        rect.x = 0;
+                        rect.y = 0;
+                        rect.w = resolution.x;
+                        rect.h = resolution.y;
+                        auto& s = target_surface;
+                        
+                        SDL_UpdateTexture(target_texture.get(), &rect, s->pixels, s->pitch);
+                        SDL_RenderClear(renderer.get());
+                        SDL_RenderCopy(renderer.get(), target_texture.get(), NULL, NULL);
+
+                        SDL_RenderPresent(renderer.get());
+                    }
+
+                    if (frameReady)
+                    {
+                        ++num_frames;
+                        last_render_stats = render_task.get();
+                        last_frame_timestamp = current_frame_timestamp;
+
+                        // update fps
+                        ++fps_frames_num;
+                        fps_frames_duration += last_render_stats.duration;
+                        if (fps_frames_duration >= std::chrono::milliseconds(500))
                         {
-                            keyboard_surface_data.set(ascii, 0, 0xFF);
-                            keyboard_surface_data.set(ascii, 1, 0xFF);
-                            keyboard_surface_data.set(ascii, 2, keyboard_surface_data.get(ascii, 2) ? 0 : 0xFF);
+                            current_fps = fps_frames_num / duration_to_seconds(fps_frames_duration);
+                            fps_frames_num = 0;
+                            fps_frames_duration = {};
                         }
+
+                        current_frame_timestamp = time;
+                        render_task = render_async();
                     }
-                    
-                    break;
-                case SDL_MOUSEMOTION:
-                    if (mouse_pressed)
-                    {
-                        mouse_x = event.button.x;
-                        mouse_y = event.button.y;
-                    }
-                    break;
-                case SDL_MOUSEBUTTONDOWN:
-                    mouse_clicked = mouse_pressed = true;
-                    mouse_press_x = mouse_x = event.button.x;
-                    mouse_press_y = mouse_y = event.button.y;
-                    break;
-                case SDL_MOUSEBUTTONUP:
-                    mouse_pressed = false;
-                    break;
-
-                default:
-                    break;
-                }
-            }
-
-            if (quit)
-            {
-                break;
-            }
-
-            bool frameReady = !(bool)render_task.wait_for(chrono::microseconds{ 33 });
-
-            if (pending_resize)
-            {
-                if (frameReady)
-                {
-                    int w, h;
-                    SDL_GetWindowSize(window.get(), &w, &h);
-
-                    resize_or_create_surfaces(w, h);
-                    pending_resize = false;
-
-                    current_frame_timestamp = time;
-                    render_task = render_async();
-                }
-            }
-            else
-            {
-                if (blit_now || frameReady )
-                {
-                    SDL_Rect rect;
-                    rect.x = 0;
-                    rect.y = 0;
-                    rect.w = resolution.x;
-                    rect.h = resolution.y;
-                    auto& s = target_surface;
-                    SDL_UpdateTexture(target_texture.get(), &rect, s->pixels, s->pitch);
-                    SDL_RenderClear(renderer.get());
-                    SDL_RenderCopy(renderer.get(), target_texture.get(), NULL, NULL);
-
-                    SDL_RenderPresent(renderer.get());
                 }
 
-                if (frameReady)
-                {
-                    ++num_frames;
-                    last_render_stats = render_task.get();
-                    last_frame_timestamp = current_frame_timestamp;
+                // update timers
+                auto now = chrono::steady_clock::now();
+                auto delta = chrono::duration_cast<chrono::microseconds>(now - update_begin);
 
-                    // update fps
-                    ++fps_frames_num;
-                    fps_frames_duration += last_render_stats.duration;
-                    if (fps_frames_duration >= std::chrono::milliseconds(500))
-                    {
-                        current_fps = fps_frames_num / duration_to_seconds(fps_frames_duration);
-                        fps_frames_num = 0;
-                        fps_frames_duration = {};
-                    }
+                time += static_cast<float>(duration_to_seconds(delta) * time_scale);
+                update_begin = now;
 
-                    current_frame_timestamp = time;
-                    render_task = render_async();
-                }
+                printf(VT100_UP(STATS_LINES) "\r");
+                printf(VT100_CLEARLINE "--- Last frame stats ---\n");
+                printf(VT100_CLEARLINE "timestamp:       %.2f s\n", last_frame_timestamp);
+                printf(VT100_CLEARLINE "duration:        %lg s\n", duration_to_seconds(last_render_stats.duration));
+                printf(VT100_CLEARLINE " - per pixel:    %lg ms\n", static_cast<double>(last_render_stats.duration.count()) / (last_render_stats.num_pixels));
+                printf(VT100_CLEARLINE "threads:         %d\n", last_render_stats.num_threads);
+                printf(VT100_CLEARLINE "\n");
+                printf(VT100_CLEARLINE "--- Player stats ---\n");
+                printf(VT100_CLEARLINE "time:            %.2f s%s\n", time, time_scale > 0 ? "" : " (paused)");
+                printf(VT100_CLEARLINE "frames:          %d\n", num_frames);
+                printf(VT100_CLEARLINE "resolution:      %dx%d\n", target_surface->w, target_surface->h);
+                printf(VT100_CLEARLINE "fps:             %lg\n", current_fps);
             }
 
-            // update timers
-            auto now = chrono::steady_clock::now();
-            auto delta = chrono::duration_cast<chrono::microseconds>(now - update_begin);
-
-            time += static_cast<float>(duration_to_seconds(delta) * time_scale);
-            update_begin = now;
-            
-            printf(VT100_UP(STATS_LINES) "\r");
-            printf(VT100_CLEARLINE "--- Last frame stats ---\n");
-            printf(VT100_CLEARLINE "timestamp:       %.2f s\n", last_frame_timestamp);
-            printf(VT100_CLEARLINE "duration:        %lg s\n", duration_to_seconds(last_render_stats.duration));
-            printf(VT100_CLEARLINE " - per pixel:    %lg ms\n", static_cast<double>(last_render_stats.duration.count()) / (last_render_stats.num_pixels));
-            printf(VT100_CLEARLINE "threads:         %d\n", last_render_stats.num_threads);
-            printf(VT100_CLEARLINE "\n");
-            printf(VT100_CLEARLINE "--- Player stats ---\n");
-            printf(VT100_CLEARLINE "time:            %.2f s%s\n", time, time_scale > 0 ? "" : " (paused)");
-            printf(VT100_CLEARLINE "frames:          %d\n", num_frames);
-            printf(VT100_CLEARLINE "resolution:      %dx%d\n", target_surface->w, target_surface->h);
-            printf(VT100_CLEARLINE "fps:             %lg\n", current_fps);
+            printf("\nwaiting for the worker thread to finish...");
+            render_task.wait();
         }
-
-        // wait for the render thread to stop
-
-
-        printf("\nwaiting for the worker thread to finish...");
-        render_task.wait();
     } 
     catch ( exception& error ) 
     {

@@ -28,6 +28,20 @@ namespace
         using int_type =   swizzle::int_type&;
         using uint_type =  swizzle::uint_type&;
         using bool_type =  swizzle::bool_type&;
+
+        // matrices likewise
+        using mat2   = swizzle::mat2;
+        using mat3   = swizzle::mat3;
+        using mat4   = swizzle::mat4;
+        using mat2x2 = swizzle::mat2x2;
+        using mat2x3 = swizzle::mat2x3;
+        using mat2x4 = swizzle::mat2x4;
+        using mat3x2 = swizzle::mat3x2;
+        using mat3x3 = swizzle::mat3x3;
+        using mat3x4 = swizzle::mat3x4;
+        using mat4x2 = swizzle::mat4x2;
+        using mat4x3 = swizzle::mat4x3;
+        using mat4x4 = swizzle::mat4x4;
     };
 
     // change meaning of glsl keywords to match sandbox

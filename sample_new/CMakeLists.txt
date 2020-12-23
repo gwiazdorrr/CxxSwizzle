@@ -2,170 +2,7 @@
 # Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 cmake_minimum_required(VERSION 3.3)
 
-include(JSONParser.cmake)
 include(CheckCXXCompilerFlag)
-
-macro(sanitize_name result name)
-    string(TOLOWER ${name} ${result})
-    string(REPLACE " "  "_" ${result} ${${result}})
-    string(REPLACE ","  "" ${result} ${${result}})
-    string(REPLACE "&"  "and" ${result} ${${result}})
-    string(REPLACE "["  "_" ${result} ${${result}})
-    string(REPLACE "]"  "_" ${result} ${${result}})
-    string(REPLACE "("  "_" ${result} ${${result}})
-    string(REPLACE ")"  "_" ${result} ${${result}})
-    string(REPLACE "!"  "_" ${result} ${${result}})
-    string(REPLACE "'"  "_" ${result} ${${result}})
-    string(REPLACE "\\" "_" ${result} ${${result}})
-    string(REPLACE "/"  "_" ${result} ${${result}})
-    string(REPLACE ":"  "_" ${result} ${${result}})
-    string(REPLACE "*"  "_" ${result} ${${result}})
-    string(REPLACE "?"  "_" ${result} ${${result}})
-    string(REPLACE "\"" "_" ${result} ${${result}})
-    string(REPLACE "<"  "_" ${result} ${${result}})
-    string(REPLACE ">"  "_" ${result} ${${result}})
-    string(REPLACE "|"  "_" ${result} ${${result}})
-endmacro()
-
-macro(create_file path contents msg)
-    message(STATUS "Creating ${path} ${msg}")
-    file(WRITE ${path} "${contents}")
-endmacro()
-
-macro(download_file url path msg)
-    message(STATUS "Downloading ${url} to ${path} ${msg}")
-    file(DOWNLOAD ${url} ${path})
-endmacro()
-
-macro(download_shadertoy shader_id api_key download_error_is_fatal)
-    set(SHADERTOY_JSON_PATH "${CMAKE_CURRENT_BINARY_DIR}/${shader_id}.json")
-    set(SHADERTOY_QUERY "https://www.shadertoy.com/api/v1/shaders/${shader_id}?key=${api_key}")
-        
-    download_file(${SHADERTOY_QUERY} ${SHADERTOY_JSON_PATH} "(Shadertoy JSON shader description)")
-
-    message(STATUS "Parsing ${SHADERTOY_JSON_PATH}")
-    file(READ "${SHADERTOY_JSON_PATH}" SHADERTOY_JSON)
-    sbeParseJson(SHADER SHADERTOY_JSON)
-
-    if (SHADER.Error)
-        if (${download_error_is_fatal})
-            if (SHADER.Error STREQUAL "Shader not found")
-                message(FATAL_ERROR "Shartoy API returned an error: ${SHADER.Error}.\nThis happens if shader is not published "
-                "as public+api. Anyway, this shader needs to be downloaded manually (see README.md for instructions)")
-            else()
-                message(FATAL_ERROR "Shartoy API returned an error: ${SHADER.Error}.")
-            endif()
-        else()
-            if (SHADER.Error STREQUAL "Shader not found")
-                message(WARNING "Shartoy API returned an error: ${SHADER.Error}.\nThis happens if shader is not published "
-                "as public+api. Anyway, this shader needs to be downloaded manually (see README.md for instructions)")
-            else()
-                message(WARNING "Shartoy API returned an error: ${SHADER.Error}.")
-            endif()
-        endif()
-    else()
-
-        # debug
-        # foreach(var ${SHADER})
-        #     message("${var} = ${${var}}") 
-        # endforeach()
-
-        set(SHADER_NAME ${SHADER.Shader.info.name})
-
-        # create directory
-        sanitize_name(SHADER_NAME_SANITIZED ${SHADER_NAME})
-    
-        set(SHADER_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_NAME_SANITIZED}")
-
-        file(MAKE_DIRECTORY ${SHADER_DIRECTORY})
-        create_file("${SHADER_DIRECTORY}/README.md" "https://www.shadertoy.com/view/${shader_id}" "" )
-
-        foreach(r ${SHADER.Shader.renderpass})
-            set(RENDERPASS SHADER.Shader.renderpass_${r})
-            
-            if (${RENDERPASS}.name)
-                sanitize_name(RENDER_PASS_NAME ${${RENDERPASS}.name})
-            else()
-                # seems this fallback is needed sometimes
-                sanitize_name(RENDER_PASS_NAME ${${RENDERPASS}.type})
-            endif()
-
-            string(REPLACE "buf_" "buffer_" RENDER_PASS_NAME ${RENDER_PASS_NAME})
-
-            message(STATUS "Creating ${SHADER_DIRECTORY}/${RENDER_PASS_NAME}.frag (Shader pass)")
-            file(WRITE "${SHADER_DIRECTORY}/${RENDER_PASS_NAME}.frag" "${${RENDERPASS}.code}")
-            
-            set(INPUT_PREFIX "${RENDER_PASS_NAME}_")
-            if(RENDER_PASS_NAME STREQUAL "image")
-                set(INPUT_PREFIX "")
-            endif()
-
-
-            foreach(i ${${RENDERPASS}.inputs})
-                set(INPUT ${RENDERPASS}.inputs_${i})
-                set(INPUT_INDEX ${${INPUT}.channel})
-                if (${INPUT}.ctype STREQUAL "texture")
-                    get_filename_component(INPUT_EXTENSION ${${INPUT}.src} EXT)
-                    download_file("https://www.shadertoy.com${${INPUT}.src}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}${INPUT_EXTENSION}" "")
-                elseif (${INPUT}.ctype STREQUAL "cubemap")
-                    get_filename_component(INPUT_EXTENSION ${${INPUT}.src} EXT)
-                    get_filename_component(INPUT_NAME      ${${INPUT}.src} NAME_WE)
-                    get_filename_component(INPUT_DIR       ${${INPUT}.src} DIRECTORY)
-                    download_file("https://www.shadertoy.com${${INPUT}.src}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}${INPUT_EXTENSION}" "")
-                    download_file("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_1${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_1${INPUT_EXTENSION}" "")
-                    download_file("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_2${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_2${INPUT_EXTENSION}" "")
-                    download_file("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_3${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_3${INPUT_EXTENSION}" "")
-                    download_file("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_4${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_4${INPUT_EXTENSION}" "")
-                    download_file("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_5${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_5${INPUT_EXTENSION}" "")
-                elseif(${INPUT}.ctype STREQUAL "buffer")
-                    set(TARGET_FILE "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}.txt")
-                    if(${INPUT}.src STREQUAL "/media/previz/buffer00.png")
-                        create_file("${TARGET_FILE}" "buffer_a" "(Redirecting to buffer_a)")
-                    elseif(${INPUT}.src STREQUAL "/media/previz/buffer01.png")
-                        create_file("${TARGET_FILE}" "buffer_b" "(Redirecting to buffer_b)")
-                    elseif(${INPUT}.src STREQUAL "/media/previz/buffer02.png")
-                        create_file("${TARGET_FILE}" "buffer_c" "(Redirecting to buffer_c)")
-                    elseif(${INPUT}.src STREQUAL "/media/previz/buffer03.png")
-                        create_file("${TARGET_FILE}" "buffer_d" "(Redirecting to buffer_d)")
-                    else()
-                        message(WARNING "Unable to guess buffer index: ${${INPUT}.src} (channel ${INPUT_INDEX})")
-                    endif()
-                elseif(${INPUT}.ctype STREQUAL "keyboard")
-                    set(TARGET_FILE "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}.txt")
-                    create_file("${TARGET_FILE}" "keyboard" "(Redirecting to keyboard)")
-                elseif(${INPUT}.ctype)
-                    message(WARNING "Channel type ${${INPUT}.ctype} not supported (channel ${INPUT_INDEX})")
-                endif()
-
-            endforeach()
-
-        endforeach()
-    endif()
-    sbeClearJson(SHADER)
-endmacro()
-
-macro(download_shadertoy_list sort_type api_key query max_count out_list)
-    set(SHADERTOY_JSON_PATH "${CMAKE_CURRENT_BINARY_DIR}/sort_${sort_type}.json")
-    set(SHADERTOY_QUERY "https://www.shadertoy.com/api/v1/shaders/query/${query}?sort=${sort_type}&key=${api_key}&from=0&num=${max_count}")
-
-    download_file(${SHADERTOY_QUERY} ${SHADERTOY_JSON_PATH} "(Shadertoy JSON shader list)")
-
-    message(STATUS "Parsing ${SHADERTOY_JSON_PATH}")
-    file(READ "${SHADERTOY_JSON_PATH}" SHADERTOY_JSON)
-    sbeParseJson(SHADER_LIST SHADERTOY_JSON)
-
-    if (SHADER_LIST.Error)
-        message(FATAL_ERROR "Shartoy API returned an error: ${SHADER_LIST.Error}.")
-    endif()
-
-    message(STATUS "Found ${SHADER_LIST.Shaders} shaders")
-
-    foreach(shader_index ${SHADER_LIST.Results})
-        set(SHADER_ID SHADER_LIST.Results_${shader_index})
-        list(APPEND ${out_list} "${${SHADER_ID}}")
-    endforeach()
-
-endmacro()
 
 macro(get_subdir_list result curdir)
     file(GLOB children RELATIVE ${curdir} ${curdir}/*)
@@ -178,111 +15,93 @@ macro(get_subdir_list result curdir)
     set(${result} ${dirlist})
 endmacro()
 
-
-# handle downloads
-set(SHADERTOY_API_KEY "BtntM7" CACHE STRING "Shadertoy API Key (go to https://www.shadertoy.com/howto#q2 for details)")
-mark_as_advanced(SHADERTOY_API_KEY)
-
-set(SHADERTOY_DOWNLOAD "none" CACHE STRING "Download Shader")
-set_property(CACHE SHADERTOY_DOWNLOAD PROPERTY STRINGS none explicit_ids top_love top_popular top_newest top_hot)
-
-set(SHADERTOY_DOWNLOAD_QUERY_PARAM "" CACHE STRING "List of Shadertoys ids (if SHADERTOY_DOWNLOAD is set to explicit_ids) or a search term")
-set(SHADERTOY_DOWNLOAD_MAX_COUNT "10" CACHE STRING "Max Shadertoys to download")
-
-if (SHADERTOY_DOWNLOAD STREQUAL "explicit_ids")
-    if (NOT SHADERTOY_DOWNLOAD_QUERY_PARAM)
-        message(FATAL_ERROR "SHADERTOY_DOWNLOAD_QUERY_PARAM needs to be set")
-    else()
-        foreach (id ${SHADERTOY_DOWNLOAD_QUERY_PARAM})
-            download_shadertoy(${id} ${SHADERTOY_API_KEY} True)
-        endforeach()
-    endif()
-elseif(SHADERTOY_DOWNLOAD MATCHES "^top_")
-    string (REPLACE "top_" "" SHADERTOY_DOWNLOAD_LIST_TYPE ${SHADERTOY_DOWNLOAD})
-    download_shadertoy_list(${SHADERTOY_DOWNLOAD_LIST_TYPE} ${SHADERTOY_API_KEY} "${SHADERTOY_DOWNLOAD_QUERY_PARAM}" ${SHADERTOY_DOWNLOAD_MAX_COUNT} SHADERTOY_SHADER_LIST)
-    foreach (id ${SHADERTOY_SHADER_LIST})
-        download_shadertoy(${id} ${SHADERTOY_API_KEY} False)
-    endforeach()
-endif()
-
-
 # basic requirements
 find_package(SDL2 CONFIG REQUIRED)
 find_package(SDL2-image CONFIG REQUIRED)
 
+# other compiler required options
+set(TARGET_ADDITIONAL_FILES "")
+set(TARGET_ADDITIONAL_FLAGS "")
+set(TARGET_ADDITIONAL_LIBS "")
+
 # handle OpenMP
-option(USE_OPENMP "Use OpenMP" ON)
-if (USE_OPENMP)
-    find_package(OpenMP REQUIRED)
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -DSAMPLE_OMP_ENABLED")
-endif()
-
-
-# handle -march flag (otherwise g++ fails its GitHub Action)
-option(OPTIMIZE_FOR_NATIVE "Build with -march=native (if compiler supports it)" ON)
-if (OPTIMIZE_FOR_NATIVE)
-    CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
-    if(COMPILER_SUPPORTS_MARCH_NATIVE)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+option(SAMPLE_USE_OPENMP "Use OpenMP" ON)
+if (SAMPLE_USE_OPENMP)
+    find_package(OpenMP)
+    if (OPENMP_FOUND)
+        list(APPEND TARGET_ADDITIONAL_FLAGS ${OpenMP_CXX_FLAGS})
+        list(APPEND TARGET_ADDITIONAL_FLAGS "-DSAMPLE_OMP_ENABLED")
     endif()
 endif()
 
-# handle VC
-option(BUILD_SIMD_SAMPLE "Build SIMD sample (Vc)" ON)
-if (BUILD_SIMD_SAMPLE)
-    find_package(Vc CONFIG REQUIRED)
-    # find_package(Vc CONFIG REQUIRED) seems to disable this policy somehow, hence it is enabled here
-    cmake_policy(SET CMP0057 NEW)
+# handle -march flag (otherwise g++ fails its GitHub Action)
+option(SAMPLE_OPTIMIZE_FOR_NATIVE "Build with -march=native (if compiler supports it)" ON)
+if (SAMPLE_OPTIMIZE_FOR_NATIVE)
+    CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
+    if(COMPILER_SUPPORTS_MARCH_NATIVE)
+        list(APPEND TARGET_ADDITIONAL_FLAGS "-march=native")
+    endif()
 endif()
-
-
-# other compiler required options
-set(COMPILER_SPECIFIC_FILES "")
-set(COMPILER_SPECIFIC_FLAGS "")
-set(COMPILER_SPECIFIC_LIBS "")
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # GLSL has "not" function, so better get rid of C++ operator mnemonics
-    set(COMPILER_SPECIFIC_FLAGS "-fno-operator-names")
+    list(APPEND TARGET_ADDITIONAL_FLAGS "-fno-operator-names")
     if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        set(COMPILER_SPECIFIC_LIBS "stdc++fs")
+        list(APPEND TARGET_ADDITIONAL_LIBS "stdc++fs")
     endif()
 elseif(MSVC)
     # fast math, _vectorcall
     # the resons permissive can't be disabled in MSVC, because there's no way to disable mnemonics then
-    set(COMPILER_SPECIFIC_FLAGS "/fp:fast;/Gv;-D_ENABLE_EXTENDED_ALIGNED_STORAGE")
+    list(APPEND TARGET_ADDITIONAL_FLAGS "/fp:fast")
+    list(APPEND TARGET_ADDITIONAL_FLAGS "/Gv")
+    list(APPEND TARGET_ADDITIONAL_FLAGS "-D_ENABLE_EXTENDED_ALIGNED_STORAGE")
     # Add debug visualisers (work great!)	
-    set(COMPILER_SPECIFIC_FILES "cxxswizzle.natvis")
+    list(APPEND TARGET_ADDITIONAL_FILES "cxxswizzle.natvis")
+endif()
+
+
+# handle SIMD type
+set(SAMPLE_SIMD_TYPE "none" CACHE STRING "SIMD type")
+set_property(CACHE SAMPLE_SIMD_TYPE PROPERTY STRINGS none naive VcSIMD)
+if (SAMPLE_SIMD_TYPE STREQUAL "none")
+    # nothing to do, default is scalar
+elseif (SAMPLE_SIMD_TYPE STREQUAL "VcSIMD")
+    find_package(Vc CONFIG REQUIRED)
+    # find_package(Vc CONFIG REQUIRED) seems to disable this policy somehow, hence it is enabled here
+    cmake_policy(SET CMP0057 NEW)
+    list(APPEND TARGET_ADDITIONAL_LIBS Vc::Vc)
+    list(APPEND TARGET_ADDITIONAL_FLAGS "-DSAMPLE_USE_SIMD_VC")
 endif()
 
 
 # handle custom structs
-set(CUSTOM_STRUCTS Ray;ray CACHE STRING "Custom structs that need function-style init or out/inout modifier")
+set(SAMPLE_CUSTOM_STRUCTS Ray;ray CACHE STRING "Custom structs that need function-style init or out/inout modifier")
 set(FRAG_CUSTOM_STRUCTS_SUPPORT "")
-foreach(STRUCT ${CUSTOM_STRUCTS})
+foreach(STRUCT ${SAMPLE_CUSTOM_STRUCTS})
     set(FRAG_CUSTOM_STRUCTS_SUPPORT "${FRAG_CUSTOM_STRUCTS_SUPPORT}        struct ${STRUCT};\n")
 endforeach()
 set(FRAG_CUSTOM_STRUCTS_SUPPORT     "${FRAG_CUSTOM_STRUCTS_SUPPORT}        struct inout_proxy : builtin_inout_proxy\n")
 set(FRAG_CUSTOM_STRUCTS_SUPPORT     "${FRAG_CUSTOM_STRUCTS_SUPPORT}        {\n")
-foreach(STRUCT ${CUSTOM_STRUCTS})
+foreach(STRUCT ${SAMPLE_CUSTOM_STRUCTS})
     set(FRAG_CUSTOM_STRUCTS_SUPPORT "${FRAG_CUSTOM_STRUCTS_SUPPORT}            using ${STRUCT} = _cxxswizzle_fragment_shader::${STRUCT}&;\n")
 endforeach()
 set(FRAG_CUSTOM_STRUCTS_SUPPORT     "${FRAG_CUSTOM_STRUCTS_SUPPORT}        };\n")
-foreach(STRUCT ${CUSTOM_STRUCTS})
+foreach(STRUCT ${SAMPLE_CUSTOM_STRUCTS})
     set(FRAG_CUSTOM_STRUCTS_SUPPORT "${FRAG_CUSTOM_STRUCTS_SUPPORT}        #define ${STRUCT}(...) ${STRUCT}\\{ __VA_ARGS__ \\}\n")
 endforeach()
 
+
 # global shaders
-get_subdir_list(SAMPLES_DIRS ${CMAKE_CURRENT_SOURCE_DIR})
+set(SAMPLE_SHADERTOYS_ROOT "${PROJECT_SOURCE_DIR}/shadertoys" CACHE STRING "Shadertoys root")
+get_subdir_list(SAMPLES_DIRS ${SAMPLE_SHADERTOYS_ROOT})
 foreach(SAMPLE_DIR ${SAMPLES_DIRS})
     message(STATUS "Sample ${SAMPLE_DIR}")
 
-    file(GLOB SHADERS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/${SAMPLE_DIR}/*.frag")
-    file(GLOB TEXTURES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/${SAMPLE_DIR}/*.png" "${CMAKE_CURRENT_SOURCE_DIR}/${SAMPLE_DIR}/*.jpg")
-    file(GLOB BUFFERS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/${SAMPLE_DIR}/*.txt")
+    file(GLOB SHADERS  RELATIVE "${SAMPLE_SHADERTOYS_ROOT}" "${SAMPLE_SHADERTOYS_ROOT}/${SAMPLE_DIR}/*.frag")
+    file(GLOB TEXTURES RELATIVE "${SAMPLE_SHADERTOYS_ROOT}" "${SAMPLE_SHADERTOYS_ROOT}/${SAMPLE_DIR}/*.png" "${SAMPLE_SHADERTOYS_ROOT}/${SAMPLE_DIR}/*.jpg")
+    file(GLOB BUFFERS  RELATIVE "${SAMPLE_SHADERTOYS_ROOT}" "${SAMPLE_SHADERTOYS_ROOT}/${SAMPLE_DIR}/*.txt")
 
     get_filename_component(SAMPLE_NAME ${SAMPLE_DIR} NAME_WE)
-    sanitize_name(SAMPLE_NAME ${SAMPLE_NAME})
 
     set(GEN_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/${SAMPLE_NAME}_gen")
     set(GEN_CONFIG_PATH "${GEN_INCLUDE_DIR}/config.hpp")
@@ -301,7 +120,7 @@ foreach(SAMPLE_DIR ${SAMPLES_DIRS})
         string(TOLOWER ${SHADER_NAME_SANITIZED} SHADER_NAME_SANITIZED_LOWER)
         if (SHADER_NAME_SANITIZED STREQUAL "common")
             message(STATUS "* found common include: ${SHADER}")
-            set(FRAG_COMMON_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/${SHADER}")
+            set(FRAG_COMMON_INCLUDE "${SAMPLE_SHADERTOYS_ROOT}/${SHADER}")
             set(FRAG_HAS_COMMON_INCLUDE True)
             break()
         endif()
@@ -319,7 +138,7 @@ foreach(SAMPLE_DIR ${SAMPLES_DIRS})
         elseif(SHADER_NAME_SANITIZED IN_LIST VALID_PASS_NAMES)
             message(STATUS "* found pass: ${SHADER}") 
             set(GEN_SANDBOX_PATH "${GEN_INCLUDE_DIR}/shadertoy_sandbox_${SHADER_NAME_SANITIZED}.cpp")
-            set(FRAG_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${SHADER}")
+            set(FRAG_PATH "${SAMPLE_SHADERTOYS_ROOT}/${SHADER}")
             set(FRAG_NAME "${SHADER_NAME_SANITIZED}")
             configure_file("shadertoy_sandbox.cpp.in" "${GEN_SANDBOX_PATH}")
             list(APPEND GEN_SHADERS ${GEN_SANDBOX_PATH})
@@ -334,11 +153,11 @@ foreach(SAMPLE_DIR ${SAMPLES_DIRS})
         get_filename_component(CHANNEL_NAME ${TEXTURE} NAME_WE)
         message(STATUS "* found texture: ${TEXTURE}") 
         string(TOUPPER ${CHANNEL_NAME} CHANNEL_NAME)
-        set(SAMPLE_${CHANNEL_NAME}_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${TEXTURE}")
+        set(SAMPLE_${CHANNEL_NAME}_PATH "${SAMPLE_SHADERTOYS_ROOT}/${TEXTURE}")
     endforeach()
 
     foreach (BUFFER ${BUFFERS})
-        file(READ "${CMAKE_CURRENT_SOURCE_DIR}/${BUFFER}" BUFFER_ID)
+        file(READ "${SAMPLE_SHADERTOYS_ROOT}/${BUFFER}" BUFFER_ID)
         message(STATUS "* found special texture: ${BUFFER} (points to ${BUFFER_ID})") 
         get_filename_component(CHANNEL_NAME ${BUFFER} NAME_WE)
         string(TOUPPER ${CHANNEL_NAME} CHANNEL_NAME)
@@ -350,38 +169,27 @@ foreach(SAMPLE_DIR ${SAMPLES_DIRS})
     set(CODEGEN_TEMPLATE_FILES "shadertoy_sandbox.cpp.in" "config.hpp.in")
     set(README_PATH "${SAMPLE_DIR}/README.md")
 
-    set(TARGET_FILES main.cpp ${GEN_SHADERS} shadertoy_sandbox.hpp ${SHADERS} ${GEN_CONFIG_PATH} ${COMPILER_SPECIFIC_FILES} ${CODEGEN_TEMPLATE_FILES})
-    if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${README_PATH}")
+    set(TARGET_FILES main.cpp ${GEN_SHADERS} shadertoy_sandbox.hpp ${SHADERS} ${GEN_CONFIG_PATH} ${TARGET_ADDITIONAL_FILES} ${CODEGEN_TEMPLATE_FILES})
+    if (EXISTS "${SAMPLE_SHADERTOYS_ROOT}/${README_PATH}")
         list(APPEND TARGET_FILES ${README_PATH})
     endif()
 
     source_group("" FILES ${SHADERS} ${README_PATH})
     source_group("codegen" FILES ${GEN_SHADERS} ${GEN_CONFIG_PATH} )
-    source_group("shared" FILES CMakeList.txt main.cpp shadertoy_sandbox.hpp ${COMPILER_SPECIFIC_FILES} ${CODEGEN_TEMPLATE_FILES})
+    source_group("shared" FILES CMakeList.txt main.cpp shadertoy_sandbox.hpp ${TARGET_ADDITIONAL_FILES} ${CODEGEN_TEMPLATE_FILES})
 
-    set(TARGET_NAME "scalar_${SAMPLE_NAME}")
+    set(TARGET_NAME "shadertoy_${SAMPLE_NAME}")
     add_executable(${TARGET_NAME} ${TARGET_FILES})
     target_include_directories(${TARGET_NAME} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include ${GEN_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(${TARGET_NAME} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image ${COMPILER_SPECIFIC_LIBS})
+    target_link_libraries(${TARGET_NAME} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image ${TARGET_ADDITIONAL_LIBS})
     set_target_properties(${TARGET_NAME} PROPERTIES CXX_STANDARD 17)
     set_target_properties(${TARGET_NAME} PROPERTIES CXX_STANDARD_REQUIRED ON)
-    target_compile_options(${TARGET_NAME} PRIVATE ${COMPILER_SPECIFIC_FLAGS})
+    target_compile_options(${TARGET_NAME} PRIVATE ${TARGET_ADDITIONAL_FLAGS})
 
-    if (BUILD_SIMD_SAMPLE)
-        set(TARGET_NAME "simd_${SAMPLE_NAME}")
-        add_executable(${TARGET_NAME} ${TARGET_FILES})
-        target_include_directories(${TARGET_NAME} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include ${GEN_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
-        target_link_libraries(${TARGET_NAME} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image Vc::Vc ${COMPILER_SPECIFIC_LIBS})
-        set_target_properties(${TARGET_NAME} PROPERTIES CXX_STANDARD 17)
-        set_target_properties(${TARGET_NAME} PROPERTIES CXX_STANDARD_REQUIRED ON)
-        target_compile_options(${TARGET_NAME} PRIVATE ${COMPILER_SPECIFIC_FLAGS} "-DSAMPLE_USE_SIMD_VC")
-    endif()
-
-    #undo variables
+    # undo variables
     foreach(SHADER ${SHADERS})
         get_filename_component(SHADER_NAME_SANITIZED ${SHADER} NAME_WE)
         string(TOUPPER ${SHADER_NAME_SANITIZED} SHADER_NAME_SANITIZED)
         unset(SAMPLE_HAS_${SHADER_NAME_SANITIZED})
     endforeach()		
 endforeach()
-
