@@ -1,13 +1,11 @@
 // CxxSwizzle
 // Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
-#include <boost/test/unit_test.hpp>
+#include <gtest/gtest.h>
 
 #include "setup.h"
 
-BOOST_AUTO_TEST_SUITE(SamplesFromStandard)
-
-BOOST_AUTO_TEST_CASE(Par_5_4_2__Constructors)
+TEST(Spec, Par_5_4_2__Constructors)
 {
     int _int = 1;
     float _float = 2;
@@ -74,7 +72,7 @@ BOOST_AUTO_TEST_CASE(Par_5_4_2__Constructors)
     // component to 1, and the rest to 0 
 }
 
-BOOST_AUTO_TEST_CASE(Par_5_5__Vector_and_Scalar_Components_and_Length)
+TEST(Spec, Par_5_5__Vector_and_Scalar_Components_and_Length)
 {
     {
         vec2 pos;
@@ -96,16 +94,16 @@ BOOST_AUTO_TEST_CASE(Par_5_5__Vector_and_Scalar_Components_and_Length)
 
     {
         vec4 pos = vec4(1.0, 2.0, 3.0, 4.0);
-        vec4 swiz= pos.wzyx; BOOST_ASSERT(swiz == vec4(4.0, 3.0, 2.0, 1.0));
-        vec4 dup = pos.xxyy; BOOST_ASSERT(dup == vec4(1.0, 1.0, 2.0, 2.0));
+        vec4 swiz= pos.wzyx; EXPECT_TRUE(swiz == vec4(4.0, 3.0, 2.0, 1.0));
+        vec4 dup = pos.xxyy; EXPECT_TRUE(dup == vec4(1.0, 1.0, 2.0, 2.0));
         float f = 1.2;
         // vec4 dup = f.xxxx; // dup = (1.2, 1.2, 1.2, 1.2) <-- THIS DOES NOT WORK
     }
 
     {
         vec4 pos = vec4(1.0, 2.0, 3.0, 4.0);
-        pos.xw = vec2(5.0, 6.0); BOOST_ASSERT(pos == vec4(5.0, 2.0, 3.0, 6.0));
-        pos.wx = vec2(7.0, 8.0); BOOST_ASSERT(pos == vec4(8.0, 2.0, 3.0, 7.0));
+        pos.xw = vec2(5.0, 6.0); EXPECT_TRUE(pos == vec4(5.0, 2.0, 3.0, 6.0));
+        pos.wx = vec2(7.0, 8.0); EXPECT_TRUE(pos == vec4(8.0, 2.0, 3.0, 7.0));
         //pos.xx = vec2(3.0, 4.0); // illegal - 'x' used twice
         //pos.xy = vec3(1.0, 2.0, 3.0); // illegal - mismatch between vec2 and vec3
     }
@@ -116,7 +114,7 @@ BOOST_AUTO_TEST_CASE(Par_5_5__Vector_and_Scalar_Components_and_Length)
     }
 }
 
-BOOST_AUTO_TEST_CASE(Par_5_6__Matrix_Components)
+TEST(Spec, Par_5_6__Matrix_Components)
 {
     {
         mat4 m;
@@ -131,7 +129,7 @@ BOOST_AUTO_TEST_CASE(Par_5_6__Matrix_Components)
     }
 }
 
-BOOST_AUTO_TEST_CASE(Par_5_10__Vector_and_Matrix_Operations)
+TEST(Spec, Par_5_10__Vector_and_Matrix_Operations)
 {
     {
         vec3 v1, v2;
@@ -150,7 +148,7 @@ BOOST_AUTO_TEST_CASE(Par_5_10__Vector_and_Matrix_Operations)
             v.z = u.z + f;
             v2 = v;
         }
-        BOOST_ASSERT( v1 == v2 );
+        EXPECT_TRUE( v1 == v2 );
     }
 
     {
@@ -167,7 +165,7 @@ BOOST_AUTO_TEST_CASE(Par_5_10__Vector_and_Matrix_Operations)
             w.z = v.z + u.z;
             v2 = w;
         }
-        BOOST_ASSERT( v1 == v2 );
+        EXPECT_TRUE( v1 == v2 );
     }
 
     {
@@ -187,7 +185,7 @@ BOOST_AUTO_TEST_CASE(Par_5_10__Vector_and_Matrix_Operations)
             u.z = dot(v, m[2]);
             u2 = u;
         }
-        BOOST_ASSERT(u1 == u2);
+        EXPECT_TRUE(u1 == u2);
 
     }
 
@@ -207,7 +205,7 @@ BOOST_AUTO_TEST_CASE(Par_5_10__Vector_and_Matrix_Operations)
             u.z = m[0].z * v.x + m[1].z * v.y + m[2].z * v.z;
             u2 = u;
         }
-        BOOST_ASSERT(u1 == u2);
+        EXPECT_TRUE(u1 == u2);
     }
 
     {
@@ -230,8 +228,6 @@ BOOST_AUTO_TEST_CASE(Par_5_10__Vector_and_Matrix_Operations)
             r[2].z = m[0].z * n[2].x + m[1].z * n[2].y + m[2].z * n[2].z;
             r2 = r;
         }
-        BOOST_ASSERT(r1 == r2);
+        EXPECT_TRUE(r1 == r2);
     }
 }
-
-BOOST_AUTO_TEST_SUITE_END()

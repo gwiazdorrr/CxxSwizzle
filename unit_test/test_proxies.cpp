@@ -2,7 +2,7 @@
 // Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
 #define CXXSWIZZLE_VECTOR_INOUT_WRAPPER_ENABLED
-#include <boost/test/unit_test.hpp>
+#include <gtest/gtest.h>
 #include <array>
 #include <limits>
 #include "setup.h"
@@ -19,17 +19,11 @@ namespace
     {}
 }
 
-BOOST_AUTO_TEST_SUITE(Proxies)
 
-
-
-BOOST_AUTO_TEST_CASE(passing)
+TEST(Proxies, passing)
 {
     vec4 v;
     foo(v.xz);
     foo(v.xzy);
     foo(v.xzyw);
 }
-
-
-BOOST_AUTO_TEST_SUITE_END()

@@ -2,7 +2,7 @@
     "name": "cxxswizzle",
     "version-string": "2.0.0",
     "dependencies": [
-        "boost-test",
+        "gtest",
         "sdl2",
         {
             "name": "sdl2-image",

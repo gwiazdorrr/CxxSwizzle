@@ -1,11 +1,9 @@
 // CxxSwizzle
 // Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
-#include <boost/test/unit_test.hpp>
+#include <gtest/gtest.h>
 
 #include "setup.h"
-
-BOOST_AUTO_TEST_SUITE(Functions)
 
 #define VAR21(f, a, b)      f(a);f(b);
 
@@ -110,7 +108,7 @@ vec2 v2;
 vec3 v3;
 vec4 v4;
 
-BOOST_AUTO_TEST_CASE(Par_8_1)
+TEST(Functions, Par_8_1)
 {
 
     F_IMPL1(radians, genType_ret, degrees)
@@ -130,7 +128,7 @@ BOOST_AUTO_TEST_CASE(Par_8_1)
     F_IMPL1(atanh, genType_ret, x)
 }
 
-BOOST_AUTO_TEST_CASE(Par_8_2)
+TEST(Functions, Par_8_2)
 {
     F_IMPL2(pow, genType_ret, x, y)
     F_IMPL1(exp, genType_ret, x)
@@ -141,7 +139,7 @@ BOOST_AUTO_TEST_CASE(Par_8_2)
     F_IMPL1(inversesqrt, genType_ret, x)
 }
 
-BOOST_AUTO_TEST_CASE(Par_8_3)
+TEST(Functions, Par_8_3)
 {
     F_IMPL1(abs, genType_ret, x)
     F_IMPL1(sign, genType_ret, x)
@@ -174,7 +172,7 @@ BOOST_AUTO_TEST_CASE(Par_8_3)
     F_IMPL3F12(smoothstep, genType_ret, edge0, edge1, x)
 }
 
-BOOST_AUTO_TEST_CASE(Par_8_4)
+TEST(Functions, Par_8_4)
 {
     F_IMPL1(length, float_arg, x)
     F_IMPL2(distance, float_arg, p0, p1)
@@ -188,7 +186,7 @@ BOOST_AUTO_TEST_CASE(Par_8_4)
     F_IMPL3F3(refract, genType_ret, N, I, Nref)
 }
 
-BOOST_AUTO_TEST_CASE(Par_8_6)
+TEST(Functions, Par_8_6)
 {
     F_IMPL2(lessThan, bvec, x, y)
     F_IMPL2(lessThan, bvec, x, y)
@@ -213,5 +211,3 @@ BOOST_AUTO_TEST_CASE(Par_8_6)
     //F_IMPL1(all, bool, x)
     //F_IMPL1(not, bool, x)
 }
-
-BOOST_AUTO_TEST_SUITE_END()
