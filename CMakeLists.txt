@@ -10,7 +10,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS On)
 
 add_subdirectory(shadertoys)
 add_subdirectory(sample)
-add_subdirectory(unit_test)
+add_subdirectory(test)
 
 # get all the shaders
 file(GLOB root RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/include/swizzle/*.*")
