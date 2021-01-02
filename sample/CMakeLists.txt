@@ -163,7 +163,8 @@ foreach(SAMPLE_DIR ${SAMPLES_DIRS})
 
     source_group("" FILES ${SHADERS} ${README_PATH} ${SAMPLE_CONFIG_PATH})
     source_group("codegen" FILES ${GEN_SHADERS} ${GEN_CONFIG_PATH} )
-    source_group("shared" FILES CMakeList.txt main.cpp shadertoy_sandbox.hpp ${TARGET_ADDITIONAL_FILES} ${CODEGEN_TEMPLATE_FILES})
+    source_group("shared" FILES CMakeList.txt main.cpp shadertoy_sandbox.hpp ${TARGET_ADDITIONAL_FILES} ${CODEGEN_TEMPLATE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt" REGULAR_EXPRESSION "\\.natvis")
+
 
     set(TARGET_NAME "shadertoy_${SAMPLE_NAME}")
     add_executable(${TARGET_NAME} ${TARGET_FILES})
