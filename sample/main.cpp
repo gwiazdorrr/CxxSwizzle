@@ -19,20 +19,25 @@ static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 #include <memory>
 #include <mutex>
 #include <sstream>
+#include <fstream>
+#include <unordered_map>
 
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
 #include <SDL_video.h>
 #include <SDL_image.h>
+#include <nlohmann/json.hpp>
 
 #include <ctime>
-
 
 #if SAMPLE_OMP_ENABLED
 #include <omp.h>
 #endif
 
-struct sdl_deleter 
+
+// some SDL goodies
+
+struct sdl_deleter
 {
     void operator()(SDL_Surface* ptr)
     {
@@ -52,41 +57,59 @@ struct sdl_deleter
     }
 };
 
-struct render_stats
+template <typename T>
+using sdl_ptr = std::unique_ptr<T, sdl_deleter>;
+
+template <typename TSdlType>
+sdl_ptr<TSdlType> make_sdl_ptr(TSdlType* ptr)
 {
-    std::chrono::microseconds duration;
-    int num_pixels;
-    int num_threads;
-};
+    return sdl_ptr<TSdlType>(ptr);
+}
 
-enum class sampler_type {
-    none,
-    texture,
-    buffer_a,
-    buffer_b, 
-    buffer_c,
-    buffer_d,
-    keyboard,
-};
-
-struct sampler_data
+template <typename TFunc, typename... TArgs>
+auto create_sdl_object_or_throw(TFunc&& f, TArgs&&... args)
 {
-    const char* path = nullptr;
-    
-    sampler_type type = sampler_type::none;
-    std::unique_ptr<SDL_Surface, sdl_deleter> images[6];
-    swizzle::naive_sampler_data faces[6];
-    size_t faces_count = 1;
-
-    void init_sampler(sampler2D& sampler, vec3& resolution) const
+    auto ptr = make_sdl_ptr(f(std::forward<TArgs>(args)...));
+    if (!ptr)
     {
-        sampler.data = &faces[0];
-        sampler.face_count = faces_count;
-        resolution = vec3(faces[0].width, faces[0].height, 0.0f);
+        std::stringstream s;
+        s << "SDL error: " << SDL_GetError();   
+        throw std::runtime_error(s.str());
     }
+    return ptr;
+}
+
+template <typename TFunc, typename... TArgs>
+auto create_sdl_image_object_or_throw(TFunc&& f, TArgs&&... args)
+{
+    auto ptr = make_sdl_ptr(f(std::forward<TArgs>(args)...));
+    if (!ptr)
+    {
+        std::stringstream s;
+        s << "SDL_image error: " << IMG_GetError();
+        throw std::runtime_error(s.str());
+    }
+    return ptr;
+}
+
+template <typename TRenderTarget>
+sdl_ptr<SDL_Surface> create_matching_sdl_surface(TRenderTarget& target)
+{
+    return create_sdl_object_or_throw(SDL_CreateRGBSurfaceWithFormatFrom, target.first_row, target.width, target.height, 32, target.pitch, target.sdl_pixelformat);
+}
+
+sdl_ptr<SDL_Texture> create_matching_sdl_texture(SDL_Renderer* renderer, int w, int h)
+{
+    return create_sdl_object_or_throw(SDL_CreateTexture, renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h);
 };
 
-struct aligned_render_target_base 
+
+constexpr auto pixels_per_batch  = static_cast<int>(::swizzle::detail::batch_traits<swizzle::float_type>::size);
+constexpr auto columns_per_batch = pixels_per_batch > 1 ? pixels_per_batch / 2 : 1;
+constexpr auto rows_per_batch    = pixels_per_batch > 1 ? 2 : 1;
+static_assert(pixels_per_batch == 1 || pixels_per_batch % 2 == 0, "1 or even scalar count");
+
+struct aligned_render_target_base
 {
     struct void_deleter
     {
@@ -101,7 +124,7 @@ struct aligned_render_target_base
     int pitch = 0;
     int width = 0;
     int height = 0;
-    size_t pixels_size;
+    size_t pixels_size = 0;
 
     aligned_render_target_base() = default;
     aligned_render_target_base(int width, int height, int bpp, int align) : width(width), height(height)
@@ -125,6 +148,7 @@ struct aligned_render_target_base
 struct render_target_rgba32 : aligned_render_target_base
 {
     static const int bytes_per_pixel = 4;
+    static const uint32_t sdl_pixelformat = SDL_PIXELFORMAT_RGBA32;
 
     render_target_rgba32() = default;
     render_target_rgba32(int width, int height) : aligned_render_target_base(width, height, bytes_per_pixel, 32) {}
@@ -139,6 +163,7 @@ struct render_target_rgba32 : aligned_render_target_base
 struct render_target_a8 : aligned_render_target_base
 {
     static const int bytes_per_pixel = 1;
+    static const uint32_t sdl_pixelformat = SDL_PIXELFORMAT_INDEX8;
 
     render_target_a8() = default;
     render_target_a8(int width, int height) : aligned_render_target_base(width, height, bytes_per_pixel, 32) {}
@@ -188,14 +213,145 @@ struct render_target_float : aligned_render_target_base
 
 };
 
-constexpr auto pixels_per_batch = static_cast<int>(::swizzle::detail::batch_traits<swizzle::float_type>::size);
-static_assert(pixels_per_batch == 1 || pixels_per_batch % 2 == 0, "1 or even scalar count");
-constexpr auto columns_per_batch = pixels_per_batch > 1 ? pixels_per_batch / 2 : 1;
-constexpr auto rows_per_batch = pixels_per_batch > 1 ? 2 : 1;
+using image_map = std::unordered_map<std::string, sdl_ptr<SDL_Surface>>;
+
+using buffer_render_target_list = std::array<render_target_float, shadertoy::num_buffers>;
+
+void ensure_texture_loaded(image_map& textures, const std::string& path)
+{
+    if (textures.find(path) == textures.end())
+    {
+        textures[path] = create_sdl_image_object_or_throw(IMG_Load, path.c_str());
+    }
+}
+
+const SDL_Surface* get_image_or_throw(const image_map& textures, const std::string& path)
+{
+    auto found = textures.find(path);
+    if (found == textures.end())
+    {
+        throw std::runtime_error(path);
+    }
+    return found->second.get();
+}
+
+swizzle::naive_sampler_data make_sampler_data(const render_target_float& rt)
+{
+    swizzle::naive_sampler_data sampler;
+    sampler.bytes = reinterpret_cast<uint8_t*>(rt.first_row);
+    sampler.width = rt.width;
+    sampler.height = rt.height;
+    sampler.pitch_bytes = static_cast<unsigned>(rt.pitch);
+    sampler.bytes_per_pixel = rt.bytes_per_pixel;
+    sampler.is_floating_point = true;
+    return sampler;
+}
+
+swizzle::naive_sampler_data make_sampler_data(const SDL_Surface* surface)
+{
+    swizzle::naive_sampler_data sampler;
+
+    sampler.bytes = reinterpret_cast<uint8_t*>(surface->pixels);
+    sampler.width = surface->w;
+    sampler.height = surface->h;
+    sampler.pitch_bytes = surface->pitch;
+    sampler.bytes_per_pixel = surface->format->BytesPerPixel;
+
+    sampler.rshift = surface->format->Rshift;
+    sampler.gshift = surface->format->Gshift;
+    sampler.bshift = surface->format->Bshift;
+    sampler.ashift = surface->format->Ashift;
+
+    if (surface->format->format == SDL_PIXELFORMAT_INDEX8)
+    {
+        sampler.rmask = 0xFF;
+        sampler.gmask = 0xFF;
+        sampler.bmask = 0xFF;
+        sampler.amask = 0;
+    }
+    else
+    {
+        sampler.rmask = surface->format->Rmask;
+        sampler.gmask = surface->format->Gmask;
+        sampler.bmask = surface->format->Bmask;
+        sampler.amask = surface->format->Amask;
+    }
+
+    return sampler;
+}
+
+enum class sampler_type 
+{
+    none,
+    texture,
+    buffer,
+    keyboard,
+    cubemap,
+};
+
+enum class pass_type : int 
+{
+    image,
+    buffer_a,
+    buffer_b,
+    buffer_c,
+    buffer_d
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(sampler_type, {
+    {sampler_type::none, "none"},
+    {sampler_type::texture, "texture"},
+    {sampler_type::buffer, "buffer"},
+    {sampler_type::keyboard, "keyboard"},
+    {sampler_type::cubemap, "cubemap"},
+});
+
+NLOHMANN_JSON_SERIALIZE_ENUM(pass_type, {
+    {pass_type::image, "image"},
+    {pass_type::buffer_a, "buffer_a"},
+    {pass_type::buffer_b, "buffer_b"},
+    {pass_type::buffer_c, "buffer_c"},
+    {pass_type::buffer_d, "buffer_d"}
+});
 
 
-template <typename PixelFunc, typename RenderTarget>
-static render_stats render(PixelFunc func, shader_inputs uniforms, RenderTarget& rt, const std::atomic_bool& cancelled)
+struct sampler_config
+{
+    std::string label;
+
+    sampler_type type = sampler_type::none;
+    std::vector<std::string> paths;
+
+    int source_buffer_index;
+};
+
+struct pass_config 
+{
+    sampler_config samplers[shadertoy::num_samplers];
+    sampler_config& get_sampler(int index)
+    {
+        return samplers[index];
+    }
+};
+
+struct shadertoy_config
+{
+    pass_config passes[1 + shadertoy::num_buffers];
+    pass_config& get_pass(pass_type pass)
+    {
+        return passes[static_cast<int>(pass)];
+    }
+};
+
+struct render_stats
+{
+    std::chrono::microseconds duration;
+    int num_pixels;
+    int num_threads;
+};
+
+template <typename TPixelFunc, typename TRenderTarget>
+static render_stats render(TPixelFunc func, shader_inputs uniforms, TRenderTarget& rt, const std::atomic_bool& cancelled)
 {
     assert(rt.width % columns_per_batch == 0);
     assert(rt.height % rows_per_batch == 0);
@@ -272,17 +428,96 @@ static render_stats render(PixelFunc func, shader_inputs uniforms, RenderTarget&
     return render_stats { std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - render_begin), num_pixels, num_threads };
 }
 
-void init_samplers(shader_inputs& inputs, const sampler_data ptr[4])
+struct textures_context
 {
-    ptr[0].init_sampler(inputs.iChannel0, inputs.iChannelResolution[0]);
-    ptr[1].init_sampler(inputs.iChannel1, inputs.iChannelResolution[1]);
-    ptr[2].init_sampler(inputs.iChannel2, inputs.iChannelResolution[2]);
-    ptr[3].init_sampler(inputs.iChannel3, inputs.iChannelResolution[3]);
-    for (auto& f : inputs.iChannelTime) 
+    const image_map& images;
+    const buffer_render_target_list& buffers;
+    const SDL_Surface* keyboard;
+
+    textures_context(const image_map& images, const buffer_render_target_list& buffers, const SDL_Surface* keyboard) 
+    : images(images),
+      buffers(buffers),
+      keyboard(keyboard)
+    {}
+};
+
+
+void bind_textures(shader_inputs& inputs, naive_sampler_data* data_buffer, const pass_config& pass, const textures_context& context)
+{
+    std::array<sampler2D*, shadertoy::num_samplers> samplers = 
     {
-        f = 0.0f;
+        &inputs.iChannel0,
+        &inputs.iChannel1,
+        &inputs.iChannel2,
+        &inputs.iChannel3,
+    };
+
+    for (int sampler_no = 0; sampler_no < shadertoy::num_samplers; ++sampler_no)
+    {
+        const sampler_config& data = pass.samplers[sampler_no];
+
+        samplers[sampler_no]->data = data_buffer;
+        samplers[sampler_no]->face_count = 1;
+
+        if (data.type == sampler_type::buffer)
+        {
+            *data_buffer++ = make_sampler_data(context.buffers[data.source_buffer_index]);
+        }
+        else if (data.type == sampler_type::keyboard)
+        {
+            *data_buffer++ = make_sampler_data(context.keyboard);
+        }
+        else if (data.type == sampler_type::cubemap || data.type == sampler_type::texture)
+        {
+            samplers[sampler_no]->face_count = data.paths.size();
+            for (auto& path: data.paths)
+            {
+                *data_buffer++ = make_sampler_data(get_image_or_throw(context.images, path));
+            }
+        }
+
+        inputs.iChannelResolution[sampler_no] = { samplers[sampler_no]->data->width, samplers[sampler_no]->data->height, 0 };
+        inputs.iChannelTime[sampler_no] = 0.0f;
     }
 }
+
+
+struct shadertoy_render_buffers
+{
+    int width;
+    int height;
+
+    render_target_rgba32 target;
+
+    // buffers are double buffered (sic!)
+    buffer_render_target_list buffers[2];
+
+    shadertoy_render_buffers(int width, int height)
+        : width(width), height(height)
+    {
+        // let's make life easier and make sure surfaces are aligned to the batch size
+        auto aligned_w = ((width + columns_per_batch - 1) / columns_per_batch) * columns_per_batch;
+        auto aligned_h = ((height + rows_per_batch - 1) / rows_per_batch) * rows_per_batch;
+
+        auto create_buffer_surface = [=]() -> auto { return render_target_float(aligned_w, aligned_h); };
+
+#ifdef SAMPLE_HAS_BUFFER_A
+        buffers[0][0] = create_buffer_surface(); buffers[1][0] = create_buffer_surface();
+#endif
+#ifdef SAMPLE_HAS_BUFFER_B
+        buffers[0][1] = create_buffer_surface(); buffers[1][1] = create_buffer_surface();
+#endif
+#ifdef SAMPLE_HAS_BUFFER_C
+        buffers[0][2] = create_buffer_surface(); buffers[1][2] = create_buffer_surface();
+#endif
+#ifdef SAMPLE_HAS_BUFFER_D
+        buffers[0][3] = create_buffer_surface(); buffers[1][3] = create_buffer_surface();
+#endif
+
+        target = render_target_rgba32(aligned_w, aligned_h);
+    }
+};
+
 
 #define STR1(x) #x
 #define STR2(x) STR1(x)
@@ -291,80 +526,8 @@ void init_samplers(shader_inputs& inputs, const sampler_data ptr[4])
 #define VT100_DOWN(x)   "\33[" STR2(x) "B"
 #define STATS_LINES 11
 
-void make_naive_sampler_data(swizzle::naive_sampler_data& sampler, render_target_float& rt)
-{
-    sampler.bytes = reinterpret_cast<uint8_t*>(rt.first_row);
-    sampler.width = rt.width;
-    sampler.height = rt.height;
-    sampler.pitch_bytes = static_cast<unsigned>(rt.pitch);
-    sampler.bytes_per_pixel = rt.bytes_per_pixel;
-    sampler.is_floating_point = true;
-}
-
-void make_naive_sampler_data(swizzle::naive_sampler_data& sampler, const SDL_Surface* surface)
-{
-    sampler.bytes = reinterpret_cast<uint8_t*>(surface->pixels);
-    sampler.width = surface->w;
-    sampler.height = surface->h;
-    sampler.pitch_bytes = surface->pitch;
-    sampler.bytes_per_pixel = surface->format->BytesPerPixel;
-
-    sampler.rshift = surface->format->Rshift;
-    sampler.gshift = surface->format->Gshift;
-    sampler.bshift = surface->format->Bshift;
-    sampler.ashift = surface->format->Ashift;
-
-    if (surface->format->format == SDL_PIXELFORMAT_INDEX8)
-    {
-        sampler.rmask = 0xFF;
-        sampler.gmask = 0xFF;
-        sampler.bmask = 0xFF;
-        sampler.amask = 0;
-    }
-    else
-    {
-        sampler.rmask = surface->format->Rmask;
-        sampler.gmask = surface->format->Gmask;
-        sampler.bmask = surface->format->Bmask;
-        sampler.amask = surface->format->Amask;
-    }
-}
-
-bool load_texture(sampler_data& sampler, const char* name)
-{
-    auto img = IMG_Load(name);
-    if (!img)
-    {
-        fprintf(stderr, "ERROR: Failed to load texture %s (error: %s)\n", name, IMG_GetError());
-        return false;
-    }
-    else
-    {
-        // check if other faces are available
-        namespace fs = std::filesystem;
-
-        fs::path path = name;
-        sampler.faces_count = 1;
 
 
-        for (int i = 1; i <= 5; ++i) 
-        {
-            fs::path other = path.parent_path() / path.stem();
-            other += fs::path("_" + std::to_string(i));
-            other += path.extension();
-
-            auto face_img = IMG_Load(other.string().c_str());
-            if (face_img) {
-                fprintf(stdout, "omg!!! %s", other.string().c_str());
-                make_naive_sampler_data(sampler.faces[i], face_img);
-                sampler.faces_count = i;
-            }
-        }
-        
-        make_naive_sampler_data(sampler.faces[0], img);
-        return true;
-    }
-}
 
 template <class Rep, class Period>
 constexpr auto duration_to_seconds(const std::chrono::duration<Rep, Period>& d)
@@ -387,10 +550,8 @@ void print_help()
     printf("-h                          show this message\n");
     printf("-o <path>                   render one frame, save to <path> (PNG) and quit.");
     printf("-r <width> <height>         set initial resolution\n");
-    printf("-sN <path>                  set texture for sampler N\n");
-    printf("-s{a|b|c|d}N <path>         set texture for sampler N for buffer a, b, c or d\n");
+    printf("-c <path>                   config path (default: %s)\n", SAMPLE_CONFIG_PATH);
     printf("-t <time>                   set initial time & pause\n");
-    printf("-w <x> <y> <width> <height> set initial viewport\n");
 }
 
 int print_args_error()
@@ -449,6 +610,98 @@ int SDL_Keysym_to_Ascii(SDL_Keysym keysym) {
     }
 }
 
+shadertoy_config apply_config(const char* path, image_map& textures)
+{
+    using json = nlohmann::json;
+
+    std::ifstream i(path);
+    json j;
+    i >> j;
+
+    std::unordered_map<std::string_view, pass_type> string_to_pass_type =
+    {
+        { "image",    pass_type::image },
+        { "buffer_a", pass_type::buffer_a },
+        { "buffer_b", pass_type::buffer_b },
+        { "buffer_c", pass_type::buffer_c },
+        { "buffer_d", pass_type::buffer_d },
+    };
+
+    std::array<std::string, shadertoy::num_samplers> channel_keys = {
+        "iChannel0",
+        "iChannel1",
+        "iChannel2",
+        "iChannel3",
+    };
+
+
+    std::map<std::string, int> buffer_name_to_index = {
+        { "buffer_a", 0 },
+        { "buffer_b", 1 },
+        { "buffer_c", 2 },
+        { "buffer_d", 3 },
+    };
+
+    shadertoy_config result;
+
+    for (json::iterator it_pass = j.begin(); it_pass != j.end(); ++it_pass)
+    {
+        pass_type pass_id = string_to_pass_type[it_pass.key()];
+        pass_config& pass = result.passes[static_cast<int>(pass_id)];
+
+        for (size_t channel_index = 0; channel_index < channel_keys.size(); ++channel_index)
+        {
+            auto it_channel = it_pass->find(channel_keys[channel_index]);
+            if (it_channel != it_pass->end())
+            {
+                auto& channel_node = it_channel.value();
+
+                sampler_config sampler;
+                sampler.type = channel_node["type"];
+
+                if (sampler.type == sampler_type::texture)
+                {
+                    std::string path = channel_node["src"];
+                    sampler.paths.push_back(path);
+                    ensure_texture_loaded(textures, path);
+
+                    sampler.label = path;
+                }
+                else if (sampler.type == sampler_type::cubemap)
+                {
+                    auto& src = channel_node["src"];
+                    if (src.size() != 6)
+                    {
+                        throw std::runtime_error("Cubemap is expected to have 6 faces");
+                    }
+
+                    for (size_t i = 0; i < 6; ++i)
+                    {
+                        std::string path = src[i];
+                        sampler.paths.push_back(path);
+                        ensure_texture_loaded(textures, path);
+                    }
+
+                    sampler.label = sampler.paths[0];
+                }
+                else if (sampler.type == sampler_type::buffer)
+                {
+                    sampler.label = channel_node["src"];
+                    sampler.source_buffer_index = buffer_name_to_index[sampler.label];
+                }
+                else if (sampler.type == sampler_type::keyboard)
+                {
+                    sampler.label = "keyboard";
+                }
+
+                pass.samplers[channel_index] = std::move(sampler);
+            }
+        }
+    }
+
+    return std::move(result);
+}
+
 
 #ifndef _MSC_VER
 #define __cdecl
@@ -457,6 +710,7 @@ int SDL_Keysym_to_Ascii(SDL_Keysym keysym) {
 int __cdecl main(int argc, char* argv[])
 {
     using namespace std;
+    
 
     // initialise SDLImage
     int flags = IMG_INIT_JPG | IMG_INIT_PNG;
@@ -472,28 +726,9 @@ int __cdecl main(int argc, char* argv[])
     const char* output_path = nullptr;
 
     static_assert(::shadertoy::num_samplers >= 4);
-    sampler_data textures[::shadertoy::num_samplers * (::shadertoy::num_buffers + 1)];
+    
+    const char* config_path = SAMPLE_CONFIG_PATH;
 
-    textures[ 0 + 0].path = SAMPLE_ICHANNEL_0_PATH;
-    textures[ 0 + 1].path = SAMPLE_ICHANNEL_1_PATH;
-    textures[ 0 + 2].path = SAMPLE_ICHANNEL_2_PATH;
-    textures[ 0 + 3].path = SAMPLE_ICHANNEL_3_PATH;
-    textures[ 4 + 0].path = SAMPLE_BUFFER_A_ICHANNEL_0_PATH;
-    textures[ 4 + 1].path = SAMPLE_BUFFER_A_ICHANNEL_1_PATH;
-    textures[ 4 + 2].path = SAMPLE_BUFFER_A_ICHANNEL_2_PATH;
-    textures[ 4 + 3].path = SAMPLE_BUFFER_A_ICHANNEL_3_PATH;
-    textures[ 8 + 0].path = SAMPLE_BUFFER_B_ICHANNEL_0_PATH;
-    textures[ 8 + 1].path = SAMPLE_BUFFER_B_ICHANNEL_1_PATH;
-    textures[ 8 + 2].path = SAMPLE_BUFFER_B_ICHANNEL_2_PATH;
-    textures[ 8 + 3].path = SAMPLE_BUFFER_B_ICHANNEL_3_PATH;
-    textures[12 + 0].path = SAMPLE_BUFFER_C_ICHANNEL_0_PATH;
-    textures[12 + 1].path = SAMPLE_BUFFER_C_ICHANNEL_1_PATH;
-    textures[12 + 2].path = SAMPLE_BUFFER_C_ICHANNEL_2_PATH;
-    textures[12 + 3].path = SAMPLE_BUFFER_C_ICHANNEL_3_PATH;
-    textures[16 + 0].path = SAMPLE_BUFFER_D_ICHANNEL_0_PATH;
-    textures[16 + 1].path = SAMPLE_BUFFER_D_ICHANNEL_1_PATH;
-    textures[16 + 2].path = SAMPLE_BUFFER_D_ICHANNEL_2_PATH;
-    textures[16 + 3].path = SAMPLE_BUFFER_D_ICHANNEL_3_PATH;
 
     for (int i = 1; i < argc; ++i)
     {
@@ -530,85 +765,27 @@ int __cdecl main(int argc, char* argv[])
                 return print_args_error();
             }
         }
-        else if (!strncmp(arg, "-s", 2)) 
+        else if (!strcmp(arg, "-h"))
         {
-            char channel = arg[2];
-            int sampler_index_base = 0;
-            int expected_length = 3;
-
-            if (channel == 'a' || channel == 'b' || channel == 'c' || channel == 'd') 
-            {
-                static_assert(::shadertoy::num_buffers == 4);
-                sampler_index_base = (channel - 'a' + 1) * 4;
-                channel = arg[3];
-                expected_length = 4;
-            }
-
-            if (channel >= '0' && channel <= '3' && i + 1 < argc && strlen(arg) == expected_length)
-            {
-                static_assert(::shadertoy::num_samplers == 4);
-                textures[sampler_index_base + channel - '0'].path = argv[++i];
-            }
-            else
-            {
-                print_args_error();
-            }
+            print_help();
+            return 0;
         }
-        else if (!strcmp(arg, "-s0") || !strcmp(arg, "-s1") || !strcmp(arg, "-s2") || !strcmp(arg, "-s3"))
+        else if (!strcmp(arg, "-c"))
         {
-            static_assert(::shadertoy::num_samplers == 4);
-            int sampler_index = arg[2] - '0';
             if (i + 1 < argc)
             {
-                textures[sampler_index].path = argv[++i];
+                config_path = argv[++i];
             }
             else
             {
                 return print_args_error();
             }
         }
-        else if (!strcmp(arg, "-h"))
-        {
-            print_help();
-            return 0;
-        }
     }
 
-    // load up textures
-    for (auto& texture : textures)
-    {
-        if (!texture.path || strlen(texture.path) == 0)
-        {
-            texture.type = sampler_type::none;
-            texture.path = nullptr;
-        }
-        else if (!strcmp(texture.path, "buffer_a")) 
-        {
-            texture.type = sampler_type::buffer_a;
-        }
-        else if (!strcmp(texture.path, "buffer_b"))
-        {
-            texture.type = sampler_type::buffer_b;
-        }
-        else if (!strcmp(texture.path, "buffer_c"))
-        {
-            texture.type = sampler_type::buffer_c;
-        }
-        else if (!strcmp(texture.path, "buffer_d"))
-        {
-            texture.type = sampler_type::buffer_d;
-        }
-        else if (!strcmp(texture.path, "keyboard"))
-        {
-            texture.type = sampler_type::keyboard;
-        }
-        else
-        {
-            texture.type = sampler_type::texture;
-            load_texture(texture, texture.path);
-        }
-    }
-
+    image_map images;
+    shadertoy_config config = apply_config(config_path, images);
+    
     if (resolution.x <= 0 || resolution.y < 0 )
     {
         fprintf(stderr, "ERROR: invalid resolution: %dx%d\n", resolution.x, resolution.y);
@@ -626,52 +803,19 @@ int __cdecl main(int argc, char* argv[])
 
     try
     {
-        std::unique_ptr<SDL_Surface, sdl_deleter> target_surface;
+        shadertoy_render_buffers render_targets(resolution.x, resolution.y);
+
+        // keyboard texture is a special one: first row contains down state, second whether it was pressed 
+        // in this frame and the last one is a toggle; also, keyboard needs to be double buffered
+        render_target_a8 keyboard_data = { 256, 3 };
+        render_target_a8 keyboard_surface_data = { 256, 3 };
+        sdl_ptr<SDL_Surface> keyboard_surface = create_matching_sdl_surface(keyboard_surface_data);
         
-
-        render_target_rgba32 target_surface_data;
-        render_target_float buffer_surfaces[4][2];
-        render_target_a8 keyboard_surface_data(256, 3);
-        render_target_a8 keyboard_surface_data_used(256, 3);
-        std::unique_ptr<SDL_Surface, sdl_deleter> keyboard_surface(SDL_CreateRGBSurfaceWithFormatFrom(keyboard_surface_data_used.first_row, keyboard_surface_data_used.width, keyboard_surface_data_used.height, 32, keyboard_surface_data_used.pitch, SDL_PIXELFORMAT_INDEX8));
+        const int keyboard_row_down = 0;
+        const int keyboard_row_pressed = 1;
+        const int keyboard_row_toggle = 2;
 
 
-        // a function used to resize the target_surface
-        auto resize_or_create_surfaces = [&](int w, int h) -> void
-        {
-            // let's make life easier and make sure surfaces are aligned to the batch size
-            auto aligned_w = ((w + columns_per_batch - 1) / columns_per_batch) * columns_per_batch;
-            auto aligned_h = ((h + rows_per_batch - 1) / rows_per_batch) * rows_per_batch;
-
-            auto create_buffer_surface = [=]() -> auto { return render_target_float(aligned_w, aligned_h); };
-
-#ifdef SAMPLE_HAS_BUFFER_A
-            buffer_surfaces[0][0] = create_buffer_surface(); buffer_surfaces[0][1] = create_buffer_surface();
-#endif
-#ifdef SAMPLE_HAS_BUFFER_B
-            buffer_surfaces[1][0] = create_buffer_surface(); buffer_surfaces[1][1] = create_buffer_surface();
-#endif
-#ifdef SAMPLE_HAS_BUFFER_C
-            buffer_surfaces[2][0] = create_buffer_surface(); buffer_surfaces[2][1] = create_buffer_surface();
-#endif
-#ifdef SAMPLE_HAS_BUFFER_D
-            buffer_surfaces[3][0] = create_buffer_surface(); buffer_surfaces[3][1] = create_buffer_surface();
-#endif
-
-            target_surface_data = render_target_rgba32(aligned_w, aligned_h);
-
-            target_surface.reset(SDL_CreateRGBSurfaceWithFormatFrom(target_surface_data.first_row, aligned_w, aligned_h, 32, target_surface_data.pitch, SDL_PIXELFORMAT_RGBA32));
-            if (!target_surface)
-            {
-                throw std::runtime_error("Unable to create target_surface");
-            }
-
-            resolution.x = w;
-            resolution.y = h;
-        };
-
-        resize_or_create_surfaces(resolution.x, resolution.y);
-        
         int num_frames = 0;
         float current_frame_timestamp = 0.0f;
         int mouse_x = 0, mouse_y = 0;
@@ -689,31 +833,29 @@ int __cdecl main(int argc, char* argv[])
 
         std::atomic_bool abort_render_token = false;
 
-
-        auto render_all = [&target_surface_data, &buffer_surfaces, &textures, &num_frames](shader_inputs inputs, const std::atomic_bool& cancel) -> auto
+        auto render_all = [&config](shader_inputs inputs, render_target_rgba32& target, buffer_render_target_list& buffers, const textures_context& context, const std::atomic_bool& cancel) -> auto
         {
-            int buffer_surface_index = 1 - (num_frames & 1);
-
-            std::chrono::microseconds duration(0);
+            std::chrono::microseconds duration(0);   
+            naive_sampler_data data_buffer[6 * num_samplers];
 
 #ifdef SAMPLE_HAS_BUFFER_A
-            init_samplers(inputs, &textures[4]);
-            duration += render(shadertoy::buffer_a, inputs, buffer_surfaces[0][buffer_surface_index], cancel).duration;
+            bind_textures(inputs, data_buffer, config.get_pass(pass_type::buffer_a), context);
+            duration += render(shadertoy::buffer_a, inputs, buffers[0], cancel).duration;
 #endif
 #ifdef SAMPLE_HAS_BUFFER_B
-            init_samplers(inputs, &textures[8]);
-            duration += render(shadertoy::buffer_b, inputs, buffer_surfaces[1][buffer_surface_index], cancel).duration;
+            bind_textures(inputs, data_buffer, config.get_pass(pass_type::buffer_b), context);
+            duration += render(shadertoy::buffer_b, inputs, buffers[1], cancel).duration;
 #endif
 #ifdef SAMPLE_HAS_BUFFER_C
-            init_samplers(inputs, &textures[12]);
-            duration += render(shadertoy::buffer_c, inputs, buffer_surfaces[2][buffer_surface_index], cancel).duration;
+            bind_textures(inputs, data_buffer, config.get_pass(pass_type::buffer_c), context);
+            duration += render(shadertoy::buffer_c, inputs, buffers[2], cancel).duration;
 #endif
 #ifdef SAMPLE_HAS_BUFFER_D
-            init_samplers(inputs, &textures[16]);
-            duration += render(shadertoy::buffer_d, inputs, buffer_surfaces[3][buffer_surface_index], cancel).duration;
+            bind_textures(inputs, data_buffer, config.get_pass(pass_type::buffer_d), context);
+            duration += render(shadertoy::buffer_d, inputs, buffers[3], cancel).duration;
 #endif
-            init_samplers(inputs, &textures[0]);
-            render_stats result = render(shadertoy::image, inputs, target_surface_data, cancel);
+            bind_textures(inputs, data_buffer, config.get_pass(pass_type::image), context);
+            render_stats result = render(shadertoy::image, inputs, target, cancel);
             result.duration += duration;
             return result;
         };
@@ -724,49 +866,26 @@ int __cdecl main(int argc, char* argv[])
             abort_render_token = false;
             
             // bring about keyboard changes
-            memcpy(keyboard_surface_data_used.first_row, keyboard_surface_data.first_row, keyboard_surface_data.pixels_size);
-            
+            memcpy(keyboard_surface_data.first_row, keyboard_data.first_row, keyboard_data.pixels_size);
+
             // clear down flag
-            for (int i = 0; i < 256; ++i) 
+            for (int i = 0; i < 256; ++i)
             {
-                keyboard_surface_data.set(i, 1, 0);
+                keyboard_data.set(i, keyboard_row_pressed, 0);
             }
-
-
-            {
-                int buffer_surface_index = num_frames & 1;
-                // sort out buffer textures
-                for (auto& data : textures)
-                {
-                    if (data.type >= sampler_type::buffer_a && data.type <= sampler_type::buffer_d)
-                    {
-                        int buffer_index = static_cast<int>(data.type) - static_cast<int>(sampler_type::buffer_a);
-                        data.faces_count = 1;
-                        make_naive_sampler_data(data.faces[0], buffer_surfaces[buffer_index][buffer_surface_index]);
-                    }
-                    else if (data.type == sampler_type::keyboard)
-                    {
-                        data.faces_count = 1;
-                        make_naive_sampler_data(data.faces[0], keyboard_surface.get());
-                    }
-                }
-            }
-
-            auto s = target_surface.get();
 
             shader_inputs inputs = {};
-            inputs.iTime = time;
-            inputs.iTimeDelta = static_cast<float>(duration_to_seconds(last_render_stats.duration));
-            inputs.iFrameRate = static_cast<int>(current_fps);
-            inputs.iFrame = num_frames;
-            inputs.iResolution = vec3(static_cast<float>(s->w), static_cast<float>(s->h), 0.0f);
-            inputs.iMouse.x = static_cast<float>(mouse_x);
-            inputs.iMouse.y = static_cast<float>(s->h - 1 - mouse_y);
-            inputs.iMouse.z = (mouse_pressed ? 1.0f : -1.0f) * mouse_press_x;
-            inputs.iMouse.w = (mouse_clicked ? 1.0f : -1.0f) * (s->h - 1 - mouse_press_y);
+            inputs.iTime         = time;
+            inputs.iTimeDelta    = static_cast<float>(duration_to_seconds(last_render_stats.duration));
+            inputs.iFrameRate    = static_cast<int>(current_fps);
+            inputs.iFrame        = num_frames;
+            inputs.iResolution   = vec3(static_cast<float>(render_targets.width), static_cast<float>(render_targets.height), 0.0f);
+            inputs.iMouse.x      = static_cast<float>(mouse_x);
+            inputs.iMouse.y      = static_cast<float>(render_targets.height - 1 - mouse_y);
+            inputs.iMouse.z      = (mouse_pressed ? 1.0f : -1.0f) * mouse_press_x;
+            inputs.iMouse.w      = (mouse_clicked ? 1.0f : -1.0f) * (render_targets.height - 1 - mouse_press_y);
 
             mouse_clicked = false;
-
 
             {
                 using sc = std::chrono::system_clock;
@@ -782,7 +901,8 @@ int __cdecl main(int argc, char* argv[])
                 inputs.iDate.w = static_cast<float>((lt->tm_hour * 60 + lt->tm_min) * 60 + lt->tm_sec + microseconds / 1000000.0);
             }
 
-            return std::async(render_all, inputs, std::ref(abort_render_token));
+            textures_context context(images, render_targets.buffers[1 - num_frames & 1], keyboard_surface.get());
+            return std::async(render_all, inputs, std::ref(render_targets.target), std::ref(render_targets.buffers[num_frames & 1]), context, std::ref(abort_render_token));
         };
 
         std::future<render_stats> render_task = render_async();
@@ -790,23 +910,14 @@ int __cdecl main(int argc, char* argv[])
         if (output_path != nullptr)
         {
             render_task.wait();
+            sdl_ptr<SDL_Surface> target_surface = create_matching_sdl_surface(render_targets.target);
             IMG_SavePNG(target_surface.get(), output_path);
         }
         else
         {
-            std::unique_ptr<SDL_Window, sdl_deleter> window(SDL_CreateWindow("CxxSwizzle sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, resolution.x, resolution.y, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI));
-            std::unique_ptr<SDL_Renderer, sdl_deleter> renderer(SDL_CreateRenderer(window.get(), -1, 0));
-            std::unique_ptr<SDL_Texture, sdl_deleter> target_texture;
-
-            auto resize_or_create_texture = [&](int w, int h) -> void
-            {
-                target_texture.reset(SDL_CreateTexture(renderer.get(), SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h));
-                if (!target_texture)
-                {
-                    throw std::runtime_error("Unable to create target_texture");
-                }
-            };
-            resize_or_create_texture(resolution.x, resolution.y);
+            sdl_ptr<SDL_Window> window          = create_sdl_object_or_throw(SDL_CreateWindow, "CxxSwizzle sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, resolution.x, resolution.y, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+            sdl_ptr<SDL_Renderer> renderer      = create_sdl_object_or_throw(SDL_CreateRenderer, window.get(), -1, 0);
+            sdl_ptr<SDL_Texture> target_texture = create_matching_sdl_texture(renderer.get(), resolution.x, resolution.y);
 
             printf("p           - pause/unpause\n");
             printf("left arrow  - decrease time by 1 s\n");
@@ -825,11 +936,17 @@ int __cdecl main(int argc, char* argv[])
                     "buffer_c.",
                     "buffer_d."
                 };
-                for (int i = 0; i < size(textures); ++i)
+                for (int pass_index = 0; pass_index < (shadertoy::num_buffers + 1); ++pass_index)
                 {
-                    if (textures[i].path)
+                    int sampler_index = 0;
+                    for (auto& sampler : config.passes[pass_index].samplers)
                     {
-                        printf("%siChannel%d: %s\n", channel_prefix[i / shadertoy::num_samplers], i % shadertoy::num_samplers, textures[i].path);
+                        ++sampler_index;
+
+                        if (sampler.type == sampler_type::none)
+                            continue;
+
+                        printf("%siChannel%d: %s\n", channel_prefix[pass_index], sampler_index, sampler.label.c_str());
                     }
                 }
             }
@@ -871,7 +988,7 @@ int __cdecl main(int argc, char* argv[])
                         int ascii = SDL_Keysym_to_Ascii(event.key.keysym);
                         if (ascii > 0)
                         {
-                            keyboard_surface_data.set(ascii, 0, 0);
+                            keyboard_data.set(ascii, keyboard_row_down, 0);
                         }
                     }
                     break;
@@ -906,9 +1023,9 @@ int __cdecl main(int argc, char* argv[])
                             int ascii = SDL_Keysym_to_Ascii(event.key.keysym);
                             if (ascii > 0)
                             {
-                                keyboard_surface_data.set(ascii, 0, 0xFF);
-                                keyboard_surface_data.set(ascii, 1, 0xFF);
-                                keyboard_surface_data.set(ascii, 2, keyboard_surface_data.get(ascii, 2) ? 0 : 0xFF);
+                                keyboard_data.set(ascii, keyboard_row_down,     0xFF);
+                                keyboard_data.set(ascii, keyboard_row_pressed,  0xFF);
+                                keyboard_data.set(ascii, keyboard_row_toggle,   keyboard_data.get(ascii, 2) ? 0 : 0xFF);
                             }
                         }
 
@@ -948,8 +1065,8 @@ int __cdecl main(int argc, char* argv[])
                         int w, h;
                         SDL_GetWindowSize(window.get(), &w, &h);
 
-                        resize_or_create_surfaces(w, h);
-                        resize_or_create_texture(w, h);
+                        render_targets = shadertoy_render_buffers(w, h);
+                        target_texture = create_matching_sdl_texture(renderer.get(), w, h);
 
                         pending_resize = false;
 
@@ -966,9 +1083,8 @@ int __cdecl main(int argc, char* argv[])
                         rect.y = 0;
                         rect.w = resolution.x;
                         rect.h = resolution.y;
-                        auto& s = target_surface;
                         
-                        SDL_UpdateTexture(target_texture.get(), &rect, s->pixels, s->pitch);
+                        SDL_UpdateTexture(target_texture.get(), &rect, render_targets.target.first_row, render_targets.target.pitch);
                         SDL_RenderClear(renderer.get());
                         SDL_RenderCopy(renderer.get(), target_texture.get(), NULL, NULL);
 
@@ -1013,7 +1129,7 @@ int __cdecl main(int argc, char* argv[])
                 printf(VT100_CLEARLINE "--- Player stats ---\n");
                 printf(VT100_CLEARLINE "time:            %.2f s%s\n", time, time_scale > 0 ? "" : " (paused)");
                 printf(VT100_CLEARLINE "frames:          %d\n", num_frames);
-                printf(VT100_CLEARLINE "resolution:      %dx%d\n", target_surface->w, target_surface->h);
+                printf(VT100_CLEARLINE "resolution:      %dx%d\n", render_targets.width, render_targets.height);
                 printf(VT100_CLEARLINE "fps:             %lg\n", current_fps);
             }
 

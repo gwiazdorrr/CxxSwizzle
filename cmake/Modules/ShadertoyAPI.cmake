@@ -83,6 +83,8 @@ macro(shadertoyDownload api_key shader_id root_dir download_error_is_fatal)
         file(MAKE_DIRECTORY ${SHADER_DIRECTORY})
         _shadertoyCreateFile("${SHADER_DIRECTORY}/README.md" "https://www.shadertoy.com/view/${shader_id}" "" )
 
+        set(SHADER_INFO "")
+
         foreach(r ${SHADER.Shader.renderpass})
             set(RENDERPASS SHADER.Shader.renderpass_${r})
             
@@ -103,47 +105,79 @@ macro(shadertoyDownload api_key shader_id root_dir download_error_is_fatal)
                 set(INPUT_PREFIX "")
             endif()
 
+            set(RENDERPASS_INFO "")
+            set(SPACING "    ")
+
 
             foreach(i ${${RENDERPASS}.inputs})
+                set(ENTRY "")
                 set(INPUT ${RENDERPASS}.inputs_${i})
                 set(INPUT_INDEX ${${INPUT}.channel})
                 if (${INPUT}.ctype STREQUAL "texture")
-                    get_filename_component(INPUT_EXTENSION ${${INPUT}.src} EXT)
-                    _shadertoyDownloadFile("https://www.shadertoy.com${${INPUT}.src}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}${INPUT_EXTENSION}" "")
+                    get_filename_component(INPUT_NAME ${${INPUT}.src} NAME)
+                    _shadertoyDownloadFile("https://www.shadertoy.com${${INPUT}.src}" "${SHADER_DIRECTORY}/${INPUT_NAME}" "")
+                    string(CONCAT ENTRY "${SPACING}  \"type\": \"texture\",\n"
+                                        "${SPACING}  \"src\":  \"${SHADER_DIRECTORY}/${INPUT_NAME}\"")
                 elseif (${INPUT}.ctype STREQUAL "cubemap")
                     get_filename_component(INPUT_EXTENSION ${${INPUT}.src} EXT)
                     get_filename_component(INPUT_NAME      ${${INPUT}.src} NAME_WE)
                     get_filename_component(INPUT_DIR       ${${INPUT}.src} DIRECTORY)
-                    _shadertoyDownloadFile("https://www.shadertoy.com${${INPUT}.src}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}${INPUT_EXTENSION}" "")
-                    _shadertoyDownloadFile("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_1${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_1${INPUT_EXTENSION}" "")
-                    _shadertoyDownloadFile("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_2${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_2${INPUT_EXTENSION}" "")
-                    _shadertoyDownloadFile("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_3${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_3${INPUT_EXTENSION}" "")
-                    _shadertoyDownloadFile("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_4${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_4${INPUT_EXTENSION}" "")
-                    _shadertoyDownloadFile("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_5${INPUT_EXTENSION}" "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}_5${INPUT_EXTENSION}" "")
+
+                    set(FACES "")
+                    foreach (index RANGE 5)
+                        set(TARGET_FILE "${SHADER_DIRECTORY}/${INPUT_NAME}_${index}${INPUT_EXTENSION}")
+                        if (index EQUAL 0)
+                            _shadertoyDownloadFile("https://www.shadertoy.com${${INPUT}.src}"                                       
+                                                   "${TARGET_FILE}" "")
+                        else()
+                            _shadertoyDownloadFile("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_${index}${INPUT_EXTENSION}" 
+                                                   "${TARGET_FILE}" "")
+                        endif()
+                        list(APPEND FACES "${SPACING}    \"${TARGET_FILE}\"")
+                    endforeach(index)
+                    list(JOIN FACES ",\n" FACES)
+                    string(CONCAT ENTRY "${SPACING}  \"type\": \"cubemap\",\n"
+                                        "${SPACING}  \"src\":  [\n${FACES}\n${SPACING}  ]")
                 elseif(${INPUT}.ctype STREQUAL "buffer")
-                    set(TARGET_FILE "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}.txt")
+                    set(BUFFER_NAME "")
                     if(${INPUT}.src STREQUAL "/media/previz/buffer00.png")
-                        _shadertoyCreateFile("${TARGET_FILE}" "buffer_a" "(Redirecting to buffer_a)")
+                        set(BUFFER_NAME "buffer_a")
                     elseif(${INPUT}.src STREQUAL "/media/previz/buffer01.png")
-                        _shadertoyCreateFile("${TARGET_FILE}" "buffer_b" "(Redirecting to buffer_b)")
+                        set(BUFFER_NAME "buffer_b")
                     elseif(${INPUT}.src STREQUAL "/media/previz/buffer02.png")
-                        _shadertoyCreateFile("${TARGET_FILE}" "buffer_c" "(Redirecting to buffer_c)")
+                        set(BUFFER_NAME "buffer_c")
                     elseif(${INPUT}.src STREQUAL "/media/previz/buffer03.png")
-                        _shadertoyCreateFile("${TARGET_FILE}" "buffer_d" "(Redirecting to buffer_d)")
+                        set(BUFFER_NAME "buffer_d")
                     else()
                         message(WARNING "Unable to guess buffer index: ${${INPUT}.src} (channel ${INPUT_INDEX})")
                     endif()
+
+                    string(CONCAT ENTRY "${SPACING}  \"type\": \"buffer\",\n"
+                                        "${SPACING}  \"src\":  \"${BUFFER_NAME}\"")
+
                 elseif(${INPUT}.ctype STREQUAL "keyboard")
-                    set(TARGET_FILE "${SHADER_DIRECTORY}/${INPUT_PREFIX}ichannel_${${INPUT}.channel}.txt")
-                    _shadertoyCreateFile("${TARGET_FILE}" "keyboard" "(Redirecting to keyboard)")
+                    string(CONCAT ENTRY "${SPACING}  \"type\": \"keyboard\"")
+
                 elseif(${INPUT}.ctype)
                     message(WARNING "Channel type ${${INPUT}.ctype} not supported (channel ${INPUT_INDEX})")
                 endif()
 
+                list(APPEND RENDERPASS_INFO "${SPACING}\"iChannel${${INPUT}.channel}\": {\n${ENTRY}\n${SPACING}}")
+
             endforeach()
 
+            list(JOIN RENDERPASS_INFO ",\n" RENDERPASS_INFO)
+            list(APPEND SHADER_INFO "  \"${RENDER_PASS_NAME}\": {\n${RENDERPASS_INFO}\n  }")
+            
+
         endforeach()
+
+        list(JOIN SHADER_INFO ",\n" SHADER_INFO)
+        _shadertoyCreateFile("${SHADER_DIRECTORY}/config.json" "{\n${SHADER_INFO}\n}" "")
+
     endif()
+
+
     sbeClearJson(SHADER)
 endmacro()
 

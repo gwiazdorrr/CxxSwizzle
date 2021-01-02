@@ -18,6 +18,7 @@ endmacro()
 # basic requirements
 find_package(SDL2 CONFIG REQUIRED)
 find_package(SDL2-image CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
 # other compiler required options
 set(TARGET_ADDITIONAL_FILES "")
@@ -87,7 +88,7 @@ foreach(STRUCT ${SAMPLE_CUSTOM_STRUCTS})
 endforeach()
 set(FRAG_CUSTOM_STRUCTS_SUPPORT     "${FRAG_CUSTOM_STRUCTS_SUPPORT}        };\n")
 foreach(STRUCT ${SAMPLE_CUSTOM_STRUCTS})
-    set(FRAG_CUSTOM_STRUCTS_SUPPORT "${FRAG_CUSTOM_STRUCTS_SUPPORT}        #define ${STRUCT}(...) ${STRUCT}\\{ __VA_ARGS__ \\}\n")
+    set(FRAG_CUSTOM_STRUCTS_SUPPORT "${FRAG_CUSTOM_STRUCTS_SUPPORT}        #define ${STRUCT}(...) ${STRUCT} { __VA_ARGS__ } \n")
 endforeach()
 
 
@@ -98,9 +99,6 @@ foreach(SAMPLE_DIR ${SAMPLES_DIRS})
     message(STATUS "Sample ${SAMPLE_DIR}")
 
     file(GLOB SHADERS  RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${SAMPLE_SHADERTOYS_ROOT}/${SAMPLE_DIR}/*.frag")
-    file(GLOB TEXTURES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${SAMPLE_SHADERTOYS_ROOT}/${SAMPLE_DIR}/*.png" "${SAMPLE_SHADERTOYS_ROOT}/${SAMPLE_DIR}/*.jpg")
-    file(GLOB BUFFERS  RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${SAMPLE_SHADERTOYS_ROOT}/${SAMPLE_DIR}/*.txt")
-
     get_filename_component(SAMPLE_NAME ${SAMPLE_DIR} NAME_WE)
 
     set(GEN_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/${SAMPLE_NAME}_gen")
@@ -149,39 +147,28 @@ foreach(SAMPLE_DIR ${SAMPLES_DIRS})
         endif()
     endforeach()
 
-    foreach (TEXTURE ${TEXTURES})
-        get_filename_component(CHANNEL_NAME ${TEXTURE} NAME_WE)
-        message(STATUS "* found texture: ${TEXTURE}") 
-        string(TOUPPER ${CHANNEL_NAME} CHANNEL_NAME)
-        set(SAMPLE_${CHANNEL_NAME}_PATH "${SAMPLE_SHADERTOYS_ROOT}/${TEXTURE}")
-    endforeach()
-
-    foreach (BUFFER ${BUFFERS})
-        file(READ "${SAMPLE_SHADERTOYS_ROOT}/${BUFFER}" BUFFER_ID)
-        message(STATUS "* found special texture: ${BUFFER} (points to ${BUFFER_ID})") 
-        get_filename_component(CHANNEL_NAME ${BUFFER} NAME_WE)
-        string(TOUPPER ${CHANNEL_NAME} CHANNEL_NAME)
-        set(SAMPLE_${CHANNEL_NAME}_PATH "${BUFFER_ID}")
-    endforeach()
-
+    set(SAMPLE_CONFIG_PATH "${SAMPLE_SHADERTOYS_ROOT}/${SAMPLE_DIR}/config.json")
     configure_file("config.hpp.in" "${GEN_CONFIG_PATH}")
 
     set(CODEGEN_TEMPLATE_FILES "shadertoy_sandbox.cpp.in" "config.hpp.in")
     set(README_PATH "${SAMPLE_SHADERTOYS_ROOT}/${SAMPLE_DIR}/README.md")
 
     set(TARGET_FILES main.cpp ${GEN_SHADERS} shadertoy_sandbox.hpp ${SHADERS} ${GEN_CONFIG_PATH} ${TARGET_ADDITIONAL_FILES} ${CODEGEN_TEMPLATE_FILES})
-    if (EXISTS "${SAMPLE_SHADERTOYS_ROOT}/${README_PATH}")
+    if (EXISTS ${README_PATH})
         list(APPEND TARGET_FILES ${README_PATH})
     endif()
+    if (EXISTS ${SAMPLE_CONFIG_PATH})
+        list(APPEND TARGET_FILES ${SAMPLE_CONFIG_PATH})
+    endif()
 
-    source_group("" FILES ${SHADERS} ${README_PATH})
+    source_group("" FILES ${SHADERS} ${README_PATH} ${SAMPLE_CONFIG_PATH})
     source_group("codegen" FILES ${GEN_SHADERS} ${GEN_CONFIG_PATH} )
     source_group("shared" FILES CMakeList.txt main.cpp shadertoy_sandbox.hpp ${TARGET_ADDITIONAL_FILES} ${CODEGEN_TEMPLATE_FILES})
 
     set(TARGET_NAME "shadertoy_${SAMPLE_NAME}")
     add_executable(${TARGET_NAME} ${TARGET_FILES})
     target_include_directories(${TARGET_NAME} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include ${GEN_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(${TARGET_NAME} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image ${TARGET_ADDITIONAL_LIBS})
+    target_link_libraries(${TARGET_NAME} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image nlohmann_json::nlohmann_json ${TARGET_ADDITIONAL_LIBS})
     set_target_properties(${TARGET_NAME} PROPERTIES CXX_STANDARD 17)
     set_target_properties(${TARGET_NAME} PROPERTIES CXX_STANDARD_REQUIRED ON)
     target_compile_options(${TARGET_NAME} PRIVATE ${TARGET_ADDITIONAL_FLAGS})

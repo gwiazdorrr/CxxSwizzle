@@ -8,6 +8,7 @@
             "name": "sdl2-image",
             "features": [ "libjpeg-turbo" ]
         },
-        "vc"
+        "vc",
+        "nlohmann-json"
     ]
 }
