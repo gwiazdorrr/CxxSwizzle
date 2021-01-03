@@ -10,375 +10,375 @@ namespace swizzle
 {
     namespace detail
     {
-        template <typename DataType, typename ScalarType, size_t Size, size_t... Indices>
+        template <typename TData, typename TScalar, size_t TSize, size_t... TIndices>
         struct indexed_proxy_storage;
 
 
-        template< typename DataType, typename ScalarType>
-        struct indexed_proxy_storage<DataType, ScalarType, 1, 0>
+        template< typename TData, typename TScalar>
+        struct indexed_proxy_storage<TData, TScalar, 1, 0>
         {
             union
             {
-                DataType data;
-                ScalarType x;
+                TData data;
+                TScalar x;
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I0>
-        struct indexed_proxy_storage<DataType, ScalarType, 1, I0>
+        template< typename TData, typename TScalar, size_t TI0>
+        struct indexed_proxy_storage<TData, TScalar, 1, TI0>
         {
             union
             {
-                DataType data;
-                struct { ScalarType _padding_x[I0]; ScalarType x; };
+                TData data;
+                struct { TScalar _padding_x[TI0]; TScalar x; };
             };
         };
 
-        template< typename DataType, typename ScalarType>
-        struct indexed_proxy_storage<DataType, ScalarType, 2, 0, 0>
+        template< typename TData, typename TScalar>
+        struct indexed_proxy_storage<TData, TScalar, 2, 0, 0>
         {
             union
             {
-                DataType data;
-                ScalarType x;
-                ScalarType y;
+                TData data;
+                TScalar x;
+                TScalar y;
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I1>
-        struct indexed_proxy_storage<DataType, ScalarType, 2, 0, I1>
+        template< typename TData, typename TScalar, size_t TI1>
+        struct indexed_proxy_storage<TData, TScalar, 2, 0, TI1>
         {
             union
             {
-                DataType data;
-                ScalarType x;
-                struct { ScalarType _padding_y[I1]; ScalarType y; };
+                TData data;
+                TScalar x;
+                struct { TScalar _padding_y[TI1]; TScalar y; };
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I0>
-        struct indexed_proxy_storage<DataType, ScalarType, 2, I0, 0>
+        template< typename TData, typename TScalar, size_t TI0>
+        struct indexed_proxy_storage<TData, TScalar, 2, TI0, 0>
         {
             union
             {
-                DataType data;
-                struct { ScalarType _padding_x[I0]; ScalarType x; };
-                ScalarType y;
+                TData data;
+                struct { TScalar _padding_x[TI0]; TScalar x; };
+                TScalar y;
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I0, size_t I1>
-        struct indexed_proxy_storage<DataType, ScalarType, 2, I0, I1>
+        template< typename TData, typename TScalar, size_t TI0, size_t TI1>
+        struct indexed_proxy_storage<TData, TScalar, 2, TI0, TI1>
         {
             union
             {
-                DataType data;
-                struct { ScalarType _padding_x[I0]; ScalarType x; };
-                struct { ScalarType _padding_y[I1]; ScalarType y; };
+                TData data;
+                struct { TScalar _padding_x[TI0]; TScalar x; };
+                struct { TScalar _padding_y[TI1]; TScalar y; };
             };
         };
 
-        template< typename DataType, typename ScalarType>
-        struct indexed_proxy_storage<DataType, ScalarType, 3, 0, 0, 0>
+        template< typename TData, typename TScalar>
+        struct indexed_proxy_storage<TData, TScalar, 3, 0, 0, 0>
         {
             union
             {
-                DataType data;
-                ScalarType x;
-                ScalarType y;
-                ScalarType z;
+                TData data;
+                TScalar x;
+                TScalar y;
+                TScalar z;
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I2>
-        struct indexed_proxy_storage<DataType, ScalarType, 3, 0, 0, I2>
+        template< typename TData, typename TScalar, size_t TI2>
+        struct indexed_proxy_storage<TData, TScalar, 3, 0, 0, TI2>
         {
             union
             {
-                DataType data;
-                ScalarType x;
-                ScalarType y;
-                struct { ScalarType _padding_z[I2]; ScalarType z; };
+                TData data;
+                TScalar x;
+                TScalar y;
+                struct { TScalar _padding_z[TI2]; TScalar z; };
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I1>
-        struct indexed_proxy_storage<DataType, ScalarType, 3, 0, I1, 0>
+        template< typename TData, typename TScalar, size_t TI1>
+        struct indexed_proxy_storage<TData, TScalar, 3, 0, TI1, 0>
         {
             union
             {
-                DataType data;
-                ScalarType x;
-                struct { ScalarType _padding_y[I1]; ScalarType y; };
-                ScalarType z;
+                TData data;
+                TScalar x;
+                struct { TScalar _padding_y[TI1]; TScalar y; };
+                TScalar z;
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I1, size_t I2>
-        struct indexed_proxy_storage<DataType, ScalarType, 3, 0, I1, I2>
+        template< typename TData, typename TScalar, size_t TI1, size_t TI2>
+        struct indexed_proxy_storage<TData, TScalar, 3, 0, TI1, TI2>
         {
             union
             {
-                DataType data;
-                ScalarType x;
-                struct { ScalarType _padding_y[I1]; ScalarType y; };
-                struct { ScalarType _padding_z[I2]; ScalarType z; };
+                TData data;
+                TScalar x;
+                struct { TScalar _padding_y[TI1]; TScalar y; };
+                struct { TScalar _padding_z[TI2]; TScalar z; };
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I0>
-        struct indexed_proxy_storage<DataType, ScalarType, 3, I0, 0, 0>
+        template< typename TData, typename TScalar, size_t TI0>
+        struct indexed_proxy_storage<TData, TScalar, 3, TI0, 0, 0>
         {
             union
             {
-                DataType data;
-                struct { ScalarType _padding_x[I0]; ScalarType x; };
-                ScalarType y;
-                ScalarType z;
+                TData data;
+                struct { TScalar _padding_x[TI0]; TScalar x; };
+                TScalar y;
+                TScalar z;
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I0, size_t I2>
-        struct indexed_proxy_storage<DataType, ScalarType, 3, I0, 0, I2>
+        template< typename TData, typename TScalar, size_t TI0, size_t TI2>
+        struct indexed_proxy_storage<TData, TScalar, 3, TI0, 0, TI2>
         {
             union
             {
-                DataType data;
-                struct { ScalarType _padding_x[I0]; ScalarType x; };
-                ScalarType y;
-                struct { ScalarType _padding_z[I2]; ScalarType z; };
+                TData data;
+                struct { TScalar _padding_x[TI0]; TScalar x; };
+                TScalar y;
+                struct { TScalar _padding_z[TI2]; TScalar z; };
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I0, size_t I1>
-        struct indexed_proxy_storage<DataType, ScalarType, 3, I0, I1, 0>
+        template< typename TData, typename TScalar, size_t TI0, size_t TI1>
+        struct indexed_proxy_storage<TData, TScalar, 3, TI0, TI1, 0>
         {
             union
             {
-                DataType data;
-                struct { ScalarType _padding_x[I0]; ScalarType x; };
-                struct { ScalarType _padding_y[I1]; ScalarType y; };
-                ScalarType z;
+                TData data;
+                struct { TScalar _padding_x[TI0]; TScalar x; };
+                struct { TScalar _padding_y[TI1]; TScalar y; };
+                TScalar z;
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I0, size_t I1, size_t I2>
-        struct indexed_proxy_storage<DataType, ScalarType, 3, I0, I1, I2>
+        template< typename TData, typename TScalar, size_t TI0, size_t TI1, size_t TI2>
+        struct indexed_proxy_storage<TData, TScalar, 3, TI0, TI1, TI2>
         {
             union
             {
-                DataType data;
-                struct { ScalarType _padding_x[I0]; ScalarType x; };
-                struct { ScalarType _padding_y[I1]; ScalarType y; };
-                struct { ScalarType _padding_z[I2]; ScalarType z; };
+                TData data;
+                struct { TScalar _padding_x[TI0]; TScalar x; };
+                struct { TScalar _padding_y[TI1]; TScalar y; };
+                struct { TScalar _padding_z[TI2]; TScalar z; };
             };
         };
 
-        template< typename DataType, typename ScalarType>
-        struct indexed_proxy_storage<DataType, ScalarType, 4, 0, 0, 0, 0>
+        template< typename TData, typename TScalar>
+        struct indexed_proxy_storage<TData, TScalar, 4, 0, 0, 0, 0>
         {
             union
             {
-                DataType data;
-                ScalarType x;
-                ScalarType y;
-                ScalarType z;
-                ScalarType w;
+                TData data;
+                TScalar x;
+                TScalar y;
+                TScalar z;
+                TScalar w;
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I3>
-        struct indexed_proxy_storage<DataType, ScalarType, 4, 0, 0, 0, I3>
+        template< typename TData, typename TScalar, size_t TI3>
+        struct indexed_proxy_storage<TData, TScalar, 4, 0, 0, 0, TI3>
         {
             union
             {
-                DataType data;
-                ScalarType x;
-                ScalarType y;
-                ScalarType z;
-                struct { ScalarType _padding_w[I3]; ScalarType w; };
+                TData data;
+                TScalar x;
+                TScalar y;
+                TScalar z;
+                struct { TScalar _padding_w[TI3]; TScalar w; };
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I2>
-        struct indexed_proxy_storage<DataType, ScalarType, 4, 0, 0, I2, 0>
+        template< typename TData, typename TScalar, size_t TI2>
+        struct indexed_proxy_storage<TData, TScalar, 4, 0, 0, TI2, 0>
         {
             union
             {
-                DataType data;
-                ScalarType x;
-                ScalarType y;
-                struct { ScalarType _padding_z[I2]; ScalarType z; };
-                ScalarType w;
+                TData data;
+                TScalar x;
+                TScalar y;
+                struct { TScalar _padding_z[TI2]; TScalar z; };
+                TScalar w;
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I2, size_t I3>
-        struct indexed_proxy_storage<DataType, ScalarType, 4, 0, 0, I2, I3>
+        template< typename TData, typename TScalar, size_t TI2, size_t TI3>
+        struct indexed_proxy_storage<TData, TScalar, 4, 0, 0, TI2, TI3>
         {
             union
             {
-                DataType data;
-                ScalarType x;
-                ScalarType y;
-                struct { ScalarType _padding_z[I2]; ScalarType z; };
-                struct { ScalarType _padding_w[I3]; ScalarType w; };
+                TData data;
+                TScalar x;
+                TScalar y;
+                struct { TScalar _padding_z[TI2]; TScalar z; };
+                struct { TScalar _padding_w[TI3]; TScalar w; };
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I1>
-        struct indexed_proxy_storage<DataType, ScalarType, 4, 0, I1, 0, 0>
+        template< typename TData, typename TScalar, size_t TI1>
+        struct indexed_proxy_storage<TData, TScalar, 4, 0, TI1, 0, 0>
         {
             union
             {
-                DataType data;
-                ScalarType x;
-                struct { ScalarType _padding_y[I1]; ScalarType y; };
-                ScalarType z;
-                ScalarType w;
+                TData data;
+                TScalar x;
+                struct { TScalar _padding_y[TI1]; TScalar y; };
+                TScalar z;
+                TScalar w;
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I1, size_t I3>
-        struct indexed_proxy_storage<DataType, ScalarType, 4, 0, I1, 0, I3>
+        template< typename TData, typename TScalar, size_t TI1, size_t TI3>
+        struct indexed_proxy_storage<TData, TScalar, 4, 0, TI1, 0, TI3>
         {
             union
             {
-                DataType data;
-                ScalarType x;
-                struct { ScalarType _padding_y[I1]; ScalarType y; };
-                ScalarType z;
-                struct { ScalarType _padding_w[I3]; ScalarType w; };
+                TData data;
+                TScalar x;
+                struct { TScalar _padding_y[TI1]; TScalar y; };
+                TScalar z;
+                struct { TScalar _padding_w[TI3]; TScalar w; };
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I1, size_t I2>
-        struct indexed_proxy_storage<DataType, ScalarType, 4, 0, I1, I2, 0>
+        template< typename TData, typename TScalar, size_t TI1, size_t TI2>
+        struct indexed_proxy_storage<TData, TScalar, 4, 0, TI1, TI2, 0>
         {
             union
             {
-                DataType data;
-                ScalarType x;
-                struct { ScalarType _padding_y[I1]; ScalarType y; };
-                struct { ScalarType _padding_z[I2]; ScalarType z; };
-                ScalarType w;
+                TData data;
+                TScalar x;
+                struct { TScalar _padding_y[TI1]; TScalar y; };
+                struct { TScalar _padding_z[TI2]; TScalar z; };
+                TScalar w;
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I1, size_t I2, size_t I3>
-        struct indexed_proxy_storage<DataType, ScalarType, 4, 0, I1, I2, I3>
+        template< typename TData, typename TScalar, size_t TI1, size_t TI2, size_t TI3>
+        struct indexed_proxy_storage<TData, TScalar, 4, 0, TI1, TI2, TI3>
         {
             union
             {
-                DataType data;
-                ScalarType x;
-                struct { ScalarType _padding_y[I1]; ScalarType y; };
-                struct { ScalarType _padding_z[I2]; ScalarType z; };
-                struct { ScalarType _padding_w[I3]; ScalarType w; };
+                TData data;
+                TScalar x;
+                struct { TScalar _padding_y[TI1]; TScalar y; };
+                struct { TScalar _padding_z[TI2]; TScalar z; };
+                struct { TScalar _padding_w[TI3]; TScalar w; };
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I0>
-        struct indexed_proxy_storage<DataType, ScalarType, 4, I0, 0, 0, 0>
+        template< typename TData, typename TScalar, size_t TI0>
+        struct indexed_proxy_storage<TData, TScalar, 4, TI0, 0, 0, 0>
         {
             union
             {
-                DataType data;
-                struct { ScalarType _padding_x[I0]; ScalarType x; };
-                ScalarType y;
-                ScalarType z;
-                ScalarType w;
+                TData data;
+                struct { TScalar _padding_x[TI0]; TScalar x; };
+                TScalar y;
+                TScalar z;
+                TScalar w;
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I0, size_t I3>
-        struct indexed_proxy_storage<DataType, ScalarType, 4, I0, 0, 0, I3>
+        template< typename TData, typename TScalar, size_t TI0, size_t TI3>
+        struct indexed_proxy_storage<TData, TScalar, 4, TI0, 0, 0, TI3>
         {
             union
             {
-                DataType data;
-                struct { ScalarType _padding_x[I0]; ScalarType x; };
-                ScalarType y;
-                ScalarType z;
-                struct { ScalarType _padding_w[I3]; ScalarType w; };
+                TData data;
+                struct { TScalar _padding_x[TI0]; TScalar x; };
+                TScalar y;
+                TScalar z;
+                struct { TScalar _padding_w[TI3]; TScalar w; };
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I0, size_t I2>
-        struct indexed_proxy_storage<DataType, ScalarType, 4, I0, 0, I2, 0>
+        template< typename TData, typename TScalar, size_t TI0, size_t TI2>
+        struct indexed_proxy_storage<TData, TScalar, 4, TI0, 0, TI2, 0>
         {
             union
             {
-                DataType data;
-                struct { ScalarType _padding_x[I0]; ScalarType x; };
-                ScalarType y;
-                struct { ScalarType _padding_z[I2]; ScalarType z; };
-                ScalarType w;
+                TData data;
+                struct { TScalar _padding_x[TI0]; TScalar x; };
+                TScalar y;
+                struct { TScalar _padding_z[TI2]; TScalar z; };
+                TScalar w;
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I0, size_t I2, size_t I3>
-        struct indexed_proxy_storage<DataType, ScalarType, 4, I0, 0, I2, I3>
+        template< typename TData, typename TScalar, size_t TI0, size_t TI2, size_t TI3>
+        struct indexed_proxy_storage<TData, TScalar, 4, TI0, 0, TI2, TI3>
         {
             union
             {
-                DataType data;
-                struct { ScalarType _padding_x[I0]; ScalarType x; };
-                ScalarType y;
-                struct { ScalarType _padding_z[I2]; ScalarType z; };
-                struct { ScalarType _padding_w[I3]; ScalarType w; };
+                TData data;
+                struct { TScalar _padding_x[TI0]; TScalar x; };
+                TScalar y;
+                struct { TScalar _padding_z[TI2]; TScalar z; };
+                struct { TScalar _padding_w[TI3]; TScalar w; };
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I0, size_t I1>
-        struct indexed_proxy_storage<DataType, ScalarType, 4, I0, I1, 0, 0>
+        template< typename TData, typename TScalar, size_t TI0, size_t TI1>
+        struct indexed_proxy_storage<TData, TScalar, 4, TI0, TI1, 0, 0>
         {
             union
             {
-                DataType data;
-                struct { ScalarType _padding_x[I0]; ScalarType x; };
-                struct { ScalarType _padding_y[I1]; ScalarType y; };
-                ScalarType z;
-                ScalarType w;
+                TData data;
+                struct { TScalar _padding_x[TI0]; TScalar x; };
+                struct { TScalar _padding_y[TI1]; TScalar y; };
+                TScalar z;
+                TScalar w;
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I0, size_t I1, size_t I3>
-        struct indexed_proxy_storage<DataType, ScalarType, 4, I0, I1, 0, I3>
+        template< typename TData, typename TScalar, size_t TI0, size_t TI1, size_t TI3>
+        struct indexed_proxy_storage<TData, TScalar, 4, TI0, TI1, 0, TI3>
         {
             union
             {
-                DataType data;
-                struct { ScalarType _padding_x[I0]; ScalarType x; };
-                struct { ScalarType _padding_y[I1]; ScalarType y; };
-                ScalarType z;
-                struct { ScalarType _padding_w[I3]; ScalarType w; };
+                TData data;
+                struct { TScalar _padding_x[TI0]; TScalar x; };
+                struct { TScalar _padding_y[TI1]; TScalar y; };
+                TScalar z;
+                struct { TScalar _padding_w[TI3]; TScalar w; };
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I0, size_t I1, size_t I2>
-        struct indexed_proxy_storage<DataType, ScalarType, 4, I0, I1, I2, 0>
+        template< typename TData, typename TScalar, size_t TI0, size_t TI1, size_t TI2>
+        struct indexed_proxy_storage<TData, TScalar, 4, TI0, TI1, TI2, 0>
         {
             union
             {
-                DataType data;
-                struct { ScalarType _padding_x[I0]; ScalarType x; };
-                struct { ScalarType _padding_y[I1]; ScalarType y; };
-                struct { ScalarType _padding_z[I2]; ScalarType z; };
-                ScalarType w;
+                TData data;
+                struct { TScalar _padding_x[TI0]; TScalar x; };
+                struct { TScalar _padding_y[TI1]; TScalar y; };
+                struct { TScalar _padding_z[TI2]; TScalar z; };
+                TScalar w;
             };
         };
 
-        template< typename DataType, typename ScalarType, size_t I0, size_t I1, size_t I2, size_t I3>
-        struct indexed_proxy_storage<DataType, ScalarType, 4, I0, I1, I2, I3>
+        template< typename TData, typename TScalar, size_t TI0, size_t TI1, size_t TI2, size_t TI3>
+        struct indexed_proxy_storage<TData, TScalar, 4, TI0, TI1, TI2, TI3>
         {
             union
             {
-                DataType data;
-                struct { ScalarType _padding_x[I0]; ScalarType x; };
-                struct { ScalarType _padding_y[I1]; ScalarType y; };
-                struct { ScalarType _padding_z[I2]; ScalarType z; };
-                struct { ScalarType _padding_w[I3]; ScalarType w; };
+                TData data;
+                struct { TScalar _padding_x[TI0]; TScalar x; };
+                struct { TScalar _padding_y[TI1]; TScalar y; };
+                struct { TScalar _padding_z[TI2]; TScalar z; };
+                struct { TScalar _padding_w[TI3]; TScalar w; };
             };
         };
     }

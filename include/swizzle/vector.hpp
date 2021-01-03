@@ -15,22 +15,22 @@
 
 namespace swizzle
 {
-    template <typename TScalarType, size_t... TIndices>
-    struct vector_  : detail::vector_base_type<TScalarType, sizeof...(TIndices)>
+    template <typename TScalar, size_t... TIndices>
+    struct vector_  : detail::vector_base_type<TScalar, sizeof...(TIndices)>
     {
     public:
-        using base_type = detail::vector_base_type<TScalarType, sizeof...(TIndices)>;
+        using base_type = detail::vector_base_type<TScalar, sizeof...(TIndices)>;
         using base_type::data;
 
         using this_type = vector_;
         using this_type_arg = const this_type&;
 
-        using scalar_type = TScalarType;
+        using scalar_type = TScalar;
         using scalar_arg = const scalar_type&;
 
-        static const bool scalar_is_bool = detail::batch_traits<TScalarType>::is_bool;
-        static const bool scalar_is_integral = detail::batch_traits<TScalarType>::is_integral;
-        static const bool scalar_is_floating_point = detail::batch_traits<TScalarType>::is_floating_point;
+        static const bool scalar_is_bool = detail::batch_traits<TScalar>::is_bool;
+        static const bool scalar_is_integral = detail::batch_traits<TScalar>::is_integral;
+        static const bool scalar_is_floating_point = detail::batch_traits<TScalar>::is_floating_point;
         static const bool scalar_is_number = scalar_is_integral || scalar_is_floating_point;
 
         using number_scalar_arg = detail::only_if< scalar_is_number, scalar_arg >;
@@ -43,7 +43,7 @@ namespace swizzle
         using integral_scalar_arg = detail::only_if< scalar_is_integral, scalar_arg >;
         using integral_vector_arg = detail::only_if< scalar_is_integral, this_type_arg >;
 
-        using bool_type = typename detail::batch_traits<TScalarType>::bool_type;
+        using bool_type = typename detail::batch_traits<TScalar>::bool_type;
         using bool_vector_type = vector_<bool_type, TIndices...>;
         using bool_scalar_arg = detail::only_if< scalar_is_bool, this_type_arg >;
         using bool_vector_arg = detail::only_if< scalar_is_bool, this_type_arg >;
@@ -803,10 +803,10 @@ namespace swizzle
 
     namespace detail
     {
-        template <typename TScalarType, size_t... TIndices>
-        struct get_vector_type_impl< ::swizzle::vector_<TScalarType, TIndices...> >
+        template <typename TScalar, size_t... TIndices>
+        struct get_vector_type_impl< ::swizzle::vector_<TScalar, TIndices...> >
         {
-            typedef ::swizzle::vector_<TScalarType, TIndices...> type;
+            typedef ::swizzle::vector_<TScalar, TIndices...> type;
         };
     }
 }

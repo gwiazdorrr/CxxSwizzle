@@ -12,24 +12,24 @@ namespace swizzle
     namespace detail
     {
         // TODO: this comment's rubbish
-        //! A VectorType's proxy, using subscript operators to access components of both the vector and the
-        //! DataType. x, y, z & w template args define which components of the vector this proxy uses in place
+        //! A TVector's proxy, using subscript operators to access components of both the vector and the
+        //! TData. x, y, z & w template args define which components of the vector this proxy uses in place
         //! of its, with -1 meaning "don't use".
         //! The type is convertible to the vector. It also forwards all unary arithmetic operators. Binary
         //! operations hopefully fallback to the vector ones.
-        template <class VectorType, class DataType, class ScalarType, size_t... Indices>
-        struct indexed_proxy : indexed_proxy_storage<DataType, ScalarType, sizeof...(Indices), Indices...>
+        template <typename TVector, typename TData, typename TScalar, size_t... TIndices>
+        struct indexed_proxy : indexed_proxy_storage<TData, TScalar, sizeof...(TIndices), TIndices...>
         {
             // Can easily count now since -1 must be continuous
-            static const size_t num_of_components = sizeof...(Indices);
+            static const size_t num_of_components = sizeof...(TIndices);
             static_assert(num_of_components >= 2, "Must be at least 2 components");
 
-            // Is this proxy writable? All indices must be different, except for -1s
-            static const bool is_writable = are_unique<Indices...>::value;
+            // Is this proxy writable? All TIndices must be different, except for -1s
+            static const bool is_writable = are_unique<TIndices...>::value;
 
             // Use the traits to define vector and scalar
-            typedef VectorType vector_type;
-            typedef VectorType decay_type;
+            typedef TVector vector_type;
+            typedef TVector decay_type;
 
             //! Convert proxy into a vector.
             vector_type decay() const
@@ -53,9 +53,9 @@ namespace swizzle
 
             indexed_proxy() = default;
 
-            template <size_t... OtherIndices>
-            indexed_proxy(const indexed_proxy_storage<DataType, ScalarType, sizeof...(Indices), OtherIndices...>& other) {
-                assign_impl(other.data, std::index_sequence<OtherIndices...>{});
+            template <size_t... OtherTIndices>
+            indexed_proxy(const indexed_proxy_storage<TData, TScalar, sizeof...(TIndices), OtherTIndices...>& other) {
+                assign_impl(other.data, std::index_sequence<OtherTIndices...>{});
             }
 
             //! Assignment only enabled if proxy is writable -> has unique indexes
@@ -65,34 +65,34 @@ namespace swizzle
             }
 
             //! Assignment only enabled if proxy is writable -> has unique indexes
-            template <size_t... OtherIndices>
-            indexed_proxy& operator=(const indexed_proxy_storage<DataType, ScalarType, sizeof...(Indices), OtherIndices...>& other) {
-                return assign_impl(other.data, std::index_sequence<OtherIndices...>{});
+            template <size_t... OtherTIndices>
+            indexed_proxy& operator=(const indexed_proxy_storage<TData, TScalar, sizeof...(TIndices), OtherTIndices...>& other) {
+                return assign_impl(other.data, std::index_sequence<OtherTIndices...>{});
             }
 
             //! Forwarding operator. Global non-assignment operators depend on it.
-            template <class T>
+            template <typename T>
             indexed_proxy& operator+=(T && o)
             {
                 return operator=(decay() + std::forward<T>(o));
             }
 
             //! Forwarding operator. Global non-assignment operators depend on it.
-            template <class T>
+            template <typename T>
             indexed_proxy& operator-=(T && o)
             {
                 return operator=(decay() - std::forward<T>(o));
             }
 
             //! Forwarding operator. Global non-assignment operators depend on it.
-            template <class T>
+            template <typename T>
             indexed_proxy& operator*=(T && o)
             {
                 return operator=(decay() * std::forward<T>(o));
             }
 
             //! Forwarding operator. Global non-assignment operators depend on it.
-            template <class T>
+            template <typename T>
             indexed_proxy& operator/=(T && o)
             {
                 return operator=(decay() / std::forward<T>(o));
@@ -104,30 +104,30 @@ namespace swizzle
             }
 
         private:
-            template <size_t... VectorIndices>
-            indexed_proxy& assign_impl(const vector_type& vec, std::index_sequence<VectorIndices...>)
+            template <size_t... VectorTIndices>
+            indexed_proxy& assign_impl(const vector_type& vec, std::index_sequence<VectorTIndices...>)
             {
-                return ((this->data[Indices] = vec.data[VectorIndices]), ..., *this);
+                return ((this->data[TIndices] = vec.data[VectorTIndices]), ..., *this);
             }
 
-            template <size_t... VectorIndices>
-            indexed_proxy& assign_impl(const DataType& vec_data, std::index_sequence<VectorIndices...>)
+            template <size_t... VectorTIndices>
+            indexed_proxy& assign_impl(const TData& vec_data, std::index_sequence<VectorTIndices...>)
             {
-                return ((this->data[Indices] = vec_data[VectorIndices]), ..., *this);
+                return ((this->data[TIndices] = vec_data[VectorTIndices]), ..., *this);
             }
 
-            template <size_t... VectorIndices>
-            vector_type& decay_impl(vector_type& vec, std::index_sequence<VectorIndices...>) const
+            template <size_t... VectorTIndices>
+            vector_type& decay_impl(vector_type& vec, std::index_sequence<VectorTIndices...>) const
             {
-                return ((vec.data[VectorIndices] = this->data[Indices]), ..., vec);
+                return ((vec.data[VectorTIndices] = this->data[TIndices]), ..., vec);
             }
         };
 
 
         // TODO: incosnistent
         //! A specialisation for the indexed_proxy, defines TVector as vector type.
-        template <class TVector, class TData, class ScalarType, size_t... Indices>
-        struct get_vector_type_impl< indexed_proxy<TVector, TData, ScalarType, Indices...> >
+        template <class TVector, class TData, class TScalar, size_t... TIndices>
+        struct get_vector_type_impl< indexed_proxy<TVector, TData, TScalar, TIndices...> >
         {
             typedef TVector type;
         };

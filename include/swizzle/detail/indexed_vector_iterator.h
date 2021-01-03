@@ -11,28 +11,28 @@ namespace swizzle
 {
     namespace detail
     {
-        //! A very simple vector iterator. Uses subscript operator to access elements. The VectorType must
+        //! A very simple vector iterator. Uses subscript operator to access elements. The TVector must
         //! also expose num_of_components static fields.
-        template <class VectorType>
+        template <class TVector>
         class indexed_vector_iterator 
         {
         public:
             using iterator_category = std::bidirectional_iterator_tag;
-            using value_type = typename std::remove_reference< decltype(std::declval<VectorType>()[0]) >::type;
+            using value_type = typename std::remove_reference< decltype(std::declval<TVector>()[0]) >::type;
             using difference_type = ptrdiff_t;
             using pointer = value_type*;
             using reference = value_type&;
 
         private:
-            VectorType& m_vector;
+            TVector& m_vector;
             size_t m_index;
 
         public:
-            indexed_vector_iterator(VectorType& vec, size_t i = 0) 
+            indexed_vector_iterator(TVector& vec, size_t i = 0) 
                 : m_vector(vec)
                 , m_index(i)
             {
-                assert(m_index <= VectorType::num_of_components);
+                assert(m_index <= TVector::num_of_components);
             }
 
             bool operator==(const indexed_vector_iterator& rhs) const 
@@ -47,7 +47,7 @@ namespace swizzle
 
             indexed_vector_iterator& operator++() 
             {
-                assert(m_index < VectorType::num_of_components);
+                assert(m_index < TVector::num_of_components);
                 ++m_index;
                 return *this;
             }   
@@ -73,24 +73,24 @@ namespace swizzle
                 return tmp;
             }
 
-            auto operator*() -> decltype( std::declval<VectorType>()[0] )
+            auto operator*() -> decltype( std::declval<TVector>()[0] )
             {
-                assert(m_index < VectorType::num_of_components);
+                assert(m_index < TVector::num_of_components);
                 return m_vector[m_index];
             }
 
-            auto operator->() -> decltype( &std::declval<VectorType>()[0] )
+            auto operator->() -> decltype( &std::declval<TVector>()[0] )
             {
-                assert(m_index < VectorType::num_of_components);
+                assert(m_index < TVector::num_of_components);
                 return &m_vector[m_index];
             }
         };
 
         //! A helper function to create a iterator.
-        template <class VectorType>
-        indexed_vector_iterator<VectorType> make_indexed_vector_iterator(VectorType& vector, size_t i = 0)
+        template <class TVector>
+        indexed_vector_iterator<TVector> make_indexed_vector_iterator(TVector& vector, size_t i = 0)
         {
-            return indexed_vector_iterator<VectorType>(vector, i);
+            return indexed_vector_iterator<TVector>(vector, i);
         }
     }
 }

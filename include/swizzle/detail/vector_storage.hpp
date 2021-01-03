@@ -6,7 +6,7 @@ namespace swizzle
 {
     namespace detail
     {
-        template <size_t Size, template <size_t...> class TProxyGenerator, typename TData>
+        template <size_t TSize, template <size_t...> class TProxyGenerator, typename TData>
         struct vector_storage;
 
         template <template <size_t...> class TProxyGenerator, typename TData>

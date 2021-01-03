@@ -13,27 +13,27 @@ namespace swizzle
 {
     namespace detail
     {
-        template <typename ScalarType, size_t Size>
+        template <typename TScalar, size_t TSize>
         struct vector_base_type_helper
         {
-            using data_type = std::array<typename batch_traits<ScalarType>::storage_type, Size>;
+            using data_type = std::array<typename batch_traits<TScalar>::storage_type, TSize>;
 
-            template <size_t... Index>
+            template <size_t... TIndices>
             struct proxy_generator
             {
-                typedef swizzle::detail::indexed_proxy< vector<ScalarType, sizeof...(Index)>, data_type, ScalarType, Index...> type;
+                typedef swizzle::detail::indexed_proxy< vector<TScalar, sizeof...(TIndices)>, data_type, TScalar, TIndices...> type;
             };
 
-            template <size_t Index>
-            struct proxy_generator<Index>
+            template <size_t TIndex>
+            struct proxy_generator<TIndex>
             {
-                typedef ScalarType type;
+                typedef TScalar type;
             };
 
-            typedef ::swizzle::detail::vector_storage< Size, proxy_generator, data_type > vector_base_type;
+            typedef ::swizzle::detail::vector_storage< TSize, proxy_generator, data_type > vector_base_type;
         };
 
-        template <typename ScalarType, size_t Size>
-        using vector_base_type = typename vector_base_type_helper<ScalarType, Size>::vector_base_type;
+        template <typename TScalar, size_t TSize>
+        using vector_base_type = typename vector_base_type_helper<TScalar, TSize>::vector_base_type;
     }
 }

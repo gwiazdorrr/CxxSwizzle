@@ -22,12 +22,12 @@ namespace swizzle
         }
     };
 
-    template <typename TData, typename PrimitiveType, size_t... TIndices>
+    template <typename TData, typename TPrimitive, size_t... TIndices>
     struct batch_base
     {
         static const size_t size = sizeof...(TIndices);
         using data_type = TData;
-        using primitive_type = PrimitiveType;
+        using primitive_type = TPrimitive;
 
         using storage_type = std::conditional_t< size == 1, data_type, std::array<TData, size> >;
 
@@ -66,12 +66,12 @@ namespace swizzle
             construct<0>(std::forward<TTypes>(values)...);
         }
 
-        friend CXXSWIZZLE_FORCE_INLINE void load_aligned(batch_base& target, const PrimitiveType* ptr)
+        friend CXXSWIZZLE_FORCE_INLINE void load_aligned(batch_base& target, const TPrimitive* ptr)
         {
             target.load_aligned_internal(ptr);
         }
 
-        friend CXXSWIZZLE_FORCE_INLINE void store_aligned(const batch_base& target, PrimitiveType* ptr)
+        friend CXXSWIZZLE_FORCE_INLINE void store_aligned(const batch_base& target, TPrimitive* ptr)
         {
             target.store_aligned_internal(ptr);
         }
@@ -134,12 +134,12 @@ namespace swizzle
         CXXSWIZZLE_FORCE_INLINE void construct()
         {}
 
-        CXXSWIZZLE_FORCE_INLINE void load_aligned_internal(const PrimitiveType* ptr)
+        CXXSWIZZLE_FORCE_INLINE void load_aligned_internal(const TPrimitive* ptr)
         {
             (batch_load_aligned(at<TIndices>(), ptr + TIndices * sizeof(data_type) / sizeof(primitive_type)), ...);
         }
 
-        CXXSWIZZLE_FORCE_INLINE void store_aligned_internal(PrimitiveType* ptr) const
+        CXXSWIZZLE_FORCE_INLINE void store_aligned_internal(TPrimitive* ptr) const
         {
             (batch_store_aligned(at<TIndices>(), ptr + TIndices * sizeof(data_type) / sizeof(primitive_type)), ...);
         }
@@ -229,8 +229,8 @@ namespace swizzle
         CXXSWIZZLE_FORCE_INLINE friend this_type max(this_arg x, this_arg y) { return this_type(construct_tag{}, max(x.at<TIndices>(), y.at<TIndices>())...); }
 
 
-        template <typename TOtherBatch, typename TOtherPrimitive, typename... OtherTypes>
-        CXXSWIZZLE_FORCE_INLINE friend void masked_read(const this_type& mask, ::swizzle::batch_base<TOtherBatch, TOtherPrimitive, TIndices...>& result, OtherTypes&&... others)
+        template <typename TOtherBatch, typename TOtherPrimitive, typename... TOtherTypes>
+        CXXSWIZZLE_FORCE_INLINE friend void masked_read(const this_type& mask, ::swizzle::batch_base<TOtherBatch, TOtherPrimitive, TIndices...>& result, TOtherTypes&&... others)
         {
             batch_masked_read(mask.storage, result.storage, others.storage...);
         }
@@ -268,8 +268,8 @@ namespace swizzle
         CXXSWIZZLE_FORCE_INLINE friend this_type min(this_arg x, this_arg y) { return this_type(construct_tag{}, min(x.at<TIndices>(), y.at<TIndices>())...); }
         CXXSWIZZLE_FORCE_INLINE friend this_type max(this_arg x, this_arg y) { return this_type(construct_tag{}, max(x.at<TIndices>(), y.at<TIndices>())...); }
 
-        template <typename TOtherBatch, typename TOtherPrimitive, typename... OtherTypes>
-        CXXSWIZZLE_FORCE_INLINE friend void masked_read(const this_type& mask, ::swizzle::batch_base<TOtherBatch, TOtherPrimitive, TIndices...>& result, OtherTypes&&... others)
+        template <typename TOtherBatch, typename TOtherPrimitive, typename... TOtherTypes>
+        CXXSWIZZLE_FORCE_INLINE friend void masked_read(const this_type& mask, ::swizzle::batch_base<TOtherBatch, TOtherPrimitive, TIndices...>& result, TOtherTypes&&... others)
         {
             batch_masked_read(mask.storage, result.storage, others.storage...);
         }

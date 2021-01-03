@@ -164,13 +164,13 @@ namespace swizzle
 
         //! A handly little type to make sure a func invoked before other destructors; just
         //! make sure it is the first one to be inherited.
-        template <typename TypeToCleanUp>
+        template <typename TCleanUpType>
         struct clean_up_before_other_destructors
         {
-            std::function<void(TypeToCleanUp&)> cleanup;
+            std::function<void(TCleanUpType&)> cleanup;
             ~clean_up_before_other_destructors()
             {
-                cleanup(*reinterpret_cast<TypeToCleanUp*>(this));
+                cleanup(*reinterpret_cast<TCleanUpType*>(this));
             }
         };
 

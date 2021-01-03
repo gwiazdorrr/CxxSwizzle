@@ -62,7 +62,7 @@ namespace swizzle
         // This should work but doesn't (I'm tired)
         ////! Constructor for matrices smaller than current one
         //template <size_t OtherNumColumns, size_t TOtherNumRows>
-        //matrix_(const matrix<VectorType, TScalar, TOtherNumRows, OtherNumColumns>& other)
+        //matrix_(const matrix<TVector, TScalar, TOtherNumRows, OtherNumColumns>& other)
         //{
         //    static_assert(OtherNumColumns <= num_columns);
         //    static_assert(TOtherNumRows <= num_rows);
@@ -300,7 +300,7 @@ namespace swizzle
     struct matrix_<TScalar, TNumRows>;
 
     //template <class TScalar, size_t M, size_t TNumRows, size_t OtherNumColumns>
-    //matrix<VectorType, TScalar, TNumRows, OtherNumColumns> operator*(const matrix<VectorType, TScalar, N, M>& m1, const matrix<VectorType, TScalar, M, OtherNumColumns>& m2 )
+    //matrix<TVector, TScalar, TNumRows, OtherNumColumns> operator*(const matrix<TVector, TScalar, N, M>& m1, const matrix<TVector, TScalar, M, OtherNumColumns>& m2 )
     //{
     //    return m1.mul(m1, m2);
     //}

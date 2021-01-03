@@ -11,15 +11,15 @@ namespace swizzle
 {
     namespace detail
     {
-        template <typename MaskType, size_t Size>
+        template <typename MaskType, size_t TSize>
         struct batch_write_mask_context
         {
             using mask_type = MaskType;
 
-            mask_type masks[Size];
-            mask_type single_masks[Size];
-            // mask_type break_masks[Size];
-            // bool is_loop[Size];
+            mask_type masks[TSize];
+            mask_type single_masks[TSize];
+            // mask_type break_masks[TSize];
+            // bool is_loop[TSize];
             // size_t next_break_mask_index;
             size_t mask_index;
             

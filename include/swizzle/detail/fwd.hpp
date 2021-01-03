@@ -4,27 +4,27 @@
 
 namespace swizzle
 {
-    template <typename ScalarType, size_t... Index>
+    template <typename TScalar, size_t... TIndices>
     struct vector_;
 
-    template <class ScalarType, size_t NumRows, size_t... Columns >
+    template <class TScalar, size_t TNumRows, size_t... TColumns >
     struct matrix_;
 
     namespace detail
     {
-        template <typename ScalarType, size_t... Index> 
-        vector_<ScalarType, Index...> make_vector_type_helper(std::index_sequence<Index...>);
+        template <typename TScalar, size_t... TIndices> 
+        vector_<TScalar, TIndices...> make_vector_type_helper(std::index_sequence<TIndices...>);
 
-        template <class ScalarType, size_t NumRows, size_t... Columns>
-        matrix_<ScalarType, NumRows, Columns...> make_matrix_type_helper(std::index_sequence<Columns...>);
+        template <class TScalar, size_t TNumRows, size_t... TColumns>
+        matrix_<TScalar, TNumRows, TColumns...> make_matrix_type_helper(std::index_sequence<TColumns...>);
     }
 
-    template <typename ScalarType, size_t Size>
-    using vector = decltype(detail::make_vector_type_helper<ScalarType>(std::make_index_sequence<Size>{}));
+    template <typename TScalar, size_t TSize>
+    using vector = decltype(detail::make_vector_type_helper<TScalar>(std::make_index_sequence<TSize>{}));
 
-    template <class ScalarType, size_t NumColumns, size_t NumRows>
-    using matrix = decltype(detail::make_matrix_type_helper<ScalarType, NumRows>(std::make_index_sequence<NumColumns>{}));
+    template <class TScalar, size_t TNumColumns, size_t TNumRows>
+    using matrix = decltype(detail::make_matrix_type_helper<TScalar, TNumRows>(std::make_index_sequence<TNumColumns>{}));
 
-    template <typename FloatType, typename Int32Type, typename UInt32Type>
+    template <typename TFloat, typename TInt32, typename TUint32>
     struct naive_sampler_generic;
 }

@@ -13,59 +13,59 @@ namespace swizzle
         //! to a vector/scalar (proxies!) can use these operators too.
         //! Note that because VC++ is unable to align SIMD types when passing by value,
         //! functions defined here use C++03 pass-by-reference style.
-        template <typename VectorType, typename ScalarType, typename VectorArgType = const VectorType&, typename ScalarArgType = const ScalarType&>
+        template <typename TVector, typename TScalar, typename TVectorArg = const TVector&, typename TScalarArg = const TScalar&>
         struct common_binary_operators
         {
-            friend VectorType operator+(VectorArgType v, ScalarArgType s)
+            friend TVector operator+(TVectorArg v, TScalarArg s)
             {
-                return VectorType(v) += s;
+                return TVector(v) += s;
             }
-            friend VectorType operator+(ScalarArgType s, VectorArgType v)
+            friend TVector operator+(TScalarArg s, TVectorArg v)
             {
                 return v + s;
             }
-            friend VectorType operator+(VectorArgType v1, VectorArgType v2)
+            friend TVector operator+(TVectorArg v1, TVectorArg v2)
             {
-                return VectorType(v1) += v2;
+                return TVector(v1) += v2;
             }
 
-            friend VectorType operator*(VectorArgType v, ScalarArgType s)
+            friend TVector operator*(TVectorArg v, TScalarArg s)
             {
-                return VectorType(v) *= s;
+                return TVector(v) *= s;
             }
-            friend VectorType operator*(ScalarArgType s, VectorArgType v)
+            friend TVector operator*(TScalarArg s, TVectorArg v)
             {
                 return v * s;
             }
-            friend VectorType operator*(VectorArgType v1, VectorArgType v2)
+            friend TVector operator*(TVectorArg v1, TVectorArg v2)
             {
-                return VectorType(v1) *= v2;
+                return TVector(v1) *= v2;
             }
 
-            friend VectorType operator-(VectorArgType v, ScalarArgType s)
+            friend TVector operator-(TVectorArg v, TScalarArg s)
             {
-                return VectorType(v) -= s;
+                return TVector(v) -= s;
             }
-            friend VectorType operator-(ScalarArgType s, VectorArgType v)
+            friend TVector operator-(TScalarArg s, TVectorArg v)
             {
-                return VectorType(s) -= v;
+                return TVector(s) -= v;
             }
-            friend VectorType operator-(VectorArgType v1, VectorArgType v2)
+            friend TVector operator-(TVectorArg v1, TVectorArg v2)
             {
-                return VectorType(v1) -= v2;
+                return TVector(v1) -= v2;
             }
 
-            friend VectorType operator/(VectorArgType v, ScalarArgType s)
+            friend TVector operator/(TVectorArg v, TScalarArg s)
             {
-                return VectorType(v) /= s;
+                return TVector(v) /= s;
             }
-            friend VectorType operator/(ScalarArgType s, VectorArgType v)
+            friend TVector operator/(TScalarArg s, TVectorArg v)
             {
-                return VectorType(s) /= v;
+                return TVector(s) /= v;
             }
-            inline friend VectorType operator/(VectorArgType v1, VectorArgType v2)
+            inline friend TVector operator/(TVectorArg v1, TVectorArg v2)
             {
-                return VectorType(v1) /= v2;
+                return TVector(v1) /= v2;
             }
         };
     }

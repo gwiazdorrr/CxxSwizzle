@@ -42,14 +42,14 @@ namespace swizzle
     };
 
     //! A really naive implemenation of a sampler
-    template <typename FloatType, typename Int32Type, typename UInt32Type>
+    template <typename TFloat, typename TInt32, typename TUint32>
     struct naive_sampler_generic
     {
         using this_type = naive_sampler_generic;
 
-        using float_type = FloatType;
-        using uint32_type = UInt32Type;
-        using int32_type = Int32Type;
+        using float_type = TFloat;
+        using uint32_type = TUint32;
+        using int32_type = TInt32;
 
         using vec2 = vector<float_type, 2>;
         using vec3 = vector<float_type, 3>;
