@@ -1,0 +1,13 @@
+{
+  "url": "https://www.shadertoy.com/view/XslGRr",
+  "json_url": "https://www.shadertoy.com/api/v1/shaders/XslGRr?key=BtntM7",
+  "image": {
+    "iChannel0": {
+      "type": "texture",
+      "src":  "C:/SRC/CxxSwizzle/shadertoys/clouds/f735bee5b64ef98879dc618b016ecf7939a5756040c2cde21ccb15e69a6e1cfb.png",
+      "filter": "mipmap",
+      "wrap":   "repeat",
+      "vflip":  "true"
+    }
+  }
+}

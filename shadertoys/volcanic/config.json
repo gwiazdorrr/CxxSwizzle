@@ -1,0 +1,36 @@
+{
+  "url": "https://www.shadertoy.com/view/XsX3RB",
+  "json_url": "https://www.shadertoy.com/api/v1/shaders/XsX3RB?key=BtntM7",
+  "image": {
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_a",
+      "filter": "linear",
+      "wrap":   "clamp",
+      "vflip":  "true"
+    }
+  },
+  "buffer_a": {
+    "iChannel1": {
+      "type": "texture",
+      "src":  "C:/SRC/CxxSwizzle/shadertoys/volcanic/fb918796edc3d2221218db0811e240e72e340350008338b0c07a52bd353666a6.jpg",
+      "filter": "mipmap",
+      "wrap":   "repeat",
+      "vflip":  "false"
+    },
+    "iChannel2": {
+      "type": "texture",
+      "src":  "C:/SRC/CxxSwizzle/shadertoys/volcanic/92d7758c402f0927011ca8d0a7e40251439fba3a1dac26f5b8b62026323501aa.jpg",
+      "filter": "mipmap",
+      "wrap":   "repeat",
+      "vflip":  "false"
+    },
+    "iChannel0": {
+      "type": "texture",
+      "src":  "C:/SRC/CxxSwizzle/shadertoys/volcanic/f735bee5b64ef98879dc618b016ecf7939a5756040c2cde21ccb15e69a6e1cfb.png",
+      "filter": "linear",
+      "wrap":   "repeat",
+      "vflip":  "false"
+    }
+  }
+}

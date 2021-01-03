@@ -1,0 +1,84 @@
+{
+  "url": "https://www.shadertoy.com/view/4dcGW2",
+  "json_url": "https://www.shadertoy.com/api/v1/shaders/4dcGW2?key=BtntM7",
+  "image": {
+    "iChannel3": {
+      "type": "texture",
+      "src":  "C:/SRC/CxxSwizzle/shadertoys/_expansive_reaction-diffusion/f735bee5b64ef98879dc618b016ecf7939a5756040c2cde21ccb15e69a6e1cfb.png",
+      "filter": "mipmap",
+      "wrap":   "repeat",
+      "vflip":  "true"
+    },
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_a",
+      "filter": "linear",
+      "wrap":   "clamp",
+      "vflip":  "true"
+    },
+    "iChannel1": {
+      "type": "buffer",
+      "src":  "buffer_c",
+      "filter": "linear",
+      "wrap":   "clamp",
+      "vflip":  "true"
+    }
+  },
+  "buffer_a": {
+    "iChannel3": {
+      "type": "texture",
+      "src":  "C:/SRC/CxxSwizzle/shadertoys/_expansive_reaction-diffusion/f735bee5b64ef98879dc618b016ecf7939a5756040c2cde21ccb15e69a6e1cfb.png",
+      "filter": "mipmap",
+      "wrap":   "repeat",
+      "vflip":  "true"
+    },
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_a",
+      "filter": "linear",
+      "wrap":   "clamp",
+      "vflip":  "true"
+    },
+    "iChannel1": {
+      "type": "buffer",
+      "src":  "buffer_c",
+      "filter": "linear",
+      "wrap":   "clamp",
+      "vflip":  "true"
+    },
+    "iChannel2": {
+      "type": "buffer",
+      "src":  "buffer_d",
+      "filter": "linear",
+      "wrap":   "clamp",
+      "vflip":  "true"
+    }
+  },
+  "buffer_b": {
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_a",
+      "filter": "linear",
+      "wrap":   "clamp",
+      "vflip":  "true"
+    }
+  },
+  "buffer_c": {
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_b",
+      "filter": "linear",
+      "wrap":   "clamp",
+      "vflip":  "true"
+    }
+  },
+  "buffer_d": {
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_a",
+      "filter": "linear",
+      "wrap":   "clamp",
+      "vflip":  "true"
+    }
+  }
+}
