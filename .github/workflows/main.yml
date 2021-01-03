@@ -86,4 +86,6 @@ jobs:
           useVcpkgToolchainFile: true
           buildDirectory: '${{ runner.workspace }}/b/${{ matrix.name }}/'
           cmakeAppendedArgs: '-G "${{ matrix.generator }}" -DCMAKE_BUILD_TYPE=${{ matrix.buildType }} '
-
+          
+      - name: Run CTest
+        run: (cd ${{ runner.workspace }}/b/${{ matrix.name }}/; ctest -V)
