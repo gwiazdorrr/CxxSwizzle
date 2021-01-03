@@ -147,8 +147,8 @@ struct aligned_render_target_base
 
 struct render_target_rgba32 : aligned_render_target_base
 {
-    static const int bytes_per_pixel = 4;
-    static const uint32_t sdl_pixelformat = SDL_PIXELFORMAT_RGBA32;
+    static inline const int bytes_per_pixel = 4;
+    static inline const uint32_t sdl_pixelformat = SDL_PIXELFORMAT_RGBA32;
 
     render_target_rgba32() = default;
     render_target_rgba32(int width, int height) : aligned_render_target_base(width, height, bytes_per_pixel, 32) {}
@@ -162,8 +162,8 @@ struct render_target_rgba32 : aligned_render_target_base
 
 struct render_target_a8 : aligned_render_target_base
 {
-    static const int bytes_per_pixel = 1;
-    static const uint32_t sdl_pixelformat = SDL_PIXELFORMAT_INDEX8;
+    static inline const int bytes_per_pixel = 1;
+    static inline const uint32_t sdl_pixelformat = SDL_PIXELFORMAT_INDEX8;
 
     render_target_a8() = default;
     render_target_a8(int width, int height) : aligned_render_target_base(width, height, bytes_per_pixel, 32) {}
