@@ -1,7 +1,7 @@
 # CxxSwizzle
 # Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required(VERSION 3.3)
 project (CxxSwizzle)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/Modules")
