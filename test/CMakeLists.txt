@@ -1,6 +1,8 @@
 # CxxSwizzle
 # Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
+enable_testing()
+
 find_package(GTest CONFIG REQUIRED)
 
 set(COMPILER_SPECIFIC_FLAGS "")
@@ -21,3 +23,5 @@ set_target_properties(test PROPERTIES CXX_STANDARD_REQUIRED ON)
 target_link_libraries(test PRIVATE GTest::gmock GTest::gtest GTest::gmock_main GTest::gtest_main)
 target_compile_options(test PRIVATE ${COMPILER_SPECIFIC_FLAGS})
 target_include_directories(test PRIVATE ${CxxSwizzle_SOURCE_DIR}/include)
+    
+add_test(AllTests test)
