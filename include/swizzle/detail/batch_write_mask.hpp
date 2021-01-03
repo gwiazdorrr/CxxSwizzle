@@ -11,10 +11,10 @@ namespace swizzle
 {
     namespace detail
     {
-        template <typename MaskType, size_t TSize>
+        template <typename TMask, size_t TSize>
         struct batch_write_mask_context
         {
-            using mask_type = MaskType;
+            using mask_type = TMask;
 
             mask_type masks[TSize];
             mask_type single_masks[TSize];
@@ -33,28 +33,28 @@ namespace swizzle
             }
         };
 
-        template <typename MaskType, size_t StackSize, bool IsSingleThreaded = false>
+        template <typename TMask, size_t TStackSize, bool TIsSingleThreaded = false>
         struct batch_write_mask_base
         {
-            inline static thread_local batch_write_mask_context<MaskType, StackSize> storage;
+            inline static thread_local batch_write_mask_context<TMask, TStackSize> storage;
         };
 
-        template <typename MaskType, size_t StackSize>
-        struct batch_write_mask_base<MaskType, StackSize, true>
+        template <typename TMask, size_t TStackSize>
+        struct batch_write_mask_base<TMask, TStackSize, true>
         {
-            inline static batch_write_mask_context<MaskType, StackSize> storage;
+            inline static batch_write_mask_context<TMask, TStackSize> storage;
         };
 
 
 
-        template <typename MaskType, size_t StackSize, bool IsSingleThreaded = false>
-        struct batch_write_mask : batch_write_mask_base<MaskType, StackSize, IsSingleThreaded>
+        template <typename TMask, size_t TStackSize, bool TIsSingleThreaded = false>
+        struct batch_write_mask : batch_write_mask_base<TMask, TStackSize, TIsSingleThreaded>
         {
             struct invert_tag {};
             struct loop_tag {};
 
-            using mask_type = MaskType;
-            using base_type = batch_write_mask_base<MaskType, StackSize, IsSingleThreaded>;
+            using mask_type = TMask;
+            using base_type = batch_write_mask_base<TMask, TStackSize, TIsSingleThreaded>;
             using base_type::storage;
 
             template <typename T>
@@ -120,8 +120,8 @@ namespace swizzle
             }
         };
 
-        //template <typename MaskType, size_t StackSize, bool IsSingleThreaded = false>
-        //struct batch_write_loop_mask : batch_write_mask<MaskType, StackSize, IsSingleThreaded>
+        //template <typename TMask, size_t TStackSize, bool TIsSingleThreaded = false>
+        //struct batch_write_loop_mask : batch_write_mask<TMask, TStackSize, TIsSingleThreaded>
         //{
         //    inline batch_write_loop_mask(const mask_type& mask)
         //        : this(mask & storage.batch_masks[++storage.batch_mask_index])

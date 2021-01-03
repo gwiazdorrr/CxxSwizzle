@@ -9,16 +9,16 @@ namespace swizzle
 {
     namespace detail
     {
-        template <typename MaskType, size_t StackSize>
+        template <typename TMask, size_t TStackSize>
         struct write_mask_scope
         {
             struct invert_tag {};
-            using mask_type = MaskType;
+            using mask_type = TMask;
 
             struct storage_type
             {
-                mask_type masks[StackSize];
-                mask_type single_masks[StackSize];
+                mask_type masks[TStackSize];
+                mask_type single_masks[TStackSize];
                 size_t mask_index;
 
                 storage_type()
@@ -82,7 +82,7 @@ namespace swizzle
                 if (MaskPusher::storage.mask_index == 0)
                     target = value;
                 else
-                    target((typename T::MaskType)MaskPusher::storage.masks[MaskPusher::storage.mask_index]) = value;
+                    target((typename T::TMask)MaskPusher::storage.masks[MaskPusher::storage.mask_index]) = value;
             }
         };
 
@@ -92,7 +92,7 @@ namespace swizzle
             template<typename T>
             static inline void assign(T& target, const T& value)
             {
-                target((typename T::MaskType)MaskPusher::storage.masks[MaskPusher::storage.mask_index]) = value;
+                target((typename T::TMask)MaskPusher::storage.masks[MaskPusher::storage.mask_index]) = value;
             }
         };
 

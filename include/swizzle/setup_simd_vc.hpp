@@ -53,21 +53,21 @@ namespace swizzle
         value.store(data, Vc::Aligned);
     }
 
-    template <size_t Index, typename ResultType>
-    inline void batch_masked_read_internal(const ::Vc::Vector<ResultType>& mask, ::Vc::Vector<ResultType>& result)
+    template <size_t TIndex, typename TResult>
+    inline void batch_masked_read_internal(const ::Vc::Vector<TResult>& mask, ::Vc::Vector<TResult>& result)
     {}
 
-    template <size_t Index, typename ResultType, typename... Types>
-    inline void batch_masked_read_internal(const ::Vc::Vector<ResultType>& mask, ::Vc::Vector<ResultType>& result, const ::Vc::Vector<ResultType>& vec, Types&&... types)
+    template <size_t TIndex, typename TResult, typename... TTypes>
+    inline void batch_masked_read_internal(const ::Vc::Vector<TResult>& mask, ::Vc::Vector<TResult>& result, const ::Vc::Vector<TResult>& vec, TTypes&&... types)
     {
-        result.assign(vec, (mask == Index));
-        batch_masked_read_internal<Index + 1>(mask, result, std::forward<Types>(types)...);
+        result.assign(vec, (mask == TIndex));
+        batch_masked_read_internal<TIndex + 1>(mask, result, std::forward<TTypes>(types)...);
     }
 
-    template <typename MaskType, typename ResultType, typename... Types>
-    inline void batch_masked_read(const ::Vc::Vector<MaskType>& mask, ::Vc::Vector<ResultType>& result, Types&&... types)
+    template <typename TMask, typename TResult, typename... TTypes>
+    inline void batch_masked_read(const ::Vc::Vector<TMask>& mask, ::Vc::Vector<TResult>& result, TTypes&&... types)
     {
-        batch_masked_read_internal<0, ResultType>(simd_cast<::Vc::Vector<ResultType>>(mask), result, std::forward<Types>(types)...);
+        batch_masked_read_internal<0, TResult>(simd_cast<::Vc::Vector<TResult>>(mask), result, std::forward<TTypes>(types)...);
     }
 
     template <typename T>
