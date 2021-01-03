@@ -133,7 +133,7 @@ struct aligned_render_target_base
 
         // each row has to be aligned
         pitch = (width * bpp + mask) & (~mask);
-        pixels_size = pitch * height;
+        pixels_size = static_cast<size_t>(pitch * height);
         size_t alloc_size = pixels_size + align - 1;
 
         // alloc and align

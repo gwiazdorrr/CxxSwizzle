@@ -278,7 +278,7 @@ namespace swizzle
         template <size_t TOffset, typename TDataB, size_t... TDataIndices>
         inline void compose_impl(const TDataB& src, std::index_sequence<TDataIndices...>)
         {
-            (std::move(at(TDataIndices + TOffset) = scalar_type(src.at(TDataIndices))), ...);
+            ((at(TDataIndices + TOffset) = scalar_type(src.at(TDataIndices))), ...);
         }
 
     public:

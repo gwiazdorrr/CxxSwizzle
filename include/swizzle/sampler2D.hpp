@@ -21,8 +21,8 @@ namespace swizzle
 
         wrap_modes wrap_mode = repeat;
 
-        unsigned width = 256;
-        unsigned height = 256; 
+        int width = 256;
+        int height = 256; 
         
         uint32_t rmask = 0;
         uint32_t gmask = 0;
@@ -35,8 +35,8 @@ namespace swizzle
         uint8_t ashift = 0;
 
         uint8_t* bytes = nullptr;
-        unsigned bytes_per_pixel = 0;
-        unsigned pitch_bytes = 0;
+        int bytes_per_pixel = 0;
+        int pitch_bytes = 0;
 
         bool is_floating_point = false;
     };
@@ -128,8 +128,8 @@ namespace swizzle
             using std::min;
             auto ix = static_cast<IntType>(u * data->width);
             auto iy = static_cast<IntType>(v * data->height);
-            ix = min(IntType((int)data->width - 1), ix);
-            iy = min(IntType((int)data->height - 1), iy);
+            ix = min(IntType(data->width - 1), ix);
+            iy = min(IntType(data->height - 1), iy);
             return std::make_tuple(ix, iy);
         }
 
@@ -214,21 +214,21 @@ namespace swizzle
 
                 if (ax >= ay && ax >= az ) 
                 {
-                    float s = x > 0 ? 1 : -1;
+                    float s = x > 0.0f ? 1.0f : -1.0f;
                     face_index = 0 + (s > 0 ? 0 : 1);
                     u = -1 * z / x;
                     v =  s * y / x;
                 }
                 else if (ay >= az && ay >= az) 
                 {
-                    float s = y > 0 ? 1 : -1;
+                    float s = y > 0 ? 1.0f : -1.0f;
                     face_index = 2 + (s > 0 ? 0 : 1);
                     u =  s * x / y;
                     v = -s * z / y;
                 }
                 else
                 {
-                    float s = z > 0 ? 1 : -1;
+                    float s = z > 0 ? 1.0f : -1.0f;
                     face_index = 4 + (s > 0 ? 0 : 1);
                     u = 1 * x / z;
                     v = s * y / z;
