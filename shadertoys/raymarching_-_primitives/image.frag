@@ -272,7 +272,7 @@ float sdPyramid( in vec3 p, in float h )
     
     // symmetry
     p.xz = abs(p.xz);
-    p.xz = (p.z>p.x) ? p.zx : p.xz;
+    p.xz = (p.z>p.x) ? (vec2)p.zx : p.xz;
     p.xz -= 0.5;
 	
     // project into face plane (2D)
