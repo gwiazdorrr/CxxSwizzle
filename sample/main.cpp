@@ -1023,9 +1023,9 @@ int __cdecl main(int argc, char* argv[])
                             int ascii = SDL_Keysym_to_Ascii(event.key.keysym);
                             if (ascii > 0)
                             {
-                                keyboard_data.set(ascii, keyboard_row_down,     0xFF);
-                                keyboard_data.set(ascii, keyboard_row_pressed,  0xFF);
-                                keyboard_data.set(ascii, keyboard_row_toggle,   keyboard_data.get(ascii, 2) ? 0 : 0xFF);
+                                keyboard_data.set(ascii, keyboard_row_down,    0xFF);
+                                keyboard_data.set(ascii, keyboard_row_pressed, 0xFF);
+                                keyboard_data.set(ascii, keyboard_row_toggle,  keyboard_data.get(ascii, 2) ? 0 : 0xFF);
                             }
                         }
 
@@ -1067,7 +1067,7 @@ int __cdecl main(int argc, char* argv[])
 
                         render_targets = shadertoy_render_buffers(w, h);
                         target_texture = create_matching_sdl_texture(renderer.get(), w, h);
-
+                        resolution     = { w, h };
                         pending_resize = false;
 
                         current_frame_timestamp = time;
