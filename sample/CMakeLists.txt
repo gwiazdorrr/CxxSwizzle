@@ -152,17 +152,14 @@ foreach(SAMPLE_DIR ${SAMPLES_DIRS})
     configure_file("config.hpp.in" "${GEN_CONFIG_PATH}")
 
     set(CODEGEN_TEMPLATE_FILES "shadertoy_sandbox.cpp.in" "config.hpp.in")
-    set(README_PATH "${SAMPLE_SHADERTOYS_ROOT}/${SAMPLE_DIR}/README.md")
 
     set(TARGET_FILES main.cpp ${GEN_SHADERS} shadertoy_sandbox.hpp ${SHADERS} ${GEN_CONFIG_PATH} ${TARGET_ADDITIONAL_FILES} ${CODEGEN_TEMPLATE_FILES})
-    if (EXISTS ${README_PATH})
-        list(APPEND TARGET_FILES ${README_PATH})
-    endif()
+
     if (EXISTS ${SAMPLE_CONFIG_PATH})
         list(APPEND TARGET_FILES ${SAMPLE_CONFIG_PATH})
     endif()
 
-    source_group("" FILES ${SHADERS} ${README_PATH} ${SAMPLE_CONFIG_PATH})
+    source_group("" FILES ${SHADERS} ${SAMPLE_CONFIG_PATH})
     source_group("codegen" FILES ${GEN_SHADERS} ${GEN_CONFIG_PATH} )
     source_group("shared" FILES CMakeList.txt main.cpp shadertoy_sandbox.hpp ${TARGET_ADDITIONAL_FILES} ${CODEGEN_TEMPLATE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt" REGULAR_EXPRESSION "\\.natvis")
 

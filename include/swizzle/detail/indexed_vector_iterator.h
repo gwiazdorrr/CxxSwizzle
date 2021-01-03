@@ -15,11 +15,14 @@ namespace swizzle
         //! also expose num_of_components static fields.
         template <class VectorType>
         class indexed_vector_iterator 
-            : public std::iterator< 
-                std::bidirectional_iterator_tag, 
-                typename std::remove_reference< decltype(std::declval<VectorType>()[0]) >::type 
-            > 
         {
+        public:
+            using iterator_category = std::bidirectional_iterator_tag;
+            using value_type = typename std::remove_reference< decltype(std::declval<VectorType>()[0]) >::type;
+            using difference_type = ptrdiff_t;
+            using pointer = value_type*;
+            using reference = value_type&;
+
         private:
             VectorType& m_vector;
             size_t m_index;

@@ -81,9 +81,11 @@ macro(shadertoyDownload api_key shader_id root_dir download_error_is_fatal)
         set(SHADER_DIRECTORY "${root_dir}/${SHADER_NAME_SANITIZED}")
 
         file(MAKE_DIRECTORY ${SHADER_DIRECTORY})
-        _shadertoyCreateFile("${SHADER_DIRECTORY}/README.md" "https://www.shadertoy.com/view/${shader_id}" "" )
 
         set(SHADER_INFO "")
+
+        list(APPEND SHADER_INFO "  \"url\": \"https://www.shadertoy.com/view/${shader_id}\"")
+        list(APPEND SHADER_INFO "  \"api_url\": \"${SHADERTOY_QUERY}\"")
 
         foreach(r ${SHADER.Shader.renderpass})
             set(RENDERPASS SHADER.Shader.renderpass_${r})
@@ -117,7 +119,7 @@ macro(shadertoyDownload api_key shader_id root_dir download_error_is_fatal)
                     get_filename_component(INPUT_NAME ${${INPUT}.src} NAME)
                     _shadertoyDownloadFile("https://www.shadertoy.com${${INPUT}.src}" "${SHADER_DIRECTORY}/${INPUT_NAME}" "")
                     string(CONCAT ENTRY "${SPACING}  \"type\": \"texture\",\n"
-                                        "${SPACING}  \"src\":  \"${SHADER_DIRECTORY}/${INPUT_NAME}\"")
+                                        "${SPACING}  \"src\":  \"${SHADER_DIRECTORY}/${INPUT_NAME}\",\n")
                 elseif (${INPUT}.ctype STREQUAL "cubemap")
                     get_filename_component(INPUT_EXTENSION ${${INPUT}.src} EXT)
                     get_filename_component(INPUT_NAME      ${${INPUT}.src} NAME_WE)
@@ -137,7 +139,7 @@ macro(shadertoyDownload api_key shader_id root_dir download_error_is_fatal)
                     endforeach(index)
                     list(JOIN FACES ",\n" FACES)
                     string(CONCAT ENTRY "${SPACING}  \"type\": \"cubemap\",\n"
-                                        "${SPACING}  \"src\":  [\n${FACES}\n${SPACING}  ]")
+                                        "${SPACING}  \"src\":  [\n${FACES}\n${SPACING}  ],\n")
                 elseif(${INPUT}.ctype STREQUAL "buffer")
                     set(BUFFER_NAME "")
                     if(${INPUT}.src STREQUAL "/media/previz/buffer00.png")
@@ -153,14 +155,18 @@ macro(shadertoyDownload api_key shader_id root_dir download_error_is_fatal)
                     endif()
 
                     string(CONCAT ENTRY "${SPACING}  \"type\": \"buffer\",\n"
-                                        "${SPACING}  \"src\":  \"${BUFFER_NAME}\"")
+                                        "${SPACING}  \"src\":  \"${BUFFER_NAME}\",\n")
 
                 elseif(${INPUT}.ctype STREQUAL "keyboard")
-                    string(CONCAT ENTRY "${SPACING}  \"type\": \"keyboard\"")
+                    string(CONCAT ENTRY "${SPACING}  \"type\": \"keyboard\",\n")
 
                 elseif(${INPUT}.ctype)
                     message(WARNING "Channel type ${${INPUT}.ctype} not supported (channel ${INPUT_INDEX})")
                 endif()
+
+                string(CONCAT ENTRY "${ENTRY}"
+                                    "${SPACING}  \"filter\": \"${${INPUT}.sampler.filter}\",\n"
+                                    "${SPACING}  \"wrap\": \"${${INPUT}.sampler.wrap}\"")
 
                 list(APPEND RENDERPASS_INFO "${SPACING}\"iChannel${${INPUT}.channel}\": {\n${ENTRY}\n${SPACING}}")
 
