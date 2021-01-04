@@ -1,5 +1,5 @@
 // CxxSwizzle
-// Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
+// Copyright (c) 2013-2021, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 
 #include "shadertoy_sandbox.hpp"
 
@@ -10,6 +10,7 @@ static_assert(sizeof(vec2) == sizeof(swizzle::float_type[2]), "Too big");
 static_assert(sizeof(vec3) == sizeof(swizzle::float_type[3]), "Too big");
 static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 
+#include <ctime>
 #include <condition_variable>
 #include <filesystem>
 #include <functional>
@@ -28,7 +29,6 @@ static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 #include <SDL_image.h>
 #include <nlohmann/json.hpp>
 
-#include <ctime>
 
 #if SAMPLE_OMP_ENABLED
 #include <omp.h>
@@ -147,8 +147,8 @@ struct aligned_render_target_base
 
 struct render_target_rgba32 : aligned_render_target_base
 {
-    static inline const int bytes_per_pixel = 4;
-    static inline const uint32_t sdl_pixelformat = SDL_PIXELFORMAT_RGBA32;
+    static constexpr int bytes_per_pixel = 4;
+    static constexpr uint32_t sdl_pixelformat = SDL_PIXELFORMAT_RGBA32;
 
     render_target_rgba32() = default;
     render_target_rgba32(int width, int height) : aligned_render_target_base(width, height, bytes_per_pixel, 32) {}
@@ -162,8 +162,8 @@ struct render_target_rgba32 : aligned_render_target_base
 
 struct render_target_a8 : aligned_render_target_base
 {
-    static inline const int bytes_per_pixel = 1;
-    static inline const uint32_t sdl_pixelformat = SDL_PIXELFORMAT_INDEX8;
+    static constexpr int bytes_per_pixel = 1;
+    static constexpr uint32_t sdl_pixelformat = SDL_PIXELFORMAT_INDEX8;
 
     render_target_a8() = default;
     render_target_a8(int width, int height) : aligned_render_target_base(width, height, bytes_per_pixel, 32) {}
@@ -186,7 +186,7 @@ struct render_target_a8 : aligned_render_target_base
 
 struct render_target_float : aligned_render_target_base
 {
-    static const int bytes_per_pixel = 4 * sizeof(float);
+    static constexpr int bytes_per_pixel = 4 * sizeof(float);
 
     render_target_float() = default;
     render_target_float(int width, int height) : aligned_render_target_base(width, height, bytes_per_pixel, 32) {}

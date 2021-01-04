@@ -3,10 +3,10 @@
 
 using namespace swizzle;
 
-#include <swizzle/define_vector_functions.hpp>
-
 namespace
 {
+    #include <swizzle/define_vector_functions.hpp>
+
     struct builtin_inout_proxy
     {
         // proxies are needed for vectors, as they need to work with swizzles
@@ -111,7 +111,7 @@ namespace
 
 @FRAG_CUSTOM_STRUCTS_SUPPORT@
 
-        vec2 gl_FragCoord;
+        vec4 gl_FragCoord;
         vec4 gl_FragColor;
         bool_type _cxxswizzle_discarded;
 
@@ -156,7 +156,7 @@ namespace shadertoy
         _cxxswizzle_fragment_shader_@FRAG_NAME@ shader;
         static_cast<shader_inputs&>(shader) = uniforms;
         shader.gl_FragColor = prevFragColor;
-        shader.gl_FragCoord = fragCoord;
+        shader.gl_FragCoord = vec4(fragCoord, 0.0f, 0.0f);
         shader._cxxswizzle_discarded = false;
         shader.mainImage(shader.gl_FragColor, fragCoord);
         if (discarded)

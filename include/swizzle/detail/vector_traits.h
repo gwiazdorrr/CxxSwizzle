@@ -33,25 +33,25 @@ namespace swizzle
         //! 1) scalars have a common type and it must be either one of them
         //! 2) Sizes are equal
         //! This type is specialised to handle cases of 1-sized vectors.
-        template <class VectorType1, class ScalarType1, size_t Size1, class VectorType2, class ScalarType2, size_t Size2>
+        template <class TVector1, class TScalar1, size_t TSize1, class TVector2, class TScalar2, size_t TSize2>
         struct common_vector_type_generic_fallback
         {
         private:
-            typedef typename std::common_type<ScalarType1, ScalarType2>::type common_scalar_type;
-            static_assert( std::is_same<common_scalar_type, ScalarType1>::value || std::is_same<common_scalar_type, ScalarType2>::value, 
+            typedef typename std::common_type<TScalar1, TScalar2>::type common_scalar_type;
+            static_assert( std::is_same<common_scalar_type, TScalar1>::value || std::is_same<common_scalar_type, TScalar2>::value, 
                 "Common type must be same as at least one of scalar types");
-            static_assert( Size1 == Size2 || Size1 == 1 || Size2 == 1,
+            static_assert( TSize1 == TSize2 || TSize1 == 1 || TSize2 == 1,
                 "Either both vectors must have same size or either one of them has to have a size equal to 1 (auto promotion to the bigger vector)");
 
         public:
-            typedef typename std::conditional< Size1 == Size2,
-                typename std::conditional< std::is_same<common_scalar_type, ScalarType1>::value,
-                    VectorType1,
-                    VectorType2
+            typedef typename std::conditional< TSize1 == TSize2,
+                typename std::conditional< std::is_same<common_scalar_type, TScalar1>::value,
+                    TVector1,
+                    TVector2
                 >::type,
-                typename std::conditional< Size2 == 1,
-                    VectorType1,
-                    VectorType2
+                typename std::conditional< TSize2 == 1,
+                    TVector1,
+                    TVector2
                 >::type
             >::type type;
         };
@@ -60,10 +60,10 @@ namespace swizzle
 
         //! Defines a common type for two vectors. By default falls back to common_vector_type_generic_fallback,
         //! but can be easily specialised to handle vectors differently.
-        template <class VectorType1, class VectorType2>
+        template <class TVector1, class TVector2>
         struct common_vector_type : common_vector_type_generic_fallback<
-            VectorType1, typename VectorType1::scalar_type, VectorType1::num_of_components, 
-            VectorType2, typename VectorType2::scalar_type, VectorType2::num_of_components>
+            TVector1, typename TVector1::scalar_type, TVector1::num_components, 
+            TVector2, typename TVector2::scalar_type, TVector2::num_components>
         {};
 
 
@@ -98,8 +98,8 @@ namespace swizzle
 
         //! 
         template <class T>
-        struct get_vector_size<T, std::integral_constant<bool, is_greater<get_vector_type<T>::type::num_of_components, 0>::value> >
-            :  std::integral_constant< size_t, get_vector_type<T>::type::num_of_components >
+        struct get_vector_size<T, std::integral_constant<bool, is_greater<get_vector_type<T>::type::num_components, 0>::value> >
+            :  std::integral_constant< size_t, get_vector_type<T>::type::num_components >
         {};
 
         struct one_of_the_types_does_not_have_get_vector_type_impl
@@ -108,7 +108,7 @@ namespace swizzle
         //! To get SFINAE-usable total vector size, we need to introduce helper type, or else g++ will fall on it's face.
         template <bool DoAllHaveVectorSizes, class... T>
         struct get_total_component_count_helper {
-            static const one_of_the_types_does_not_have_get_vector_type_impl value;
+            static constexpr one_of_the_types_does_not_have_get_vector_type_impl value;
         };
 
         template <class... T>
@@ -127,17 +127,17 @@ namespace swizzle
         template <class... T>
         constexpr size_t get_total_component_count_v = get_total_component_count<T...>::value;
 
-        template <typename StorageType, typename PrimitiveType, size_t Align, size_t BatchSize, size_t BatchCount, typename BoolType, bool IsBool, bool IsIntegral, bool IsFloatingPoint>
+        template <typename TStorage, typename TPrimitive, size_t Align, size_t BatchSize, size_t BatchCount, typename TBool, bool IsBool, bool IsIntegral, bool IsFloatingPoint>
         struct batch_traits_builder
         {
-            using bool_type = BoolType;
-            using storage_type = std::conditional_t< (BatchCount == 1), StorageType, std::array<StorageType, BatchCount> >;
-            using primitive_type = PrimitiveType;
-            static const bool is_bool = IsBool;
-            static const bool is_integral = IsIntegral;
-            static const bool is_floating_point = IsFloatingPoint;
-            static const size_t size = BatchSize * BatchCount;
-            static const size_t align = Align;
+            using bool_type = TBool;
+            using storage_type = std::conditional_t< (BatchCount == 1), TStorage, std::array<TStorage, BatchCount> >;
+            using primitive_type = TPrimitive;
+            static constexpr bool is_bool = IsBool;
+            static constexpr bool is_integral = IsIntegral;
+            static constexpr bool is_floating_point = IsFloatingPoint;
+            static constexpr size_t size = BatchSize * BatchCount;
+            static constexpr size_t align = Align;
             using aligned_storage_type = std::aligned_storage_t<sizeof(storage_type), align>;
         };
 

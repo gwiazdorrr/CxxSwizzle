@@ -22,7 +22,7 @@ namespace swizzle
             template <typename T1> static typename T1::type test(int);
             template <typename> static void test(...);
         public:
-            static const bool value = !std::is_void<decltype(test<T>(0))>::value;
+            static constexpr bool value = !std::is_void<decltype(test<T>(0))>::value;
         };
 
         template <typename T>
@@ -31,13 +31,13 @@ namespace swizzle
 
 
         // is a > b?
-        template <size_t a, size_t b>
-        struct is_greater : std::integral_constant<bool, (a > b)>
+        template <size_t TA, size_t TB>
+        struct is_greater : std::integral_constant<bool, (TA > TB)>
         {};
 
 
         //! A type to indicate that operation is not available for some combination of input types.
-        template <typename T, int line = 0>
+        template <typename T, int TLine = 0>
         struct operation_not_available_t;
         struct operation_not_available;
         template <int> struct operation_not_available_n;
@@ -45,10 +45,10 @@ namespace swizzle
         //! An empty type carrying no information, used whenever applicable.
         struct nothing {};
 
-        template <size_t Offset, typename Func, size_t... Index>
-        inline void static_for_impl(Func func, std::index_sequence<Index...>)
+        template <size_t TOffset, typename Func, size_t... TIndices>
+        inline void static_for_impl(Func func, std::index_sequence<TIndices...>)
         {
-            ((func(Offset + Index)), ...);
+            ((func(TOffset + TIndices)), ...);
         }
 
         //! Trigger Func for each value from [Begin, End) range.
@@ -80,87 +80,87 @@ namespace swizzle
 
 
         //! Sum up all the arguments.
-        template <size_t Head, size_t... Tail>
+        template <size_t THead, size_t... TTail>
         struct accumulate
         {
-            static const size_t value = Head + accumulate<Tail...>::value;
+            static constexpr size_t value = THead + accumulate<TTail...>::value;
         };
 
-        template <size_t Head>
-        struct accumulate<Head>
+        template <size_t THead>
+        struct accumulate<THead>
         {
-            static const size_t value = Head;
+            static constexpr size_t value = THead;
         };
 
-        template <template <class> class Predicate, class Head, class... Tail>
+        template <template <class> class TPredicate, class THead, class... TTail>
         struct all
         {
-            static const bool value = Predicate<Head>::value && all<Predicate, Tail...>::value;
+            static constexpr bool value = TPredicate<THead>::value && all<TPredicate, TTail...>::value;
         };
 
-        template <template <class> class Predicate, class Head>
-        struct all < Predicate, Head >
+        template <template <class> class TPredicate, class THead>
+        struct all < TPredicate, THead >
         {
-            static const bool value = Predicate<Head>::value;
+            static constexpr bool value = TPredicate<THead>::value;
         };
 
-        //! Does the sequence contain "What"?
-        template <size_t What, size_t Head, size_t... Tail>
+        //! Does the sequence contain "TWhat"?
+        template <size_t TWhat, size_t THead, size_t... TTail>
         struct contains
         {
-            static const bool value = What == Head || contains<What, Tail...>::value;
+            static constexpr bool value = TWhat == THead || contains<TWhat, TTail...>::value;
         };
 
-        template <size_t What, size_t Head>
-        struct contains<What, Head>
+        template <size_t TWhat, size_t THead>
+        struct contains<TWhat, THead>
         {
-            static const bool value = What == Head;
+            static constexpr bool value = TWhat == THead;
         };
 
 
         //! Are all elements unique?
-        template <size_t Head, size_t... Tail>
+        template <size_t THead, size_t... TTail>
         struct are_unique
         {
-            static const bool value = !contains<Head, Tail...>::value && are_unique<Tail...>::value;
+            static constexpr bool value = !contains<THead, TTail...>::value && are_unique<TTail...>::value;
         };
 
-        template <size_t value1, size_t value2>
-        struct are_unique<value1, value2>
+        template <size_t TValue1, size_t TValue2>
+        struct are_unique<TValue1, TValue2>
         {
-            static const bool value = value1 != value2;
+            static constexpr bool value = TValue1 != TValue2;
         };
 
 
         //! Last template parameter.
-        template <class Head, class... T>
+        template <class THead, class... T>
         struct last
         {
             typedef typename last<T...>::type type;
         };
 
-        template <class Head>
-        struct last<Head>
+        template <class THead>
+        struct last<THead>
         {
-            typedef Head type;
+            typedef THead type;
         };
 
-        template <class Head, class... T>
-        using last_t = typename last<Head, T...>::type;
+        template <class THead, class... T>
+        using last_t = typename last<THead, T...>::type;
 
 
-        template <size_t... Values, size_t... Indices>
+        template <size_t... TValues, size_t... Indices>
         auto take_n_resolver(std::index_sequence<Indices...>)
         {
-            constexpr size_t values[] = { Values... };
+            constexpr size_t values[] = { TValues... };
             return std::index_sequence<values[Indices]...>();
         }
 
-        template <size_t Count, size_t... Values>
-        using take_n = decltype(take_n_resolver<Values...>(std::make_index_sequence<Count>()));
+        template <size_t TCount, size_t... TValues>
+        using take_n = decltype(take_n_resolver<TValues...>(std::make_index_sequence<TCount>()));
 
-        template <bool Condition, typename T, int Line = 0>
-        using only_if = std::conditional_t<Condition, T, detail::operation_not_available_t<T, Line> >;
+        template <bool TCondition, typename T, int TLine = 0>
+        using only_if = std::conditional_t<TCondition, T, detail::operation_not_available_t<T, TLine> >;
 
         //! A handly little type to make sure a func invoked before other destructors; just
         //! make sure it is the first one to be inherited.

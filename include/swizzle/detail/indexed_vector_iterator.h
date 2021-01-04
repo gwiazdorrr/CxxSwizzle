@@ -12,7 +12,7 @@ namespace swizzle
     namespace detail
     {
         //! A very simple vector iterator. Uses subscript operator to access elements. The TVector must
-        //! also expose num_of_components static fields.
+        //! also expose num_components static fields.
         template <class TVector>
         class indexed_vector_iterator 
         {
@@ -32,7 +32,7 @@ namespace swizzle
                 : m_vector(vec)
                 , m_index(i)
             {
-                assert(m_index <= TVector::num_of_components);
+                assert(m_index <= TVector::num_components);
             }
 
             bool operator==(const indexed_vector_iterator& rhs) const 
@@ -47,7 +47,7 @@ namespace swizzle
 
             indexed_vector_iterator& operator++() 
             {
-                assert(m_index < TVector::num_of_components);
+                assert(m_index < TVector::num_components);
                 ++m_index;
                 return *this;
             }   
@@ -75,13 +75,13 @@ namespace swizzle
 
             auto operator*() -> decltype( std::declval<TVector>()[0] )
             {
-                assert(m_index < TVector::num_of_components);
+                assert(m_index < TVector::num_components);
                 return m_vector[m_index];
             }
 
             auto operator->() -> decltype( &std::declval<TVector>()[0] )
             {
-                assert(m_index < TVector::num_of_components);
+                assert(m_index < TVector::num_components);
                 return &m_vector[m_index];
             }
         };

@@ -12,7 +12,6 @@
 #include <swizzle/detail/indexed_vector_iterator.h>
 #include <swizzle/detail/vector_base_type.hpp>
 
-
 namespace swizzle
 {
     template <typename TScalar, size_t... TIndices>
@@ -22,20 +21,20 @@ namespace swizzle
         using base_type = detail::vector_base_type<TScalar, sizeof...(TIndices)>;
         using base_type::data;
 
-        using this_type = vector_;
+        using this_type     = vector_;
         using this_type_arg = const this_type&;
 
         using scalar_type = TScalar;
-        using scalar_arg = const scalar_type&;
+        using scalar_arg  = const scalar_type&;
 
-        static const bool scalar_is_bool = detail::batch_traits<TScalar>::is_bool;
-        static const bool scalar_is_integral = detail::batch_traits<TScalar>::is_integral;
-        static const bool scalar_is_floating_point = detail::batch_traits<TScalar>::is_floating_point;
-        static const bool scalar_is_number = scalar_is_integral || scalar_is_floating_point;
+        static constexpr bool scalar_is_bool           = detail::batch_traits<TScalar>::is_bool;
+        static constexpr bool scalar_is_integral       = detail::batch_traits<TScalar>::is_integral;
+        static constexpr bool scalar_is_floating_point = detail::batch_traits<TScalar>::is_floating_point;
+        static constexpr bool scalar_is_number         = scalar_is_integral || scalar_is_floating_point;
 
-        using number_scalar_arg = detail::only_if< scalar_is_number, scalar_arg >;
+        using number_scalar_arg   = detail::only_if< scalar_is_number, scalar_arg >;
         using number_integral_arg = detail::only_if< scalar_is_integral, scalar_arg >;
-        using number_vector_arg = detail::only_if< scalar_is_number, this_type_arg >;
+        using number_vector_arg   = detail::only_if< scalar_is_number, this_type_arg >;
         
         using float_scalar_arg = detail::only_if< scalar_is_floating_point, scalar_arg >;
         using float_vector_arg = detail::only_if< scalar_is_floating_point, this_type_arg >;
@@ -43,10 +42,10 @@ namespace swizzle
         using integral_scalar_arg = detail::only_if< scalar_is_integral, scalar_arg >;
         using integral_vector_arg = detail::only_if< scalar_is_integral, this_type_arg >;
 
-        using bool_type = typename detail::batch_traits<TScalar>::bool_type;
+        using bool_type        = typename detail::batch_traits<TScalar>::bool_type;
         using bool_vector_type = vector_<bool_type, TIndices...>;
-        using bool_scalar_arg = detail::only_if< scalar_is_bool, this_type_arg >;
-        using bool_vector_arg = detail::only_if< scalar_is_bool, this_type_arg >;
+        using bool_scalar_arg  = detail::only_if< scalar_is_bool, this_type_arg >;
+        using bool_vector_arg  = detail::only_if< scalar_is_bool, this_type_arg >;
 
         using literal_arg = std::conditional_t<
             std::is_fundamental_v<scalar_type> || !scalar_is_number,
@@ -58,18 +57,18 @@ namespace swizzle
         //! externally is different than the internal one (well, hello SIMD)
         using internal_scalar_type = std::remove_reference_t<decltype(std::declval<base_type>().data[0])>;
 
-        static const size_t num_of_components = sizeof...(TIndices);
-        static const bool are_scalar_types_same = std::is_same_v< internal_scalar_type, scalar_type>;
+        static constexpr size_t num_components = sizeof...(TIndices);
+        static constexpr bool are_scalar_types_same = std::is_same_v< internal_scalar_type, scalar_type>;
         static_assert(are_scalar_types_same || sizeof(scalar_type) == sizeof(internal_scalar_type), "scalar_type and internal_scalar_type can't be safely converted");
 
         //! Type static functions return; for single-component they decay to a scalar
-        using decay_type = std::conditional_t<num_of_components == 1, scalar_type, this_type>;
+        using decay_type = std::conditional_t<num_components == 1, scalar_type, this_type>;
 
-        using number_scalar_arg_cond = detail::only_if <(num_of_components > 1), number_scalar_arg>;
-        using float_scalar_arg_cond = detail::only_if <(num_of_components > 1), float_scalar_arg>;
-        using number_vector_arg_cond = detail::only_if <(num_of_components > 1), number_vector_arg>;
-        using float_vector_arg_cond = detail::only_if <(num_of_components > 1), float_vector_arg>;
-        using integral_vector_arg_cond = detail::only_if <(num_of_components > 1), integral_vector_arg>;
+        using number_scalar_arg_cond   = detail::only_if <(num_components > 1), number_scalar_arg>;
+        using float_scalar_arg_cond    = detail::only_if <(num_components > 1), float_scalar_arg>;
+        using number_vector_arg_cond   = detail::only_if <(num_components > 1), number_vector_arg>;
+        using float_vector_arg_cond    = detail::only_if <(num_components > 1), float_vector_arg>;
+        using integral_vector_arg_cond = detail::only_if <(num_components > 1), integral_vector_arg>;
 
         //!
         typedef detail::indexed_vector_iterator<const this_type> const_iterator;
@@ -95,37 +94,37 @@ namespace swizzle
         }
 
         //! Implicit constructor from scalar-convertible only for one-component vector
-        inline vector_(detail::only_if<num_of_components == 1 && !std::is_same_v<scalar_type, int> && !std::is_same_v<scalar_type, double>, scalar_type> s)
+        inline vector_(detail::only_if<num_components == 1 && !std::is_same_v<scalar_type, int> && !std::is_same_v<scalar_type, double>, scalar_type> s)
         {
             at_rvalue(0) = s;
         }
 
         //! Implicit from int (yep, it's needed for stuff like cos(0) to work
-        inline vector_(detail::only_if<num_of_components == 1, int, __LINE__> s)
+        inline vector_(detail::only_if<num_components == 1, int, __LINE__> s)
         {
             ((at_rvalue(TIndices) = scalar_type(s)), ...);
         }
 
         //! Implicit from double (for stuff like cos(0.0) to work
-        inline vector_(detail::only_if<num_of_components == 1 && scalar_is_floating_point, double, __LINE__> s)
+        inline vector_(detail::only_if<num_components == 1 && scalar_is_floating_point, double, __LINE__> s)
         {
             ((at_rvalue(TIndices) = scalar_type(s)), ...);
         }
 
         //! When more than 1 component implicit construction is not possible
-        inline explicit vector_(detail::only_if<num_of_components != 1 && !std::is_same_v<scalar_type, int> && !std::is_same_v<scalar_type, double>, scalar_type, __LINE__> s)
+        inline explicit vector_(detail::only_if<num_components != 1 && !std::is_same_v<scalar_type, int> && !std::is_same_v<scalar_type, double>, scalar_type, __LINE__> s)
         {
             ((at_rvalue(TIndices) = s), ...);
         }
 
         //! For vec2(0)
-        inline explicit vector_(detail::only_if<num_of_components != 1, int, __LINE__> s)
+        inline explicit vector_(detail::only_if<num_components != 1, int, __LINE__> s)
         {
             ((at_rvalue(TIndices) = scalar_type(s)), ...);
         }
 
         //! For vec2(0.0)
-        inline explicit vector_(detail::only_if<num_of_components != 1 && scalar_is_floating_point, double, __LINE__> s)
+        inline explicit vector_(detail::only_if<num_components != 1 && scalar_is_floating_point, double, __LINE__> s)
         {
             ((at_rvalue(TIndices) = scalar_type(s)), ...);
         }
@@ -142,7 +141,7 @@ namespace swizzle
             compose<0>(t0);
         }
 
-        template <class TProxyVector, class TProxyData, class TProxyScalar, size_t... TProxyIndices, class = std::enable_if_t<sizeof...(TProxyIndices) == num_of_components>>
+        template <class TProxyVector, class TProxyData, class TProxyScalar, size_t... TProxyIndices, class = std::enable_if_t<sizeof...(TProxyIndices) == num_components>>
         inline explicit vector_(const detail::indexed_proxy<TProxyVector, TProxyData, TProxyScalar, TProxyIndices...>& t0)
         {
             compose<0>(t0.decay());
@@ -152,8 +151,8 @@ namespace swizzle
         // will likely optimise this.
         template <class T0, class T1, class... T,
             class = std::enable_if_t<
-            (num_of_components <= detail::get_total_component_count_v<T0, T1, T...>) &&
-            !(num_of_components <= detail::get_total_component_count_v<T0, T1, T...> -detail::get_total_component_count_v< detail::last_t<T0, T1, T...> >)
+            (num_components <= detail::get_total_component_count_v<T0, T1, T...>) &&
+            !(num_components <= detail::get_total_component_count_v<T0, T1, T...> -detail::get_total_component_count_v< detail::last_t<T0, T1, T...> >)
             >
         >
         inline vector_(T0&& t0, T1&& t1, T&&... ts)
@@ -224,7 +223,7 @@ namespace swizzle
 
 
         // Auto-decay to scalar type only if this is a 1-sized vector
-        inline operator detail::only_if<num_of_components == 1, scalar_type>() const
+        inline operator detail::only_if<num_components == 1, scalar_type>() const
         {
             return at(0);
         }
@@ -271,20 +270,20 @@ namespace swizzle
         template <size_t TIndex, typename TOtherScalar, size_t... TOtherIndices>
         void compose(const vector_<TOtherScalar, TOtherIndices...>& v)
         {
-            const size_t limit = sizeof...(TOtherIndices) > num_of_components - TIndex ? (num_of_components - TIndex) : sizeof...(TOtherIndices);
+            const size_t limit = sizeof...(TOtherIndices) > num_components - TIndex ? (num_components - TIndex) : sizeof...(TOtherIndices);
             compose_impl<TIndex>(v, detail::take_n<limit, TOtherIndices...> {});
         }
 
         template <size_t TOffset, typename TDataB, size_t... TDataIndices>
         inline void compose_impl(const TDataB& src, std::index_sequence<TDataIndices...>)
         {
-            ((at(TDataIndices + TOffset) = scalar_type(src.at(TDataIndices))), ...);
+            ((at_rvalue(TDataIndices + TOffset) = scalar_type(src.at(TDataIndices))), ...);
         }
 
     public:
         int length() const
         {
-            return num_of_components;
+            return num_components;
         }
 
 
@@ -430,7 +429,7 @@ namespace swizzle
         {
             return this_type(modf(x.at(TIndices), &i.at(TIndices))...);
         }
-        static this_type call_modf(detail::only_if<num_of_components == 1, float_vector_arg> x, float& i)
+        static this_type call_modf(detail::only_if<num_components == 1, float_vector_arg> x, float& i)
         {
             // TODO: batch detection
             return this_type(modf(x.at(TIndices), &i)...);
@@ -509,7 +508,7 @@ namespace swizzle
 
         //static auto call_floatBitsToInt(float_vector_arg value)
         //{
-        //    using int_vector_type = vector<decltype(floatBitsToInt(0)), num_of_components>;
+        //    using int_vector_type = vector<decltype(floatBitsToInt(0)), num_components>;
         //    return int_vector_type{ (floatBitsToInt(value.data[TIndices]))... };
         //}
 
@@ -551,7 +550,7 @@ namespace swizzle
             return ((x.at(TIndices) * y.at(TIndices)) + ...);
         }
 
-        static typename detail::only_if<num_of_components == 3, this_type> call_cross(float_vector_arg x, float_vector_arg y)
+        static typename detail::only_if<num_components == 3, this_type> call_cross(float_vector_arg x, float_vector_arg y)
         {
             auto rx = x[1] * y[2] - x[2] * y[1];
             auto ry = x[2] * y[0] - x[0] * y[2];
@@ -728,7 +727,7 @@ namespace swizzle
             return *this;
         }
 
-        inline this_type& operator*=(const matrix<scalar_type, num_of_components, num_of_components>& mat)
+        inline this_type& operator*=(const matrix<scalar_type, num_components, num_components>& mat)
         {
             return *this = mat.mul(*this, mat);
         }
@@ -757,7 +756,7 @@ namespace swizzle
         //! \return Immutable iterator.
         const_iterator end() const
         {
-            return detail::make_indexed_vector_iterator(*this, num_of_components);
+            return detail::make_indexed_vector_iterator(*this, num_components);
         }
         //! \return Mutable iterator.
         iterator begin()
@@ -767,7 +766,7 @@ namespace swizzle
         //! \return Mutable iterator.
         iterator end()
         {
-            return detail::make_indexed_vector_iterator(*this, num_of_components);
+            return detail::make_indexed_vector_iterator(*this, num_components);
         }
 
 
@@ -781,7 +780,7 @@ namespace swizzle
         //! As an inline friend function, because thanks to that all convertibles will use same function.
         friend std::ostream& operator<<(std::ostream& os, this_type_arg vec)
         {
-            vec.visit_index([&](size_t i) -> void { os << vec[i] << (i == num_of_components - 1 ? "" : ","); });
+            vec.visit_index([&](size_t i) -> void { os << vec[i] << (i == num_components - 1 ? "" : ","); });
             return os;
         }
 
@@ -791,7 +790,7 @@ namespace swizzle
             vec.visit_index([&](size_t i) -> void
             {
                 is >> vec[i];
-                if (i < num_of_components - 1 && is.peek() == ',')
+                if (i < num_components - 1 && is.peek() == ',')
                 {
                     is.ignore(1);
                 }

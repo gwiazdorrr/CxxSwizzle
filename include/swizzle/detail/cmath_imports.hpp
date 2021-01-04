@@ -37,7 +37,7 @@ namespace swizzle
     using std::ceil;
     using std::modf;
 
-    inline float isnan(float x)
+    inline bool isnan(float x)
     {
         // this is because std::isnan is a template and it messes up adl
         return std::isnan(x);
@@ -48,7 +48,7 @@ namespace swizzle
         return ::std::atan2(y, x);
     }
 
-    inline float isinf(float x)
+    inline bool isinf(float x)
     {
         // this is because std::isinf is a template and it messes up adl
         return std::isinf(x);
@@ -97,7 +97,7 @@ namespace swizzle
             return round(x);
         }
 
-        int intValue = static_cast<int>(x);
+        int32_t intValue = static_cast<int32_t>(x);
         auto intPart = static_cast<float>(intValue);
 
         if ((intValue % 2) == 0)
@@ -119,22 +119,22 @@ namespace swizzle
         return val ? b : a;
     }
 
-    inline int min(int a, int b)
+    inline int32_t min(int32_t a, int32_t b)
     {
         return a < b ? a : b;
     }
 
-    inline int max(int a, int b)
+    inline int32_t max(int32_t a, int32_t b)
     {
         return a > b ? a : b;
     }
 
-    inline int min(unsigned a, unsigned b)
+    inline int32_t min(uint32_t a, uint32_t b)
     {
         return a < b ? a : b;
     }
 
-    inline int max(unsigned a, unsigned b)
+    inline uint32_t max(uint32_t a, uint32_t b)
     {
         return a > b ? a : b;
     }

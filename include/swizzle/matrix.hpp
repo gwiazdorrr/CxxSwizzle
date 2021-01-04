@@ -25,8 +25,8 @@ namespace swizzle
     struct matrix_ : detail::common_binary_operators<matrix_<TScalar, TNumRows, TColumns...>, TScalar>
     {
     public:
-        static const size_t num_rows = TNumRows;
-        static const size_t num_columns = sizeof...(TColumns);
+        static constexpr size_t num_rows = TNumRows;
+        static constexpr size_t num_columns = sizeof...(TColumns);
 
         typedef matrix_ matrix_type;
         typedef vector<TScalar, num_columns> row_type;

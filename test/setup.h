@@ -51,7 +51,7 @@ typedef swizzle::matrix<double, 2, 4> dmat2x4;
 
 inline bool are_close(float a, float b)
 {
-    static const float eps = std::numeric_limits<float>::epsilon();
+    static constexpr float eps = std::numeric_limits<float>::epsilon();
     return (a-b) <= eps;
 }
 

@@ -25,7 +25,7 @@ namespace swizzle
     template <typename TData, typename TPrimitive, size_t... TIndices>
     struct batch_base
     {
-        static const size_t size = sizeof...(TIndices);
+        static constexpr size_t size = sizeof...(TIndices);
         using data_type = TData;
         using primitive_type = TPrimitive;
 

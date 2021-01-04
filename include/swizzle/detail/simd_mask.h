@@ -73,26 +73,26 @@ namespace swizzle
             }
         };
 
-        template <typename MaskPusher>
+        template <typename TMaskPusher>
         struct write_mask_with_branch_assign_policy
         {
             template<typename T>
             static inline void assign(T& target, const T& value)
             {
-                if (MaskPusher::storage.mask_index == 0)
+                if (TMaskPusher::storage.mask_index == 0)
                     target = value;
                 else
-                    target((typename T::TMask)MaskPusher::storage.masks[MaskPusher::storage.mask_index]) = value;
+                    target((typename T::TMask)TMaskPusher::storage.masks[TMaskPusher::storage.mask_index]) = value;
             }
         };
 
-        template <typename MaskPusher>
+        template <typename TMaskPusher>
         struct write_mask_assign_policy
         {
             template<typename T>
             static inline void assign(T& target, const T& value)
             {
-                target((typename T::TMask)MaskPusher::storage.masks[MaskPusher::storage.mask_index]) = value;
+                target((typename T::TMask)TMaskPusher::storage.masks[TMaskPusher::storage.mask_index]) = value;
             }
         };
 

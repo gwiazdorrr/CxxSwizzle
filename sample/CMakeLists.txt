@@ -1,5 +1,5 @@
 # CxxSwizzle
-# Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
+# Copyright (c) 2013-2021, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 cmake_minimum_required(VERSION 3.3)
 
 include(CheckCXXCompilerFlag)

@@ -28,7 +28,7 @@ namespace swizzle
 
         template <typename TSomeVector, typename TSomeData, typename TSomeScalar, size_t... TIndices>
         inout_wrapper(detail::indexed_proxy<TSomeVector, TSomeData, TSomeScalar, TIndices...>& value,
-            std::enable_if_t<sizeof...(TIndices) == vector_type::num_of_components && std::is_same_v<TSomeScalar, typename vector_type::scalar_type>, bool> = false)
+            std::enable_if_t<sizeof...(TIndices) == vector_type::num_components && std::is_same_v<TSomeScalar, typename vector_type::scalar_type>, bool> = false)
             : vector_type(value.decay())
         {
             this->cleanup = [&value](this_type& v) -> void

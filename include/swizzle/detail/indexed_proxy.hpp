@@ -21,11 +21,11 @@ namespace swizzle
         struct indexed_proxy : indexed_proxy_storage<TData, TScalar, sizeof...(TIndices), TIndices...>
         {
             // Can easily count now since -1 must be continuous
-            static const size_t num_of_components = sizeof...(TIndices);
-            static_assert(num_of_components >= 2, "Must be at least 2 components");
+            static constexpr size_t num_components = sizeof...(TIndices);
+            static_assert(num_components >= 2, "Must be at least 2 components");
 
             // Is this proxy writable? All TIndices must be different, except for -1s
-            static const bool is_writable = are_unique<TIndices...>::value;
+            static constexpr bool is_writable = are_unique<TIndices...>::value;
 
             // Use the traits to define vector and scalar
             typedef TVector vector_type;
@@ -35,7 +35,7 @@ namespace swizzle
             vector_type decay() const
             {
                 vector_type result;
-                return decay_impl(result, std::make_index_sequence<num_of_components>{});
+                return decay_impl(result, std::make_index_sequence<num_components>{});
  
             }
 
@@ -61,7 +61,7 @@ namespace swizzle
             //! Assignment only enabled if proxy is writable -> has unique indexes
             indexed_proxy& operator=(const vector_type& vec)
             {
-                return assign_impl(vec, std::make_index_sequence<num_of_components>{});
+                return assign_impl(vec, std::make_index_sequence<num_components>{});
             }
 
             //! Assignment only enabled if proxy is writable -> has unique indexes
