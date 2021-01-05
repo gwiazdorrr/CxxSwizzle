@@ -13,9 +13,9 @@ namespace swizzle
     namespace detail
     {
         template <> struct get_vector_type_impl<float_type> : default_vector_type_impl<float_type> {};
-        template <> struct get_vector_type_impl<int_type> : default_vector_type_impl<int_type> {};
-        template <> struct get_vector_type_impl<uint_type> : default_vector_type_impl<uint_type> {};
-        template <> struct get_vector_type_impl<bool_type> : default_vector_type_impl<bool_type> {};
+        template <> struct get_vector_type_impl<int_type>   : default_vector_type_impl<int_type> {};
+        template <> struct get_vector_type_impl<uint_type>  : default_vector_type_impl<uint_type> {};
+        template <> struct get_vector_type_impl<bool_type>  : default_vector_type_impl<bool_type> {};
 
         // now make sure fundamentals get the right treatment too
         template <> struct get_vector_type_impl<only_if<!std::is_same_v<float_type, float>, float, __LINE__>>   : get_vector_type_impl<float_type> {};
@@ -62,5 +62,5 @@ namespace swizzle
     using mat3 = mat3x3;
     using mat4 = mat4x4;
 
-    using sampler2D = naive_sampler_generic<float_type, int_type, uint_type>;
+    using sampler2D = sampler_generic<float_type, int_type, uint_type>;
 }

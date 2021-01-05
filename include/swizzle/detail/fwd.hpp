@@ -26,5 +26,5 @@ namespace swizzle
     using matrix = decltype(detail::make_matrix_type_helper<TScalar, TNumRows>(std::make_index_sequence<TNumColumns>{}));
 
     template <typename TFloat, typename TInt32, typename TUint32>
-    struct naive_sampler_generic;
+    struct sampler_generic;
 }

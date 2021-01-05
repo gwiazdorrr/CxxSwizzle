@@ -12,7 +12,6 @@ static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 
 #include <ctime>
 #include <condition_variable>
-#include <filesystem>
 #include <functional>
 #include <future>
 #include <iomanip>
@@ -23,17 +22,13 @@ static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 #include <fstream>
 #include <unordered_map>
 
+#include <nlohmann/json.hpp>
+#include <omp.h>
+
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
 #include <SDL_video.h>
 #include <SDL_image.h>
-#include <nlohmann/json.hpp>
-
-
-#if SAMPLE_OMP_ENABLED
-#include <omp.h>
-#endif
-
 
 // some SDL goodies
 
@@ -102,7 +97,6 @@ sdl_ptr<SDL_Texture> create_matching_sdl_texture(SDL_Renderer* renderer, int w, 
 {
     return create_sdl_object_or_throw(SDL_CreateTexture, renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h);
 };
-
 
 constexpr auto pixels_per_batch  = static_cast<int>(::swizzle::detail::batch_traits<swizzle::float_type>::size);
 constexpr auto columns_per_batch = pixels_per_batch > 1 ? pixels_per_batch / 2 : 1;
@@ -235,49 +229,28 @@ const SDL_Surface* get_image_or_throw(const image_map& textures, const std::stri
     return found->second.get();
 }
 
-swizzle::naive_sampler_data make_sampler_data(const render_target_float& rt)
+swizzle::sampler_generic_data make_sampler_data(const render_target_float& rt)
 {
-    swizzle::naive_sampler_data sampler;
-    sampler.bytes = reinterpret_cast<uint8_t*>(rt.first_row);
-    sampler.width = rt.width;
-    sampler.height = rt.height;
-    sampler.pitch_bytes = static_cast<unsigned>(rt.pitch);
-    sampler.bytes_per_pixel = rt.bytes_per_pixel;
-    sampler.is_floating_point = true;
-    return sampler;
+    return sampler_generic_data::make_float32(rt.first_row, rt.width, rt.height, rt.pitch);
 }
 
-swizzle::naive_sampler_data make_sampler_data(const SDL_Surface* surface)
+swizzle::sampler_generic_data make_sampler_data(const SDL_Surface* surface)
 {
-    swizzle::naive_sampler_data sampler;
+    auto format = surface->format;
+    auto result = sampler_generic_data::make_rgba(
+        surface->pixels, surface->w, surface->h, surface->pitch, format->BytesPerPixel,
+        format->Rshift, format->Gshift, format->Bshift, format->Ashift,
+        format->Rmask,  format->Gmask,  format->Bmask,  format->Amask);
 
-    sampler.bytes = reinterpret_cast<uint8_t*>(surface->pixels);
-    sampler.width = surface->w;
-    sampler.height = surface->h;
-    sampler.pitch_bytes = surface->pitch;
-    sampler.bytes_per_pixel = surface->format->BytesPerPixel;
-
-    sampler.rshift = surface->format->Rshift;
-    sampler.gshift = surface->format->Gshift;
-    sampler.bshift = surface->format->Bshift;
-    sampler.ashift = surface->format->Ashift;
-
-    if (surface->format->format == SDL_PIXELFORMAT_INDEX8)
+    if (format->format == SDL_PIXELFORMAT_INDEX8)
     {
-        sampler.rmask = 0xFF;
-        sampler.gmask = 0xFF;
-        sampler.bmask = 0xFF;
-        sampler.amask = 0;
+        result.rmask = 0xFF;
+        result.gmask = 0xFF;
+        result.bmask = 0xFF;
+        result.amask = 0;
     }
-    else
-    {
-        sampler.rmask = surface->format->Rmask;
-        sampler.gmask = surface->format->Gmask;
-        sampler.bmask = surface->format->Bmask;
-        sampler.amask = surface->format->Amask;
-    }
-
-    return sampler;
+   
+    return std::move(result);
 }
 
 enum class sampler_type 
@@ -321,6 +294,10 @@ struct sampler_config
 
     sampler_type type = sampler_type::none;
     std::vector<std::string> paths;
+
+    texture_wrap_modes wrap_mode;
+    texture_filter_modes filter_mode = texture_filter_modes::linear;
+    bool vflip = true;
 
     int source_buffer_index;
 };
@@ -384,17 +361,12 @@ static render_stats render(TPixelFunc func, shader_inputs uniforms, TRenderTarge
     const int max_x = rt.width;
     const int max_y = rt.height;
 
-#if !SAMPLE_OMP_ENABLED
-    {
-        num_threads = 1;
-#else
     #pragma omp parallel default(shared)
     {
         #pragma omp master
         num_threads = omp_get_num_threads();
 
         #pragma omp for
-#endif
         for (int y = 0; y < max_y; y += rows_per_batch)
         {
             if (cancelled)
@@ -418,9 +390,7 @@ static render_stats render(TPixelFunc func, shader_inputs uniforms, TRenderTarge
                 ptr += rt.bytes_per_pixel * columns_per_batch;
             }
 
-#if SAMPLE_OMP_ENABLED
             #pragma omp atomic
-#endif
             num_pixels += (max_x) * rows_per_batch;
         }
     }
@@ -442,7 +412,7 @@ struct textures_context
 };
 
 
-void bind_textures(shader_inputs& inputs, naive_sampler_data* data_buffer, const pass_config& pass, const textures_context& context)
+void bind_textures(shader_inputs& inputs, sampler_generic_data* data_buffer, const pass_config& pass, const textures_context& context)
 {
     std::array<sampler2D*, shadertoy::num_samplers> samplers = 
     {
@@ -458,6 +428,9 @@ void bind_textures(shader_inputs& inputs, naive_sampler_data* data_buffer, const
 
         samplers[sampler_no]->data = data_buffer;
         samplers[sampler_no]->face_count = 1;
+        samplers[sampler_no]->wrap_mode = data.wrap_mode;
+        samplers[sampler_no]->filter_mode = data.filter_mode;
+        samplers[sampler_no]->vflip = data.vflip;
 
         if (data.type == sampler_type::buffer)
         {
@@ -476,8 +449,8 @@ void bind_textures(shader_inputs& inputs, naive_sampler_data* data_buffer, const
             }
         }
 
-        inputs.iChannelResolution[sampler_no] = { samplers[sampler_no]->data->width, samplers[sampler_no]->data->height, 0 };
-        inputs.iChannelTime[sampler_no] = 0.0f;
+        std::move(inputs.iChannelResolution[sampler_no]) = { samplers[sampler_no]->data->width, samplers[sampler_no]->data->height, 0 };
+        std::move(inputs.iChannelTime[sampler_no]      ) = 0.0f;
     }
 }
 
@@ -501,16 +474,16 @@ struct shadertoy_render_buffers
 
         auto create_buffer_surface = [=]() -> auto { return render_target_float(aligned_w, aligned_h); };
 
-#ifdef SAMPLE_HAS_BUFFER_A
+#ifdef CONFIG_SAMPLE_HAS_BUFFER_A
         buffers[0][0] = create_buffer_surface(); buffers[1][0] = create_buffer_surface();
 #endif
-#ifdef SAMPLE_HAS_BUFFER_B
+#ifdef CONFIG_SAMPLE_HAS_BUFFER_B
         buffers[0][1] = create_buffer_surface(); buffers[1][1] = create_buffer_surface();
 #endif
-#ifdef SAMPLE_HAS_BUFFER_C
+#ifdef CONFIG_SAMPLE_HAS_BUFFER_C
         buffers[0][2] = create_buffer_surface(); buffers[1][2] = create_buffer_surface();
 #endif
-#ifdef SAMPLE_HAS_BUFFER_D
+#ifdef CONFIG_SAMPLE_HAS_BUFFER_D
         buffers[0][3] = create_buffer_surface(); buffers[1][3] = create_buffer_surface();
 #endif
 
@@ -550,7 +523,7 @@ void print_help()
     printf("-h                          show this message\n");
     printf("-o <path>                   render one frame, save to <path> (PNG) and quit.");
     printf("-r <width> <height>         set initial resolution\n");
-    printf("-c <path>                   config path (default: %s)\n", SAMPLE_CONFIG_PATH);
+    printf("-c <path>                   config path (default: %s)\n", CONFIG_SAMPLE_CONFIG_PATH);
     printf("-t <time>                   set initial time & pause\n");
 }
 
@@ -635,12 +608,30 @@ shadertoy_config apply_config(const char* path, image_map& textures)
     };
 
 
-    std::map<std::string, int> buffer_name_to_index = {
+    std::unordered_map<std::string, int> buffer_name_to_index = {
         { "buffer_a", 0 },
         { "buffer_b", 1 },
         { "buffer_c", 2 },
         { "buffer_d", 3 },
     };
+
+    std::unordered_map<std::string, texture_wrap_modes> name_to_wrap_mode = {
+        { "clamp", texture_wrap_modes::clamp },
+        { "repeat", texture_wrap_modes::repeat },
+    };
+
+    std::unordered_map<std::string, texture_filter_modes> name_to_filter_mode = {
+        { "nearest", texture_filter_modes::nearest },
+        { "linear", texture_filter_modes::linear },
+        { "mipmap", texture_filter_modes::linear }, // mimaps are not supported
+    };
+
+    // this is dumb, but works best in case of an empty property
+    std::unordered_map<std::string, bool> name_to_vflip = {
+        { "true", true },
+        { "false", false },
+    };
+
 
     shadertoy_config result;
 
@@ -658,6 +649,19 @@ shadertoy_config apply_config(const char* path, image_map& textures)
 
                 sampler_config sampler;
                 sampler.type = channel_node["type"];
+
+                if (channel_node.contains("filter"))
+                {
+                    sampler.filter_mode = name_to_filter_mode[channel_node["filter"]];
+                }
+                if (channel_node.contains("wrap"))
+                {
+                    sampler.wrap_mode = name_to_wrap_mode[channel_node["wrap"]];
+                }
+                if (channel_node.contains("vflip"))
+                {
+                    sampler.vflip = name_to_vflip[channel_node["vflip"]];
+                }
 
                 if (sampler.type == sampler_type::texture)
                 {
@@ -727,7 +731,7 @@ int __cdecl main(int argc, char* argv[])
 
     static_assert(::shadertoy::num_samplers >= 4);
     
-    const char* config_path = SAMPLE_CONFIG_PATH;
+    const char* config_path = CONFIG_SAMPLE_CONFIG_PATH;
 
 
     for (int i = 1; i < argc; ++i)
@@ -823,6 +827,7 @@ int __cdecl main(int argc, char* argv[])
         bool pending_resize = false;
         bool mouse_pressed = false;
         bool mouse_clicked = false;
+        bool multithreaded = true;
 
         render_stats last_render_stats = { };
         float last_frame_timestamp = 0.0f;
@@ -830,27 +835,28 @@ int __cdecl main(int argc, char* argv[])
         std::chrono::microseconds fps_frames_duration = {};
         int fps_frames_num = 0;
         double current_fps = 0;
+        const int max_thread_count = omp_get_max_threads();
 
         std::atomic_bool abort_render_token = false;
 
         auto render_all = [&config](shader_inputs inputs, render_target_rgba32& target, buffer_render_target_list& buffers, const textures_context& context, const std::atomic_bool& cancel) -> auto
         {
             std::chrono::microseconds duration(0);   
-            naive_sampler_data data_buffer[6 * num_samplers];
+            sampler_generic_data data_buffer[6 * num_samplers];
 
-#ifdef SAMPLE_HAS_BUFFER_A
+#ifdef CONFIG_SAMPLE_HAS_BUFFER_A
             bind_textures(inputs, data_buffer, config.get_pass(pass_type::buffer_a), context);
             duration += render(shadertoy::buffer_a, inputs, buffers[0], cancel).duration;
 #endif
-#ifdef SAMPLE_HAS_BUFFER_B
+#ifdef CONFIG_SAMPLE_HAS_BUFFER_B
             bind_textures(inputs, data_buffer, config.get_pass(pass_type::buffer_b), context);
             duration += render(shadertoy::buffer_b, inputs, buffers[1], cancel).duration;
 #endif
-#ifdef SAMPLE_HAS_BUFFER_C
+#ifdef CONFIG_SAMPLE_HAS_BUFFER_C
             bind_textures(inputs, data_buffer, config.get_pass(pass_type::buffer_c), context);
             duration += render(shadertoy::buffer_c, inputs, buffers[2], cancel).duration;
 #endif
-#ifdef SAMPLE_HAS_BUFFER_D
+#ifdef CONFIG_SAMPLE_HAS_BUFFER_D
             bind_textures(inputs, data_buffer, config.get_pass(pass_type::buffer_d), context);
             duration += render(shadertoy::buffer_d, inputs, buffers[3], cancel).duration;
 #endif
@@ -874,32 +880,39 @@ int __cdecl main(int argc, char* argv[])
                 keyboard_data.set(i, keyboard_row_pressed, 0);
             }
 
-            shader_inputs inputs = {};
-            inputs.iTime         = time;
-            inputs.iTimeDelta    = static_cast<float>(duration_to_seconds(last_render_stats.duration));
-            inputs.iFrameRate    = static_cast<int>(current_fps);
-            inputs.iFrame        = num_frames;
-            inputs.iResolution   = vec3(static_cast<float>(render_targets.width), static_cast<float>(render_targets.height), 0.0f);
-            inputs.iMouse.x      = static_cast<float>(mouse_x);
-            inputs.iMouse.y      = static_cast<float>(render_targets.height - 1 - mouse_y);
-            inputs.iMouse.z      = (mouse_pressed ? 1.0f : -1.0f) * mouse_press_x;
-            inputs.iMouse.w      = (mouse_clicked ? 1.0f : -1.0f) * (render_targets.height - 1 - mouse_press_y);
+            vec4 mouse(
+                static_cast<float>(mouse_x),
+                static_cast<float>(render_targets.height - 1 - mouse_y),
+                (mouse_pressed ? 1.0f : -1.0f)* mouse_press_x,
+                (mouse_clicked ? 1.0f : -1.0f)* (render_targets.height - 1 - mouse_press_y)
+            );
 
             mouse_clicked = false;
 
-            {
+            auto make_date = []() -> vec4 {
                 using sc = std::chrono::system_clock;
                 auto now = sc::now();
                 auto seconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
                 auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(now - seconds).count();
-                
+
                 auto t = sc::to_time_t(now);
                 std::tm* lt = std::localtime(&t);
-                inputs.iDate.x = static_cast<float>(1900 + lt->tm_year);
-                inputs.iDate.y = static_cast<float>(lt->tm_mon);
-                inputs.iDate.z = static_cast<float>(lt->tm_mday);
-                inputs.iDate.w = static_cast<float>((lt->tm_hour * 60 + lt->tm_min) * 60 + lt->tm_sec + microseconds / 1000000.0);
-            }
+                return {
+                    static_cast<float>(1900 + lt->tm_year),
+                    static_cast<float>(lt->tm_mon),
+                    static_cast<float>(lt->tm_mday),
+                    static_cast<float>((lt->tm_hour * 60 + lt->tm_min) * 60 + lt->tm_sec + microseconds / 1000000.0)
+                };
+            };
+
+            shader_inputs inputs;
+            std::move(inputs.iTime      ) = time;
+            std::move(inputs.iTimeDelta ) = static_cast<float>(duration_to_seconds(last_render_stats.duration));
+            std::move(inputs.iFrameRate ) = static_cast<int>(current_fps);
+            std::move(inputs.iFrame     ) = num_frames;
+            std::move(inputs.iResolution) = vec3(static_cast<float>(render_targets.width), static_cast<float>(render_targets.height), 0.0f);
+            std::move(inputs.iMouse     ) = mouse;
+            std::move(inputs.iDate      ) = make_date();
 
             textures_context context(images, render_targets.buffers[1 - num_frames & 1], keyboard_surface.get());
             return std::async(render_all, inputs, std::ref(render_targets.target), std::ref(render_targets.buffers[num_frames & 1]), context, std::ref(abort_render_token));
@@ -923,6 +936,7 @@ int __cdecl main(int argc, char* argv[])
             printf("left arrow  - decrease time by 1 s\n");
             printf("right arrow - increase time by 1 s\n");
             printf("space       - blit now! (show incomplete render)\n");
+            printf("t           - toggle multithreading\n");
             printf("esc         - quit\n");
             printf("\n");
             printf("--- Textures: ---\n");
@@ -978,10 +992,8 @@ int __cdecl main(int argc, char* argv[])
                         }
                         break;
                     case SDL_QUIT:
-                    {
                         abort_render_token = quit = true;
-                    }
-                    break;
+                        break;
 
                     case SDL_KEYUP:
                     {
@@ -990,8 +1002,9 @@ int __cdecl main(int argc, char* argv[])
                         {
                             keyboard_data.set(ascii, keyboard_row_down, 0);
                         }
+                        break;
                     }
-                    break;
+                    
 
                     case SDL_KEYDOWN:
                         switch (event.key.keysym.sym)
@@ -1000,14 +1013,14 @@ int __cdecl main(int argc, char* argv[])
                             blit_now = true;
                             break;
                         case SDLK_ESCAPE:
-                        {
                             abort_render_token = quit = true;
-                        }
-                        break;
-                        case SDLK_f:
                             break;
                         case SDLK_p:
                             time_scale = (time_scale > 0 ? 0.0f : 1.0f);
+                            break;
+                        case SDLK_t:
+                            multithreaded = !multithreaded;
+                            omp_set_num_threads(multithreaded ? max_thread_count : 1);
                             break;
                         case SDLK_LEFT:
                             time = std::max(0.0f, time - 1.0f);
@@ -1056,11 +1069,11 @@ int __cdecl main(int argc, char* argv[])
                     break;
                 }
 
-                bool frameReady = !(bool)render_task.wait_for(chrono::microseconds{ 33 });
+                bool frame_ready = !(bool)render_task.wait_for(chrono::microseconds{ 16 });
 
                 if (pending_resize)
                 {
-                    if (frameReady)
+                    if (frame_ready)
                     {
                         int w, h;
                         SDL_GetWindowSize(window.get(), &w, &h);
@@ -1076,7 +1089,7 @@ int __cdecl main(int argc, char* argv[])
                 }
                 else
                 {
-                    if (blit_now || frameReady)
+                    if (blit_now || frame_ready)
                     {
                         SDL_Rect rect;
                         rect.x = 0;
@@ -1091,7 +1104,7 @@ int __cdecl main(int argc, char* argv[])
                         SDL_RenderPresent(renderer.get());
                     }
 
-                    if (frameReady)
+                    if (frame_ready)
                     {
                         ++num_frames;
                         last_render_stats = render_task.get();

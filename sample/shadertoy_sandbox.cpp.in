@@ -57,7 +57,7 @@ namespace
     #define highp
     #define precision
     #define final final_
-    #define discard _cxxswizzle_discarded = true
+    #define discard do { _cxxswizzle_discarded = true; } while(0)
     // char is not a type in glsl so can be used freely
     #define char definitely_not_a_char
 
@@ -105,22 +105,22 @@ namespace
     #pragma warning(disable: 4244) // disable return implicit conversion warning
     #pragma warning(disable: 4305) // disable truncation warning
 
-    struct _cxxswizzle_fragment_shader_@FRAG_NAME@ : shadertoy::shader_inputs
+    struct _cxxswizzle_fragment_shader_@CONFIG_FRAG_NAME@ : shadertoy::shader_inputs
     {
-        using _cxxswizzle_fragment_shader = _cxxswizzle_fragment_shader_@FRAG_NAME@;
+        using _cxxswizzle_fragment_shader = _cxxswizzle_fragment_shader_@CONFIG_FRAG_NAME@;
 
-@FRAG_CUSTOM_STRUCTS_SUPPORT@
+@CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT@
 
         vec4 gl_FragCoord;
         vec4 gl_FragColor;
         bool_type _cxxswizzle_discarded;
 
-        #cmakedefine FRAG_HAS_COMMON_INCLUDE
-        #ifdef FRAG_HAS_COMMON_INCLUDE
-        #include "@FRAG_COMMON_INCLUDE@"
+        #cmakedefine CONFIG_FRAG_COMMON_INCLUDE
+        #ifdef CONFIG_FRAG_COMMON_INCLUDE
+        #include "@CONFIG_FRAG_COMMON_INCLUDE@"
         #endif
 
-        #include "@FRAG_PATH@"
+        #include "@CONFIG_FRAG_PATH@"
     };
 }
 
@@ -129,7 +129,7 @@ namespace
 #undef namespace
 #undef shadertoy
 #undef vec4
-#undef @FRAG_NAME@
+#undef @CONFIG_FRAG_NAME@
 #undef const
 #undef shader_inputs
 #undef uniforms
@@ -139,7 +139,7 @@ namespace
 #undef prevFragColor
 #undef bool_type
 #undef discarded
-#undef _cxxswizzle_fragment_shader_@FRAG_NAME@
+#undef _cxxswizzle_fragment_shader_@CONFIG_FRAG_NAME@
 #undef shader
 #undef static_cast
 #undef gl_FragColor
@@ -151,13 +151,13 @@ namespace
 
 namespace shadertoy
 {
-    vec4 @FRAG_NAME@(const shader_inputs& uniforms, vec2 fragCoord, vec4 prevFragColor, bool_type* discarded)
+    vec4 @CONFIG_FRAG_NAME@(const shader_inputs& uniforms, vec2 fragCoord, vec4 prevFragColor, bool_type* discarded)
     {
-        _cxxswizzle_fragment_shader_@FRAG_NAME@ shader;
+        _cxxswizzle_fragment_shader_@CONFIG_FRAG_NAME@ shader;
         static_cast<shader_inputs&>(shader) = uniforms;
-        shader.gl_FragColor = prevFragColor;
-        shader.gl_FragCoord = vec4(fragCoord, 0.0f, 0.0f);
-        shader._cxxswizzle_discarded = false;
+        std::move(shader.gl_FragColor) = prevFragColor;
+        std::move(shader.gl_FragCoord) = vec4(fragCoord, 0.0f, 0.0f);
+        std::move(shader._cxxswizzle_discarded) = false;
         shader.mainImage(shader.gl_FragColor, fragCoord);
         if (discarded)
         {

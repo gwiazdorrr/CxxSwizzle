@@ -165,6 +165,7 @@ macro(shadertoyDownload api_key shader_id root_dir download_error_is_fatal)
                 endif()
 
                 string(CONCAT ENTRY "${ENTRY}"
+                                    "${SPACING}  \"vflip\": \"${${INPUT}.sampler.vflip}\",\n"
                                     "${SPACING}  \"filter\": \"${${INPUT}.sampler.filter}\",\n"
                                     "${SPACING}  \"wrap\": \"${${INPUT}.sampler.wrap}\"")
 

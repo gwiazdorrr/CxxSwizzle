@@ -22,7 +22,7 @@ namespace swizzle
     template <typename To, typename From>
     inline ::Vc::Vector<To> batch_cast(const ::Vc::Vector<From>& value)
     {
-        return ::Vc::Vector<To>(value);
+        return simd_cast<::Vc::Vector<To>>(value);
     }
 
     template <typename T>
@@ -270,9 +270,9 @@ namespace Vc_VERSIONED_NAMESPACE
 namespace swizzle
 {
     using float_type = float_batch<::Vc::float_v, ::Vc::float_m, 0>;
-    using int_type =  int_batch<::Vc::int32_v, ::Vc::float_m, 0>;
-    using uint_type = uint_batch<::Vc::uint32_v, ::Vc::float_m, 0>;
-    using bool_type = bool_batch<::Vc::float_m, 0>;
+    using int_type   = int_batch<::Vc::int32_v, ::Vc::float_m, 0>;
+    using uint_type  = uint_batch<::Vc::uint32_v, ::Vc::float_m, 0>;
+    using bool_type  = bool_batch<::Vc::float_m, 0>;
 
     // batch types traits definitions
     namespace detail

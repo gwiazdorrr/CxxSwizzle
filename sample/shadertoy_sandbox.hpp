@@ -2,7 +2,7 @@
 
 #include <swizzle/vector.hpp>
 #include <swizzle/matrix.hpp>
-#include <swizzle/sampler2D.hpp>
+#include <swizzle/sampler_generic.hpp>
 #include <swizzle/detail/simd_mask.h>
 #include <swizzle/inout_wrapper.hpp>
 #include <swizzle/detail/batch_write_mask.hpp>
@@ -31,20 +31,8 @@ namespace shadertoy
     };
 
     swizzle::vec4 image(const shader_inputs& uniforms, swizzle::vec2 fragCoord, swizzle::vec4 prevFragColor, swizzle::bool_type* discarded);
-
-#ifdef SAMPLE_HAS_BUFFER_A
     swizzle::vec4 buffer_a(const shader_inputs& input, swizzle::vec2 fragCoord, swizzle::vec4 prevFragColor, swizzle::bool_type* discarded);
-#endif
-
-#ifdef SAMPLE_HAS_BUFFER_B
     swizzle::vec4 buffer_b(const shader_inputs& input, swizzle::vec2 fragCoord, swizzle::vec4 prevFragColor, swizzle::bool_type* discarded);
-#endif
-
-#ifdef SAMPLE_HAS_BUFFER_C
     swizzle::vec4 buffer_c(const shader_inputs& input, swizzle::vec2 fragCoord, swizzle::vec4 prevFragColor, swizzle::bool_type* discarded);
-#endif
-
-#ifdef SAMPLE_HAS_BUFFER_D
     swizzle::vec4 buffer_d(const shader_inputs& input, swizzle::vec2 fragCoord, swizzle::vec4 prevFragColor, swizzle::bool_type* discarded);
-#endif
 }

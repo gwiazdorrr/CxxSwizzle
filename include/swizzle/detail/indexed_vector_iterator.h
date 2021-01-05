@@ -14,9 +14,8 @@ namespace swizzle
         //! A very simple vector iterator. Uses subscript operator to access elements. The TVector must
         //! also expose num_components static fields.
         template <class TVector>
-        class indexed_vector_iterator 
+        struct indexed_vector_iterator 
         {
-        public:
             using iterator_category = std::bidirectional_iterator_tag;
             using value_type = typename std::remove_reference< decltype(std::declval<TVector>()[0]) >::type;
             using difference_type = ptrdiff_t;
@@ -24,20 +23,20 @@ namespace swizzle
             using reference = value_type&;
 
         private:
-            TVector& m_vector;
-            size_t m_index;
+            TVector& vector;
+            size_t index;
 
         public:
             indexed_vector_iterator(TVector& vec, size_t i = 0) 
-                : m_vector(vec)
-                , m_index(i)
+                : vector(vec)
+                , index(i)
             {
-                assert(m_index <= TVector::num_components);
+                assert(index <= TVector::num_components);
             }
 
             bool operator==(const indexed_vector_iterator& rhs) const 
             {
-                return (&m_vector == &rhs.m_vector) && (m_index == rhs.m_index);
+                return (&vector == &rhs.vector) && (index == rhs.index);
             }
 
             bool operator!=(const indexed_vector_iterator& rhs) const 
@@ -47,8 +46,8 @@ namespace swizzle
 
             indexed_vector_iterator& operator++() 
             {
-                assert(m_index < TVector::num_components);
-                ++m_index;
+                assert(index < TVector::num_components);
+                ++index;
                 return *this;
             }   
 
@@ -61,8 +60,8 @@ namespace swizzle
 
             indexed_vector_iterator& operator--() 
             {
-                assert(m_index > 0);
-                --m_index;
+                assert(index > 0);
+                --index;
                 return *this;
             }
 
@@ -75,14 +74,14 @@ namespace swizzle
 
             auto operator*() -> decltype( std::declval<TVector>()[0] )
             {
-                assert(m_index < TVector::num_components);
-                return m_vector[m_index];
+                assert(index < TVector::num_components);
+                return vector[index];
             }
 
             auto operator->() -> decltype( &std::declval<TVector>()[0] )
             {
-                assert(m_index < TVector::num_components);
-                return &m_vector[m_index];
+                assert(index < TVector::num_components);
+                return &vector[index];
             }
         };
 

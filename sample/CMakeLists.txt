@@ -19,22 +19,11 @@ endmacro()
 find_package(SDL2 CONFIG REQUIRED)
 find_package(SDL2-image CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(OpenMP REQUIRED)
 
 # other compiler required options
-set(TARGET_ADDITIONAL_FILES "")
 set(TARGET_ADDITIONAL_FLAGS "")
 set(TARGET_ADDITIONAL_LIBS "")
-set(TARGET_ADDITIONAL_LINKER_FLAGS "")
-
-# handle OpenMP
-option(SAMPLE_USE_OPENMP "Use OpenMP" ON)
-if (SAMPLE_USE_OPENMP)
-    find_package(OpenMP)
-    if (OPENMP_FOUND)
-        list(APPEND TARGET_ADDITIONAL_FLAGS "-DSAMPLE_OMP_ENABLED")
-        list(APPEND TARGET_ADDITIONAL_LIBS OpenMP::OpenMP_CXX)
-    endif()
-endif()
 
 # handle -march flag (otherwise g++ fails its GitHub Action)
 option(SAMPLE_OPTIMIZE_FOR_NATIVE "Build with -march=native (if compiler supports it)" ON)
@@ -48,9 +37,6 @@ endif()
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # GLSL has "not" function, so better get rid of C++ operator mnemonics
     list(APPEND TARGET_ADDITIONAL_FLAGS "-fno-operator-names")
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        list(APPEND TARGET_ADDITIONAL_LIBS "stdc++fs")
-    endif()
 elseif(MSVC)
     # fast math, _vectorcall
     # the resons permissive can't be disabled in MSVC, because there's no way to disable mnemonics then
@@ -58,8 +44,6 @@ elseif(MSVC)
     list(APPEND TARGET_ADDITIONAL_FLAGS "/Gv")
     list(APPEND TARGET_ADDITIONAL_FLAGS "-D_ENABLE_EXTENDED_ALIGNED_STORAGE")
     list(APPEND TARGET_ADDITIONAL_FLAGS "-D_CRT_SECURE_NO_WARNINGS")
-    # Add debug visualisers (work great!)	
-    list(APPEND TARGET_ADDITIONAL_FILES "cxxswizzle.natvis")
 endif()
 
 
@@ -79,104 +63,110 @@ endif()
 
 # handle custom structs
 set(SAMPLE_CUSTOM_STRUCTS Ray;ray CACHE STRING "Custom structs that need function-style init or out/inout modifier")
-set(FRAG_CUSTOM_STRUCTS_SUPPORT "")
-foreach(STRUCT ${SAMPLE_CUSTOM_STRUCTS})
-    set(FRAG_CUSTOM_STRUCTS_SUPPORT "${FRAG_CUSTOM_STRUCTS_SUPPORT}        struct ${STRUCT};\n")
-endforeach()
-set(FRAG_CUSTOM_STRUCTS_SUPPORT     "${FRAG_CUSTOM_STRUCTS_SUPPORT}        struct inout_proxy : builtin_inout_proxy\n")
-set(FRAG_CUSTOM_STRUCTS_SUPPORT     "${FRAG_CUSTOM_STRUCTS_SUPPORT}        {\n")
-foreach(STRUCT ${SAMPLE_CUSTOM_STRUCTS})
-    set(FRAG_CUSTOM_STRUCTS_SUPPORT "${FRAG_CUSTOM_STRUCTS_SUPPORT}            using ${STRUCT} = _cxxswizzle_fragment_shader::${STRUCT}&;\n")
-endforeach()
-set(FRAG_CUSTOM_STRUCTS_SUPPORT     "${FRAG_CUSTOM_STRUCTS_SUPPORT}        };\n")
-foreach(STRUCT ${SAMPLE_CUSTOM_STRUCTS})
-    set(FRAG_CUSTOM_STRUCTS_SUPPORT "${FRAG_CUSTOM_STRUCTS_SUPPORT}        #define ${STRUCT}(...) ${STRUCT} { __VA_ARGS__ } \n")
-endforeach()
 
 
 # global shaders
 set(SAMPLE_SHADERTOYS_ROOT "${PROJECT_SOURCE_DIR}/shadertoys" CACHE STRING "Shadertoys root")
 get_subdir_list(SAMPLES_DIRS ${SAMPLE_SHADERTOYS_ROOT})
-foreach(SAMPLE_DIR ${SAMPLES_DIRS})
-    message(STATUS "Sample ${SAMPLE_DIR}")
 
-    file(GLOB SHADERS  RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${SAMPLE_SHADERTOYS_ROOT}/${SAMPLE_DIR}/*.frag")
-    get_filename_component(SAMPLE_NAME ${SAMPLE_DIR} NAME_WE)
+macro(create_sample_from_template template_dir target_name shadertoy_dir custom_structs)
 
-    set(GEN_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/${SAMPLE_NAME}_gen")
-    set(GEN_CONFIG_PATH "${GEN_INCLUDE_DIR}/config.hpp")
+    file(GLOB shader_file_list RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${shadertoy_dir}/*.frag")
+    
+    set(gen_include_dir "${CMAKE_CURRENT_BINARY_DIR}/${target_name}_gen")
 
-    # set the config default values
-    foreach(PREFIX SAMPLE SAMPLE_BUFFER_A SAMPLE_BUFFER_B SAMPLE_BUFFER_C SAMPLE_BUFFER_D)
-        foreach(INDEX 0 1 2 3)
-            set(${PREFIX}_ICHANNEL_${INDEX}_PATH "\\0")
-        endforeach()
+    # codegen for custom strcuts
+    set(CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT "")
+    foreach(STRUCT ${custom_structs})
+        set(CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT "${CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT}        struct ${STRUCT};\n")
+    endforeach()
+    set(CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT     "${CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT}        struct inout_proxy : builtin_inout_proxy\n")
+    set(CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT     "${CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT}        {\n")
+    foreach(STRUCT ${custom_structs})
+        set(CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT "${CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT}            using ${STRUCT} = _cxxswizzle_fragment_shader::${STRUCT}&;\n")
+    endforeach()
+    set(CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT     "${CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT}        };\n")
+    foreach(STRUCT ${custom_structs})
+        set(CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT "${CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT}        #define ${STRUCT}(...) ${STRUCT} { __VA_ARGS__ } \n")
     endforeach()
 
-    unset(FRAG_COMMON_INCLUDE)
-    unset(FRAG_HAS_COMMON_INCLUDE)
-    foreach(SHADER ${SHADERS})
-        get_filename_component(SHADER_NAME_SANITIZED ${SHADER} NAME_WE)
-        string(TOLOWER ${SHADER_NAME_SANITIZED} SHADER_NAME_SANITIZED_LOWER)
-        if (SHADER_NAME_SANITIZED STREQUAL "common")
-            message(STATUS "* found common include: ${SHADER}")
-            set(FRAG_COMMON_INCLUDE "${SAMPLE_SHADERTOYS_ROOT}/${SHADER}")
-            set(FRAG_HAS_COMMON_INCLUDE True)
+    # find common
+    unset(CONFIG_FRAG_COMMON_INCLUDE)
+    foreach(shader_file ${shader_file_list})
+        get_filename_component(shader_name ${shader_file} NAME_WE)
+        string(TOLOWER ${shader_name} shader_name)
+        if (shader_name STREQUAL "common")
+            message(STATUS "* found common include: ${shader_file}")
+            set(CONFIG_FRAG_COMMON_INCLUDE "${SAMPLE_SHADERTOYS_ROOT}/${shader_file}")
             break()
         endif()
     endforeach()
 
-    # defines will be needed
-    set(GEN_SHADERS)
+    # handle shaders
+    set(codegen_file_list)
 
-    set(VALID_PASS_NAMES "image" "buffer_a" "buffer_b" "buffer_c" "buffer_d" "common")
-    foreach(SHADER ${SHADERS})
-        get_filename_component(SHADER_NAME_SANITIZED ${SHADER} NAME_WE)
-        string(TOLOWER ${SHADER_NAME_SANITIZED} SHADER_NAME_SANITIZED_LOWER)
-        if (SHADER_NAME_SANITIZED STREQUAL "common")
+    set(valid_shader_names "common" "image" "buffer_a" "buffer_b" "buffer_c" "buffer_d" )
+    foreach(shader_name ${valid_shader_names})
+        string(TOUPPER ${shader_name} shader_name)
+        unset(CONFIG_SAMPLE_HAS_${shader_name})
+    endforeach()    
+
+    foreach(shader_file ${shader_file_list})
+        get_filename_component(shader_name ${shader_file} NAME_WE)
+        string(TOLOWER ${shader_name} shader_name)
+        if (shader_name STREQUAL "common")
             # ignore
-        elseif(SHADER_NAME_SANITIZED IN_LIST VALID_PASS_NAMES)
-            message(STATUS "* found pass: ${SHADER}") 
-            set(GEN_SANDBOX_PATH "${GEN_INCLUDE_DIR}/shadertoy_sandbox_${SHADER_NAME_SANITIZED}.cpp")
-            set(FRAG_PATH "${SAMPLE_SHADERTOYS_ROOT}/${SHADER}")
-            set(FRAG_NAME "${SHADER_NAME_SANITIZED}")
-            configure_file("shadertoy_sandbox.cpp.in" "${GEN_SANDBOX_PATH}")
-            list(APPEND GEN_SHADERS ${GEN_SANDBOX_PATH})
-            string(TOUPPER ${SHADER_NAME_SANITIZED} SHADER_NAME_SANITIZED)
-            set(SAMPLE_HAS_${SHADER_NAME_SANITIZED} True)    
+        elseif(shader_name IN_LIST valid_shader_names)
+            message(STATUS "* found pass: ${shader_file}") 
+            set(gen_sandbox_path "${gen_include_dir}/shadertoy_sandbox_${shader_name}.cpp")
+            set(CONFIG_FRAG_PATH "${SAMPLE_SHADERTOYS_ROOT}/${shader_file}")
+            set(CONFIG_FRAG_NAME "${shader_name}")
+            configure_file("shadertoy_sandbox.cpp.in" "${gen_sandbox_path}")
+            list(APPEND codegen_file_list ${gen_sandbox_path})
+            string(TOUPPER ${shader_name} shader_name)
+            set(CONFIG_SAMPLE_HAS_${shader_name} True)    
         else()
-            message(WARNING "Pass name not recognised: ${SHADER_NAME_SANITIZED}, not going to get included.")
+            message(WARNING "Pass name not recognised: ${shader_name}, not going to get included.")
         endif()
     endforeach()
 
-    set(SAMPLE_CONFIG_PATH "${SAMPLE_SHADERTOYS_ROOT}/${SAMPLE_DIR}/config.json")
-    configure_file("config.hpp.in" "${GEN_CONFIG_PATH}")
-
-    set(CODEGEN_TEMPLATE_FILES "shadertoy_sandbox.cpp.in" "config.hpp.in")
-
-    set(TARGET_FILES main.cpp ${GEN_SHADERS} shadertoy_sandbox.hpp ${SHADERS} ${GEN_CONFIG_PATH} ${TARGET_ADDITIONAL_FILES} ${CODEGEN_TEMPLATE_FILES})
-
-    if (EXISTS ${SAMPLE_CONFIG_PATH})
-        list(APPEND TARGET_FILES ${SAMPLE_CONFIG_PATH})
+    set(config_json_path "${shadertoy_dir}/config.json")
+    if (EXISTS ${config_json_path})
+        set(CONFIG_SAMPLE_CONFIG_PATH ${config_json_path})
+    else()
+        unset(CONFIG_SAMPLE_CONFIG_PATH)
+        set(config_json_path)
     endif()
 
-    source_group("" FILES ${SHADERS} ${SAMPLE_CONFIG_PATH})
-    source_group("codegen" FILES ${GEN_SHADERS} ${GEN_CONFIG_PATH} )
-    source_group("shared" FILES CMakeList.txt main.cpp shadertoy_sandbox.hpp ${TARGET_ADDITIONAL_FILES} ${CODEGEN_TEMPLATE_FILES} "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt" REGULAR_EXPRESSION "\\.natvis")
+    set(codegen_config_path "${gen_include_dir}/config.hpp")
+    configure_file("${template_dir}/config.hpp.in" "${codegen_config_path}")
+
+    list(APPEND codegen_file_list ${codegen_config_path})
+
+    set(shared_file_list "${template_dir}/main.cpp" 
+                         "${template_dir}/shadertoy_sandbox.hpp"
+                         "${template_dir}/shadertoy_sandbox.cpp.in" 
+                         "${template_dir}/config.hpp.in"
+                         "${template_dir}/cxxswizzle.natvis")
 
 
-    set(TARGET_NAME "shadertoy_${SAMPLE_NAME}")
-    add_executable(${TARGET_NAME} ${TARGET_FILES})
-    target_include_directories(${TARGET_NAME} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include ${GEN_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
-    target_link_libraries(${TARGET_NAME} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image nlohmann_json::nlohmann_json ${TARGET_ADDITIONAL_LIBS})
-    set_target_properties(${TARGET_NAME} PROPERTIES CXX_STANDARD 17)
-    set_target_properties(${TARGET_NAME} PROPERTIES CXX_STANDARD_REQUIRED ON)
-    target_compile_options(${TARGET_NAME} PRIVATE ${TARGET_ADDITIONAL_FLAGS})
+    source_group("" FILES ${shader_file_list} ${config_json_path})
+    source_group("codegen" FILES ${codegen_file_list} )
+    source_group("shared" FILES ${shared_file_list} "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt" REGULAR_EXPRESSION "\\.natvis")
 
-    # undo variables
-    foreach(SHADER ${SHADERS})
-        get_filename_component(SHADER_NAME_SANITIZED ${SHADER} NAME_WE)
-        string(TOUPPER ${SHADER_NAME_SANITIZED} SHADER_NAME_SANITIZED)
-        unset(SAMPLE_HAS_${SHADER_NAME_SANITIZED})
-    endforeach()		
+    add_executable(${target_name} ${shared_file_list} ${codegen_file_list}  ${shader_file_list} ${config_json_path})
+    target_include_directories(${target_name} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include ${gen_include_dir} ${template_dir})
+    target_link_libraries(${target_name} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image nlohmann_json::nlohmann_json OpenMP::OpenMP_CXX ${TARGET_ADDITIONAL_LIBS})
+    set_target_properties(${target_name} PROPERTIES CXX_STANDARD 17)
+    set_target_properties(${target_name} PROPERTIES CXX_STANDARD_REQUIRED ON)
+    target_compile_options(${target_name} PRIVATE ${TARGET_ADDITIONAL_FLAGS})
+endmacro()
+
+foreach(SAMPLE_DIR ${SAMPLES_DIRS})
+    message(STATUS "Sample ${SAMPLE_DIR}")
+
+    get_filename_component(shadertoy_dir ${SAMPLE_DIR} NAME_WE)
+    set(target_name "shadertoy_${shadertoy_dir}")
+    create_sample_from_template("${CMAKE_CURRENT_SOURCE_DIR}" ${target_name} "${SAMPLE_SHADERTOYS_ROOT}/${SAMPLE_DIR}" "${SAMPLE_CUSTOM_STRUCTS}")
+
 endforeach()
