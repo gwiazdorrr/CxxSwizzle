@@ -6,6 +6,7 @@
 #include <swizzle/detail/simd_mask.h>
 #include <swizzle/inout_wrapper.hpp>
 #include <swizzle/detail/batch_write_mask.hpp>
+#include <type_traits>
 
 namespace shadertoy
 {

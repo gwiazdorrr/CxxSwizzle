@@ -6,13 +6,37 @@
 #include <Vc/vector.h>
 #include <Vc/global.h>
 #include <type_traits>
+#include <swizzle/detail/batch_write_mask.hpp>
 
 namespace swizzle
 {
     // free functions needed for wrappers to work
+#ifndef CXXSWIZZLE_SIMD_MASKING
+#define CXXSWIZZLE_INTERNAL_BATCH_WRITE_MASK_TYPE detail::batch_write_mask<::Vc::float_m, 16, false>
 
     template <typename T>
-    inline ::Vc::Vector<T> batch_cast(const ::Vc::float_m& value)
+    inline void batch_masked_assign(::Vc::Vector<T>& target, const ::Vc::Vector<T>& src) noexcept
+    {
+        using write_mask = detail::batch_write_mask<::Vc::float_m, 16, false>;
+        target(simd_cast<typename ::Vc::Vector<T>::MaskType>(write_mask::storage.masks[write_mask::storage.mask_index])) = src;
+    }
+
+#else
+    template <typename T>
+    inline void batch_masked_assign(::Vc::Vector<T>& target, const ::Vc::Vector<T>& src) noexcept
+    {
+        target = src;
+    }
+#endif
+
+    template <typename T>
+    inline void batch_masked_assign(::Vc::Mask<T>& target, const ::Vc::Mask<T>& src) noexcept
+    {
+        target = src;
+    }
+
+    template <typename T>
+    inline ::Vc::Vector<T> batch_cast(const ::Vc::float_m& value) noexcept
     {
         ::Vc::Vector<T> result(::Vc::Zero);
         result(value) = 1.0f;
@@ -20,63 +44,58 @@ namespace swizzle
     }
 
     template <typename To, typename From>
-    inline ::Vc::Vector<To> batch_cast(const ::Vc::Vector<From>& value)
+    inline ::Vc::Vector<To> batch_cast(const ::Vc::Vector<From>& value) noexcept
     {
         return simd_cast<::Vc::Vector<To>>(value);
     }
 
     template <typename T>
-    inline ::Vc::Vector<T> batch_scalar_cast(T value)
+    inline ::Vc::Vector<T> batch_scalar_cast(T value) noexcept
     {
         return ::Vc::Vector<T>(value);
     }
 
-    inline ::Vc::float_m batch_scalar_cast(bool value)
+    inline ::Vc::float_m batch_scalar_cast(bool value) noexcept
     {
         return ::Vc::float_m(value);
     }
 
-    inline bool batch_collapse(const ::Vc::float_m& value)
+    inline bool batch_collapse(const ::Vc::float_m& value) noexcept
     {
         return value.isNotEmpty();
     }
 
     template <typename T>
-    inline void batch_load_aligned(::Vc::Vector<T>& value, const T* data)
+    inline void batch_load_aligned(::Vc::Vector<T>& value, const T* data) noexcept
     {
         value.load(data, Vc::Aligned);
     }
 
     template <typename T>
-    inline void batch_store_aligned(const ::Vc::Vector<T>& value, T* data)
+    inline void batch_store_aligned(const ::Vc::Vector<T>& value, T* data) noexcept
     {
         value.store(data, Vc::Aligned);
     }
 
     template <size_t TIndex, typename TResult>
-    inline void batch_masked_read_internal(const ::Vc::Vector<TResult>& mask, ::Vc::Vector<TResult>& result)
+    inline void batch_masked_read_internal(const ::Vc::Vector<TResult>& mask, ::Vc::Vector<TResult>& result) noexcept
     {}
 
     template <size_t TIndex, typename TResult, typename... TTypes>
-    inline void batch_masked_read_internal(const ::Vc::Vector<TResult>& mask, ::Vc::Vector<TResult>& result, const ::Vc::Vector<TResult>& vec, TTypes&&... types)
+    inline void batch_masked_read_internal(const ::Vc::Vector<TResult>& mask, ::Vc::Vector<TResult>& result, const ::Vc::Vector<TResult>& vec, TTypes&&... types) noexcept
     {
         result.assign(vec, (mask == TIndex));
         batch_masked_read_internal<TIndex + 1>(mask, result, std::forward<TTypes>(types)...);
     }
 
     template <typename TMask, typename TResult, typename... TTypes>
-    inline void batch_masked_read(const ::Vc::Vector<TMask>& mask, ::Vc::Vector<TResult>& result, TTypes&&... types)
+    inline void batch_masked_read(const ::Vc::Vector<TMask>& mask, ::Vc::Vector<TResult>& result, TTypes&&... types) noexcept
     {
         batch_masked_read_internal<0, TResult>(simd_cast<::Vc::Vector<TResult>>(mask), result, std::forward<TTypes>(types)...);
     }
 
-    template <typename T>
-    inline void batch_assign(::Vc::Vector<T>& target, const ::Vc::Vector<T>& src)
-    {
-        target = src;
-    }
-    
-    inline uint8_t* batch_store_rgba8_aligned(const ::Vc::float_v& r, const ::Vc::float_v& g, const ::Vc::float_v& b, const ::Vc::float_v& a, uint8_t* ptr, size_t pitch)
+
+    inline uint8_t* batch_store_rgba8_aligned(const ::Vc::float_v& r, const ::Vc::float_v& g, const ::Vc::float_v& b, const ::Vc::float_v& a, uint8_t* ptr, size_t pitch) noexcept
     {
         using namespace Vc;
 
@@ -104,7 +123,7 @@ namespace swizzle
 #endif
     }
 
-    inline uint8_t* batch_store_rgba32f_aligned(const ::Vc::float_v& r, const ::Vc::float_v& g, const ::Vc::float_v& b, const ::Vc::float_v& a, uint8_t* ptr, size_t pitch)
+    inline uint8_t* batch_store_rgba32f_aligned(const ::Vc::float_v& r, const ::Vc::float_v& g, const ::Vc::float_v& b, const ::Vc::float_v& a, uint8_t* ptr, size_t pitch) noexcept
     {
         using namespace Vc;
 
@@ -130,14 +149,14 @@ namespace swizzle
 namespace Vc_VERSIONED_NAMESPACE
 {
     template <typename T>
-    inline Vector<T> step(const Vector<T>& edge, const Vector<T>& x)
+    inline Vector<T> step(const Vector<T>& edge, const Vector<T>& x) noexcept
     {
         auto result = Vector<T>::One();
         result.setZero(x <= edge);
         return result;
     }
 
-    inline float_v mix(const float_v& x, const float_v& y, const float_m& a)
+    inline float_v mix(const float_v& x, const float_v& y, const float_m& a) noexcept
     {
         float_v result = x;
         result(a) = y;
@@ -145,7 +164,7 @@ namespace Vc_VERSIONED_NAMESPACE
     }
 
     template <typename T>
-    inline Vector<T> pow(const Vector<T>& x, const Vector<T>& n)
+    inline Vector<T> pow(const Vector<T>& x, const Vector<T>& n) noexcept
     {
         //! Vc doesn't come with pow function, so we're gonna go
         //! with the poor man's version of it.
@@ -154,7 +173,7 @@ namespace Vc_VERSIONED_NAMESPACE
     }
 
     template <typename T>
-    inline Vector<T> exp2(const Vector<T>& x)
+    inline Vector<T> exp2(const Vector<T>& x) noexcept
     {
         //! Vc doesn't come with pow function, so we're gonna go
         //! with the poor man's version of it.
@@ -162,25 +181,25 @@ namespace Vc_VERSIONED_NAMESPACE
     }
 
     template <typename T>
-    inline Vector<T> fract(const Vector<T>& x)
+    inline Vector<T> fract(const Vector<T>& x) noexcept
     {
         return x - floor(x);
     }
 
     template <typename T>
-    inline Vector<T> inversesqrt(const Vector<T>& x)
+    inline Vector<T> inversesqrt(const Vector<T>& x) noexcept
     {
         return 1 / sqrt(x);
     }
 
     template <typename T>
-    inline Vector<T> mod(const Vector<T>& x, const Vector<T>& y)
-    {
+    inline Vector<T> mod(const Vector<T>& x, const Vector<T>& y) noexcept
+    { 
         return x - y * floor(x / y);
     }
 
     template <typename T>
-    inline Vector<T> sign(const Vector<T>& x)
+    inline Vector<T> sign(const Vector<T>& x) noexcept
     {
         auto m1 = x > 0;
         auto m2 = x < 0;
@@ -191,20 +210,20 @@ namespace Vc_VERSIONED_NAMESPACE
     }
 
     template <typename T>
-    inline Vector<T> atan(const Vector<T>& y, const Vector<T>& x)
+    inline Vector<T> atan(const Vector<T>& y, const Vector<T>& x) noexcept
     {
         return atan2(y, x);
     }
 
     template <typename T>
-    inline Vector<T> tan(const Vector<T>& x)
+    inline Vector<T> tan(const Vector<T>& x) noexcept
     {
         return sin(x) / cos(x);
     }
 
     //! https://developer.download.nvidia.com/cg/acos.html
     template <typename T>
-    inline Vector<T> acos(const Vector<T>& _x)
+    inline Vector<T> acos(const Vector<T>& _x) noexcept
     {
         Vector<T> negate = Vector<T>::Zero();
         negate(_x < 0) = 1;
@@ -223,19 +242,19 @@ namespace Vc_VERSIONED_NAMESPACE
 
 
     template <typename T>
-    inline Vector<T> radians(const Vector<T>& x)
+    inline Vector<T> radians(const Vector<T>& x) noexcept
     {
         return  x * (180.0f / 3.14159265358979323846f);
     }
 
     template <typename T>
-    inline Vector<T> degrees(const Vector<T>& x)
+    inline Vector<T> degrees(const Vector<T>& x) noexcept
     {
         return x * (3.14159265358979323846f / 180.0f);
     }
 
     template <typename T>
-    inline Vector<T> dFdx(const Vector<T>& x)
+    inline Vector<T> dFdx(const Vector<T>& x) noexcept
     {
         // this assumes vectors are row major and there are 2 rows
         auto data = x.data();
@@ -245,7 +264,7 @@ namespace Vc_VERSIONED_NAMESPACE
     }
 
     template <typename T>
-    inline Vector<T> dFdy(const Vector<T>& x)
+    inline Vector<T> dFdy(const Vector<T>& x) noexcept
     {
         // this assumes vectors are row major and there are 2 rows
         auto data = x.data();

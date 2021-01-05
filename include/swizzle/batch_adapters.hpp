@@ -13,15 +13,6 @@ namespace swizzle
 {
     struct construct_tag {};
 
-    template <typename T>
-    struct batch_assign_policy
-    {
-        static void assign(T& target, const T& source)
-        {
-            target = source;
-        }
-    };
-
     template <typename TData, typename TPrimitive, size_t... TIndices>
     struct batch_base
     {
@@ -33,113 +24,113 @@ namespace swizzle
 
         storage_type storage;
 
-        CXXSWIZZLE_FORCE_INLINE batch_base()
+        CXXSWIZZLE_FORCE_INLINE batch_base() noexcept
         {}
 
-        CXXSWIZZLE_FORCE_INLINE batch_base(const typename detail::only_if<size != 1, storage_type&> storage)
+        CXXSWIZZLE_FORCE_INLINE batch_base(const typename detail::only_if<size != 1, storage_type&> storage) noexcept
             : storage(storage)
         {}
 
-        CXXSWIZZLE_FORCE_INLINE batch_base(const data_type& d)
+        CXXSWIZZLE_FORCE_INLINE batch_base(const data_type& d) noexcept
         {
             ((at<TIndices>() = d), ...);
         }
 
-        CXXSWIZZLE_FORCE_INLINE batch_base(const batch_base& other)
+        CXXSWIZZLE_FORCE_INLINE batch_base(const batch_base& other) noexcept
             : storage(other.storage)
         {}
 
-        CXXSWIZZLE_FORCE_INLINE batch_base(detail::only_if<!std::is_same_v<primitive_type, data_type>, primitive_type> value)
+        CXXSWIZZLE_FORCE_INLINE batch_base(detail::only_if<!std::is_same_v<primitive_type, data_type>, primitive_type> value) noexcept
             : batch_base(batch_scalar_cast(value))
         {}
 
         template <typename TOtherBatch, typename TOtherPrimitive>
-        CXXSWIZZLE_FORCE_INLINE explicit batch_base(const batch_base<TOtherBatch, TOtherPrimitive, TIndices...>& other)
+        CXXSWIZZLE_FORCE_INLINE explicit batch_base(const batch_base<TOtherBatch, TOtherPrimitive, TIndices...>& other) noexcept
         {
             ((at<TIndices>() = batch_cast<primitive_type>(other.template at<TIndices>())), ...);
         }
 
         template <typename... TTypes>
-        CXXSWIZZLE_FORCE_INLINE explicit batch_base(construct_tag, TTypes&& ... values)
+        CXXSWIZZLE_FORCE_INLINE explicit batch_base(construct_tag, TTypes&& ... values) noexcept
         {
             static_assert(sizeof...(TTypes) == sizeof...(TIndices));
             construct<0>(std::forward<TTypes>(values)...);
         }
 
-        friend CXXSWIZZLE_FORCE_INLINE void load_aligned(batch_base& target, const TPrimitive* ptr)
+        friend CXXSWIZZLE_FORCE_INLINE void load_aligned(batch_base& target, const TPrimitive* ptr) noexcept
         {
             target.load_aligned_internal(ptr);
         }
 
-        friend CXXSWIZZLE_FORCE_INLINE void store_aligned(const batch_base& target, TPrimitive* ptr)
+        friend CXXSWIZZLE_FORCE_INLINE void store_aligned(const batch_base& target, TPrimitive* ptr) noexcept
         {
             target.store_aligned_internal(ptr);
         }
 
         template <size_t TIndex, size_t TSize = size>
-        CXXSWIZZLE_FORCE_INLINE std::enable_if_t< (TSize > 1), data_type>& at()
+        CXXSWIZZLE_FORCE_INLINE std::enable_if_t< (TSize > 1), data_type>& at() noexcept
         {
             return storage[TIndex];
         }
 
         template <size_t TIndex, size_t TSize = size>
-        CXXSWIZZLE_FORCE_INLINE std::enable_if_t< (TSize == 1), data_type>& at()
+        CXXSWIZZLE_FORCE_INLINE std::enable_if_t< (TSize == 1), data_type>& at() noexcept
         {
             return storage;
         }
 
         template <size_t TIndex, size_t TSize = size>
-        CXXSWIZZLE_FORCE_INLINE const std::enable_if_t< (TSize > 1), data_type>& at() const
+        CXXSWIZZLE_FORCE_INLINE const std::enable_if_t< (TSize > 1), data_type>& at() const noexcept
         {
             return storage[TIndex];
         }
 
         template <size_t TIndex, size_t TSize = size>
-        CXXSWIZZLE_FORCE_INLINE const std::enable_if_t< (TSize == 1), data_type>& at() const
+        CXXSWIZZLE_FORCE_INLINE const std::enable_if_t< (TSize == 1), data_type>& at() const noexcept
         {
             return storage;
         }
 
-        CXXSWIZZLE_FORCE_INLINE void assign(const batch_base& other)
+        CXXSWIZZLE_FORCE_INLINE void assign(const batch_base& other) noexcept
         {
-            (batch_assign_policy<TData>::assign(at<TIndices>(), other.at<TIndices>()), ...);
+            (batch_masked_assign(at<TIndices>(), other.at<TIndices>()), ...);
         }
 
-        CXXSWIZZLE_FORCE_INLINE void assign_fast(const batch_base& other)
+        CXXSWIZZLE_FORCE_INLINE void assign_fast(const batch_base& other) noexcept
         {
             ((at<TIndices>() = other.at<TIndices>()), ...);
         }
 
         template <size_t TIndex>
-        CXXSWIZZLE_FORCE_INLINE void assign_at(const data_type& other)
+        CXXSWIZZLE_FORCE_INLINE void assign_at(const data_type& other) noexcept
         {
-            batch_assign_policy<TData>::assign(at<TIndex>(), other);
+            batch_masked_assign(at<TIndex>(), other);
         }
 
         template <size_t TIndex>
-        CXXSWIZZLE_FORCE_INLINE void assign_at_fast(const data_type& other)
+        CXXSWIZZLE_FORCE_INLINE void assign_at_fast(const data_type& other) noexcept
         {
             at<TIndex>() = other;
         }
 
     private:
         template <size_t TIndex, typename... TTypes>
-        CXXSWIZZLE_FORCE_INLINE void construct(const data_type& first, TTypes&& ... others)
+        CXXSWIZZLE_FORCE_INLINE void construct(const data_type& first, TTypes&& ... others) noexcept
         {
             at<TIndex>() = first;
             construct<TIndex + 1>(std::forward<TTypes>(others)...);
         }
 
         template <size_t TIndex>
-        CXXSWIZZLE_FORCE_INLINE void construct()
+        CXXSWIZZLE_FORCE_INLINE void construct() noexcept
         {}
 
-        CXXSWIZZLE_FORCE_INLINE void load_aligned_internal(const TPrimitive* ptr)
+        CXXSWIZZLE_FORCE_INLINE void load_aligned_internal(const TPrimitive* ptr) noexcept
         {
             (batch_load_aligned(at<TIndices>(), ptr + TIndices * sizeof(data_type) / sizeof(primitive_type)), ...);
         }
 
-        CXXSWIZZLE_FORCE_INLINE void store_aligned_internal(TPrimitive* ptr) const
+        CXXSWIZZLE_FORCE_INLINE void store_aligned_internal(TPrimitive* ptr) const noexcept
         {
             (batch_store_aligned(at<TIndices>(), ptr + TIndices * sizeof(data_type) / sizeof(primitive_type)), ...);
         }
@@ -155,15 +146,15 @@ namespace swizzle
         using this_arg = const this_type&;
         using primitive_type = typename base_type::primitive_type;
 
-        bool_batch(bool b) : bool_batch(batch_scalar_cast(b)) {}
+        bool_batch(bool b) noexcept : bool_batch(batch_scalar_cast(b)) {}
 
-        CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)&
+        CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)& noexcept
         {
             this->assign(other);
             return *this;
         }
 
-        CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)&&
+        CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)&& noexcept
         {
             this->assign_fast(other);
             return *this;
@@ -171,13 +162,13 @@ namespace swizzle
 
         // needed to avoid template as qualifier
         template <size_t TIndex>
-        CXXSWIZZLE_FORCE_INLINE const typename base_type::data_type& at() const
+        CXXSWIZZLE_FORCE_INLINE const typename base_type::data_type& at() const noexcept
         {
             return base_type::template at<TIndex>();
         }
 
         // for CxxSwizzle ADL-magic
-        CXXSWIZZLE_FORCE_INLINE this_type decay() const
+        CXXSWIZZLE_FORCE_INLINE this_type decay() const noexcept
         {
             return *this;
         }

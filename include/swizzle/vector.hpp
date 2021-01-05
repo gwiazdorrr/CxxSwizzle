@@ -15,7 +15,7 @@
 namespace swizzle
 {
     template <typename TScalar, size_t... TIndices>
-    struct vector_  : detail::vector_base_type<TScalar, sizeof...(TIndices)>
+    struct vector_ : detail::vector_base_type<TScalar, sizeof...(TIndices)>
     {
     public:
         using base_type = detail::vector_base_type<TScalar, sizeof...(TIndices)>;
@@ -736,7 +736,7 @@ namespace swizzle
         static scalar_type smoothstep_helper(scalar_arg edge0, scalar_arg edge1, scalar_arg x)
         {
             auto t = (x - edge0) / (edge1 - edge0);
-            t = min(max(t, scalar_type(0.0)), scalar_type(1.0));
+            detail::nonmasked(t) = min(max(t, scalar_type(0.0)), scalar_type(1.0));
             return t * t * (scalar_type(3.0) - scalar_type(2.0) * t);
         }
 

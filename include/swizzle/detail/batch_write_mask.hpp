@@ -68,6 +68,12 @@ namespace swizzle
                 return{ static_cast<mask_type>(condition) };
             }
 
+            static void reset()
+            {
+                storage.masks[0] = mask_type(true);
+                storage.mask_index = 0;
+            }
+
             //static batch_write_mask push(bool condition, loop_tag)
             //{
             //    auto mask = static_cast<mask_type>(condition);

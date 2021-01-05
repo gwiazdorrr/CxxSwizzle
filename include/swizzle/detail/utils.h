@@ -174,5 +174,18 @@ namespace swizzle
             }
         };
 
+        template <typename T>
+        constexpr decltype(auto) nonmasked(T& arg) noexcept {
+            using actual_type = std::remove_reference_t<T>;
+            if constexpr (std::is_fundamental_v<actual_type>)
+            {
+                return arg;
+            }
+            else
+            {
+                return static_cast<actual_type&&>(arg);
+            }
+        }
+
     }
 }

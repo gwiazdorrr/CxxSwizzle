@@ -63,4 +63,24 @@ namespace swizzle
     using mat4 = mat4x4;
 
     using sampler2D = sampler_generic<float_type, int_type, uint_type>;
+
+#ifdef CXXSWIZZLE_INTERNAL_BATCH_WRITE_MASK_TYPE
+
+    using batch_write_mask = CXXSWIZZLE_INTERNAL_BATCH_WRITE_MASK_TYPE;
+#undef CXXSWIZZLE_INTERNAL_BATCH_WRITE_MASK_TYPE
+
+#define CXXSWIZZLE_OVERRIDE_IF(x)       if (::swizzle::batch_write_mask current_mask_holder = ::swizzle::batch_write_mask::push(x))
+#define CXXSWIZZLE_OVERRIDE_ELSE        if (::swizzle::batch_write_mask::invert_tag{})
+#define CXXSWIZZLE_OVERRIDE_WHILE(x)    while(::swizzle::batch_write_mask current_mask_holder = ::swizzle::batch_write_mask::push(x)) 
+#define CXXSWIZZLE_OVERRIDE_BREAK       ::swizzle::batch_write_mask::mul_head()
+    
+    inline void batch_write_mask_reset() noexcept
+    {
+        batch_write_mask::reset();
+    }
+#else
+    inline void batch_write_mask_reset() noexcept
+    {
+    }
+#endif
 }

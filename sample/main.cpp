@@ -30,6 +30,8 @@ static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 #include <SDL_video.h>
 #include <SDL_image.h>
 
+using swizzle::detail::nonmasked;
+
 // some SDL goodies
 
 struct sdl_deleter
@@ -449,8 +451,8 @@ void bind_textures(shader_inputs& inputs, sampler_generic_data* data_buffer, con
             }
         }
 
-        std::move(inputs.iChannelResolution[sampler_no]) = { samplers[sampler_no]->data->width, samplers[sampler_no]->data->height, 0 };
-        std::move(inputs.iChannelTime[sampler_no]      ) = 0.0f;
+        nonmasked(inputs.iChannelResolution[sampler_no]) = { samplers[sampler_no]->data->width, samplers[sampler_no]->data->height, 0 };
+        nonmasked(inputs.iChannelTime[sampler_no]      ) = 0.0f;
     }
 }
 
@@ -827,7 +829,11 @@ int __cdecl main(int argc, char* argv[])
         bool pending_resize = false;
         bool mouse_pressed = false;
         bool mouse_clicked = false;
+
         bool multithreaded = true;
+#if _DEBUG
+        multithreaded = false;
+#endif
 
         render_stats last_render_stats = { };
         float last_frame_timestamp = 0.0f;
@@ -835,7 +841,9 @@ int __cdecl main(int argc, char* argv[])
         std::chrono::microseconds fps_frames_duration = {};
         int fps_frames_num = 0;
         double current_fps = 0;
+
         const int max_thread_count = omp_get_max_threads();
+        omp_set_num_threads(multithreaded ? max_thread_count : 1);
 
         std::atomic_bool abort_render_token = false;
 
@@ -906,13 +914,13 @@ int __cdecl main(int argc, char* argv[])
             };
 
             shader_inputs inputs;
-            std::move(inputs.iTime      ) = time;
-            std::move(inputs.iTimeDelta ) = static_cast<float>(duration_to_seconds(last_render_stats.duration));
-            std::move(inputs.iFrameRate ) = static_cast<int>(current_fps);
-            std::move(inputs.iFrame     ) = num_frames;
-            std::move(inputs.iResolution) = vec3(static_cast<float>(render_targets.width), static_cast<float>(render_targets.height), 0.0f);
-            std::move(inputs.iMouse     ) = mouse;
-            std::move(inputs.iDate      ) = make_date();
+            nonmasked(inputs.iTime      ) = time;
+            nonmasked(inputs.iTimeDelta ) = static_cast<float>(duration_to_seconds(last_render_stats.duration));
+            nonmasked(inputs.iFrameRate ) = static_cast<int>(current_fps);
+            nonmasked(inputs.iFrame     ) = num_frames;
+            nonmasked(inputs.iResolution) = vec3(static_cast<float>(render_targets.width), static_cast<float>(render_targets.height), 0.0f);
+            nonmasked(inputs.iMouse     ) = mouse;
+            nonmasked(inputs.iDate      ) = make_date();
 
             textures_context context(images, render_targets.buffers[1 - num_frames & 1], keyboard_surface.get());
             return std::async(render_all, inputs, std::ref(render_targets.target), std::ref(render_targets.buffers[num_frames & 1]), context, std::ref(abort_render_token));

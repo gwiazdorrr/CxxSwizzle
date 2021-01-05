@@ -87,7 +87,7 @@ namespace swizzle
     }
 
     template <typename T>
-    inline void batch_assign(T& target, const T& src)
+    inline void batch_masked_assign(T& target, const T& src)
     {
         target = src;
     }

@@ -258,7 +258,7 @@ namespace swizzle
         template <size_t TCellIdx>
         typename std::enable_if<TCellIdx % num_rows == 0, void>::type compose(const column_type& v)
         {
-            column( TCellIdx / num_rows ) = v;
+            detail::nonmasked(column( TCellIdx / num_rows )) = v;
         }
 
         //! Vector fallback setter, when TCellIdx is not aligned

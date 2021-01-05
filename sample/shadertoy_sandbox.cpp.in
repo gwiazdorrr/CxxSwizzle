@@ -148,6 +148,9 @@ namespace
 #undef mainImage
 #undef _cxxswizzle_discarded
 #undef return
+#undef nonmasked
+#undef swizzle
+#undef detail
 
 namespace shadertoy
 {
@@ -155,9 +158,10 @@ namespace shadertoy
     {
         _cxxswizzle_fragment_shader_@CONFIG_FRAG_NAME@ shader;
         static_cast<shader_inputs&>(shader) = uniforms;
-        std::move(shader.gl_FragColor) = prevFragColor;
-        std::move(shader.gl_FragCoord) = vec4(fragCoord, 0.0f, 0.0f);
-        std::move(shader._cxxswizzle_discarded) = false;
+        swizzle::detail::nonmasked(shader.gl_FragColor) = prevFragColor;
+        swizzle::detail::nonmasked(shader.gl_FragCoord) = vec4(fragCoord, 0.0f, 0.0f);
+        swizzle::detail::nonmasked(shader._cxxswizzle_discarded) = false;
+        swizzle::batch_write_mask_reset();
         shader.mainImage(shader.gl_FragColor, fragCoord);
         if (discarded)
         {

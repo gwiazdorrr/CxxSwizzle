@@ -179,8 +179,8 @@ namespace swizzle
             using std::min;
             auto ix = static_cast<IntType>(u * static_cast<float>(data->width));
             auto iy = static_cast<IntType>(v * static_cast<float>(data->height));
-            ix = min(IntType(data->width - 1), ix);
-            iy = min(IntType(data->height - 1), iy);
+            detail::nonmasked(ix) = min(IntType(data->width - 1), ix);
+            detail::nonmasked(iy) = min(IntType(data->height - 1), iy);
             return std::make_tuple(ix, iy);
         }
 
