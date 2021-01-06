@@ -108,7 +108,7 @@ namespace swizzle
         //! To get SFINAE-usable total vector size, we need to introduce helper type, or else g++ will fall on it's face.
         template <bool DoAllHaveVectorSizes, class... T>
         struct get_total_component_count_helper {
-            static constexpr one_of_the_types_does_not_have_get_vector_type_impl value;
+            static constexpr one_of_the_types_does_not_have_get_vector_type_impl value = {};
         };
 
         template <class... T>
