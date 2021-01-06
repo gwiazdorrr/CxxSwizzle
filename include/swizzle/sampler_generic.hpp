@@ -10,70 +10,40 @@
 
 namespace swizzle
 {
+    enum class texture_formats : int
+    {
+        a8 =                    1,
+        r8g8b8a8 =              4,
+        r32g32b32a32_float =    16,
+    };
+
     struct sampler_generic_data
     {
-        static sampler_generic_data make_float32(const void* p, int width, int height, int pitch)
+        static sampler_generic_data make(const void* p, int width, int height, int pitch, texture_formats format) 
         {
-            sampler_generic_data result;
-            result.bytes = reinterpret_cast<const uint8_t*>(p);
-            result.width = width;
-            result.height = height;
-            result.pixel_w = 1.0f / width;
-            result.pixel_h = 1.0f / height;
-            result.pitch_bytes = static_cast<unsigned>(pitch);
-            result.bytes_per_pixel = sizeof(float) * 4;
-            result.is_floating_point = true;
-            return std::move(result);
+            return {
+                reinterpret_cast<const uint8_t*>(p),
+                width,
+                height,
+                pitch,
+                1.0f / width,
+                1.0f / height,
+                format
+            };
         }
 
-        static sampler_generic_data make_rgba(const void* p, int width, int height, int pitch, int bpp,
-            uint8_t rshift, uint8_t gshift, uint8_t bshift, uint8_t ashift,
-            uint32_t rmask, uint32_t gmask, uint32_t bmask, uint32_t amask)
-        {
-            sampler_generic_data result;
-
-            result.bytes = reinterpret_cast<const uint8_t*>(p);
-            result.width = width;
-            result.height = height;
-            result.pixel_w = 1.0f / width;
-            result.pixel_h = 1.0f / height;
-            result.pitch_bytes = pitch;
-            result.bytes_per_pixel = bpp;
-
-            result.rshift = rshift;
-            result.gshift = gshift;
-            result.bshift = bshift;
-            result.ashift = ashift;
-
-            result.rmask = rmask;
-            result.gmask = gmask;
-            result.bmask = bmask;
-            result.amask = amask;
-
-            return std::move(result);
-        }
+        const uint8_t* bytes = nullptr;
 
         int width = 256;
         int height = 256; 
+        int pitch_bytes = 0;
 
         float pixel_w;
         float pixel_h;
 
-        uint32_t rmask = 0;
-        uint32_t gmask = 0;
-        uint32_t bmask = 0;
-        uint32_t amask = 0;
+        
 
-        uint8_t rshift = 0;
-        uint8_t gshift = 0;
-        uint8_t bshift = 0;
-        uint8_t ashift = 0;
-
-        const uint8_t* bytes = nullptr;
-        int bytes_per_pixel = 0;
-        int pitch_bytes = 0;
-
-        bool is_floating_point = false;
+        texture_formats format;
     };
 
     enum class texture_filter_modes {
@@ -152,7 +122,7 @@ namespace swizzle
 
         inline friend vec4 texelFetch(const this_type& sampler, const ivec2& p, int32_type lod)
         {
-            return sampler.fetch(p);
+            return sampler.fetch(p.x, p.y);
         }
 
 
@@ -189,13 +159,15 @@ namespace swizzle
         {
             if (vflip)
             {
-                return (data->height - 1 - y) * data->pitch_bytes + x * data->bytes_per_pixel;
+                return (data->height - 1 - y) * data->pitch_bytes + x * static_cast<int>(data->format);
             }
             else
             {
-                return y * data->pitch_bytes + x * data->bytes_per_pixel;
+                return y * data->pitch_bytes + x * static_cast<int>(data->format);
             }
         }
+
+        
 
 
         std::tuple<float, float, float, float> fetch_pixel(int index, const sampler_generic_data* data) const
@@ -207,7 +179,7 @@ namespace swizzle
                 return std::make_tuple(0.0f, 0.0f, 0.0f, 1.0f);
             }
 
-            if (data->is_floating_point) {
+            if (data->format == texture_formats::r32g32b32a32_float) {
                 return std::make_tuple(
                     reinterpret_cast<const float*>(ptr)[0],
                     reinterpret_cast<const float*>(ptr)[1],
@@ -215,25 +187,24 @@ namespace swizzle
                     reinterpret_cast<const float*>(ptr)[3]
                 );
             }
+            else if (data->format == texture_formats::a8) 
+            {
+                auto r = ptr[0] / 255.0f;
+                return std::make_tuple(r, r, r, r);
+            }
             else
             {
-                uint32_t pixel = 0;
-                // TODO: are cache reads aligned?
-                // TODO: still crashing
-                switch (data->bytes_per_pixel)
-                {
-                case 4: pixel |= (ptr[3] << (3 * 8));
-                case 3: pixel |= (ptr[2] << (2 * 8));
-                case 2: pixel |= (ptr[1] << (1 * 8));
-                case 1: pixel |= (ptr[0] << (0 * 8));
-                }
+                uint32_t pixel = *reinterpret_cast<const uint32_t*>(ptr);
+                auto r = ptr[0];
+                auto g = ptr[1];
+                auto b = ptr[2];
+                auto a = ptr[3];
 
-                // TODO: a faster cast is possible
                 return std::make_tuple(
-                    static_cast<float>((pixel & data->rmask) >> data->rshift) / 255.0f,
-                    static_cast<float>((pixel & data->gmask) >> data->gshift) / 255.0f,
-                    static_cast<float>((pixel & data->bmask) >> data->bshift) / 255.0f,
-                    static_cast<float>(data->amask ? ((pixel & data->amask) >> data->ashift) / 255.0f : 1.0f)
+                    r / 255.0f,
+                    g / 255.0f,
+                    b / 255.0f,
+                    a / 255.0f
                 );
             }
         }
@@ -340,9 +311,7 @@ namespace swizzle
             }
             else
             {
-                ivec2 icoord;
-                std::tie(icoord.x, icoord.y) = uv_to_icoord<int32_type>(uv.x, uv.y, data);
-                return fetch(icoord);
+                return fetch(uv_to_icoord<int32_type>(uv.x, uv.y, data));
             }
         }
 
@@ -379,16 +348,13 @@ namespace swizzle
                     int32_type index = icoord_to_index(x, y, data);
                     store_aligned(index, ibuffer);
                 }
-
+                
                 alignas(batch_traits<float_type>::align) float pr[batch_traits<float_type>::size];
                 alignas(batch_traits<float_type>::align) float pg[batch_traits<float_type>::size];
                 alignas(batch_traits<float_type>::align) float pb[batch_traits<float_type>::size];
                 alignas(batch_traits<float_type>::align) float pa[batch_traits<float_type>::size];
 
-                static_for<0, batch_traits<int32_type>::size>([&](size_t i)
-                    {
-                        std::tie(pr[i], pg[i], pb[i], pa[i]) = fetch_pixel(ibuffer[i], data);
-                    });
+                fetch_pixels(ibuffer, pr, pg, pb, pa);
 
                 vec4 result;
                 load_aligned(result.r, pr);
@@ -399,38 +365,38 @@ namespace swizzle
             }
         }
 
-        vec4 fetch(const ivec2& coord) const
+        template <size_t TCount>
+        void fetch_pixels(int(&index)[TCount], float(&target_r)[TCount], float(&target_g)[TCount], float(&target_b)[TCount], float(&target_a)[TCount]) const
         {
-            if (!data->bytes)
+            if (data->format == texture_formats::r32g32b32a32_float)
             {
-                return vec4(0.0f, 0.0f, 0.0f, 1.0f);
+                detail::static_for<0, TCount>([&](size_t i) -> void {
+                    auto pf = reinterpret_cast<const float*>(data->bytes + index[i]);
+                    target_r[i] = pf[0];
+                    target_g[i] = pf[1];
+                    target_b[i] = pf[2];
+                    target_a[i] = pf[3];
+                    });
+            }
+            else if (data->format == texture_formats::a8)
+            {
+                detail::static_for<0, TCount>([&](size_t i) -> void {
+                    auto a = *(data->bytes + index[i]) / 255.0f;
+                    target_r[i] = a;
+                    target_g[i] = a;
+                    target_b[i] = a;
+                    target_a[i] = a;
+                    });
             }
             else
             {
-                using namespace swizzle::detail;
-
-                alignas(batch_traits<int32_type>::align) int ibuffer[batch_traits<int32_type>::size];
-                {
-                    int32_type index = icoord_to_index(coord.x, coord.y, data);
-                    store_aligned(index, ibuffer);
-                }
-
-                alignas(batch_traits<float_type>::align) float pr[batch_traits<float_type>::size];
-                alignas(batch_traits<float_type>::align) float pg[batch_traits<float_type>::size];
-                alignas(batch_traits<float_type>::align) float pb[batch_traits<float_type>::size];
-                alignas(batch_traits<float_type>::align) float pa[batch_traits<float_type>::size];
-
-                static_for<0, batch_traits<int32_type>::size>([&](size_t i)
-                {
-                    std::tie(pr[i], pg[i], pb[i], pa[i]) = fetch_pixel(ibuffer[i], data);
-                });
-
-                vec4 result;
-                load_aligned(result.r, pr);
-                load_aligned(result.g, pg);
-                load_aligned(result.b, pb);
-                load_aligned(result.a, pa);
-                return result;
+                detail::static_for<0, TCount>([&](size_t i) -> void {
+                    auto ptr = data->bytes + index[i];
+                    target_r[i] = ptr[0] / 255.0f;
+                    target_g[i] = ptr[1] / 255.0f;
+                    target_b[i] = ptr[2] / 255.0f;
+                    target_a[i] = ptr[3] / 255.0f;
+                    });
             }
         }
     };

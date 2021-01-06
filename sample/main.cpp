@@ -217,7 +217,15 @@ void ensure_texture_loaded(image_map& textures, const std::string& path)
 {
     if (textures.find(path) == textures.end())
     {
-        textures[path] = create_sdl_image_object_or_throw(IMG_Load, path.c_str());
+        auto image = create_sdl_image_object_or_throw(IMG_Load, path.c_str());
+        if (image->format->format == SDL_PIXELFORMAT_INDEX8)
+        {
+            textures[path] = std::move(image);
+        }
+        else
+        {
+            textures[path] = create_sdl_object_or_throw(SDL_ConvertSurfaceFormat, image.get(), SDL_PIXELFORMAT_RGBA32, 0);
+        }
     }
 }
 
@@ -233,26 +241,17 @@ const SDL_Surface* get_image_or_throw(const image_map& textures, const std::stri
 
 swizzle::sampler_generic_data make_sampler_data(const render_target_float& rt)
 {
-    return sampler_generic_data::make_float32(rt.first_row, rt.width, rt.height, rt.pitch);
+    return sampler_generic_data::make(rt.first_row, rt.width, rt.height, rt.pitch, swizzle::texture_formats::r32g32b32a32_float);
 }
 
 swizzle::sampler_generic_data make_sampler_data(const SDL_Surface* surface)
 {
-    auto format = surface->format;
-    auto result = sampler_generic_data::make_rgba(
-        surface->pixels, surface->w, surface->h, surface->pitch, format->BytesPerPixel,
-        format->Rshift, format->Gshift, format->Bshift, format->Ashift,
-        format->Rmask,  format->Gmask,  format->Bmask,  format->Amask);
-
-    if (format->format == SDL_PIXELFORMAT_INDEX8)
-    {
-        result.rmask = 0xFF;
-        result.gmask = 0xFF;
-        result.bmask = 0xFF;
-        result.amask = 0;
-    }
-   
-    return std::move(result);
+    auto sdl_format = surface->format->format;
+    assert(sdl_format == SDL_PIXELFORMAT_INDEX8 || sdl_format == SDL_PIXELFORMAT_RGBA32);
+    return sampler_generic_data::make(surface->pixels, surface->w, surface->h, surface->pitch,
+        sdl_format == SDL_PIXELFORMAT_INDEX8 ?  swizzle::texture_formats::a8 : swizzle::texture_formats::r8g8b8a8
+    
+    );
 }
 
 enum class sampler_type 
