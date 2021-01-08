@@ -17,19 +17,12 @@ namespace swizzle
             using mask_type = TMask;
 
             mask_type masks[TSize];
-            mask_type single_masks[TSize];
-            // mask_type break_masks[TSize];
-            // bool is_loop[TSize];
-            // size_t next_break_mask_index;
-            size_t mask_index;
+            int mask_index;
             
             batch_write_mask_context()
             {
                 masks[0] = mask_type(true);
-                //break_masks[0] = mask_type(true);
-                //break_masks[1] = mask_type(true);
                 mask_index = 0;
-                //break_mask_index = 0;
             }
         };
 
@@ -50,80 +43,86 @@ namespace swizzle
         template <typename TMask, size_t TStackSize, bool TIsSingleThreaded = false>
         struct batch_write_mask : batch_write_mask_base<TMask, TStackSize, TIsSingleThreaded>
         {
-            struct invert_tag {};
-            struct loop_tag {};
+            int index;
 
+            struct invert_tag {};
+            struct copy_tag   {};
+   
             using mask_type = TMask;
             using base_type = batch_write_mask_base<TMask, TStackSize, TIsSingleThreaded>;
-            using base_type::storage;
+            using this_type = batch_write_mask;
 
-            template <typename T>
-            static batch_write_mask push(T && condition)
-            {
-                return{ static_cast<mask_type>(condition) };
-            }
-
-            static batch_write_mask push(bool condition)
-            {
-                return{ static_cast<mask_type>(condition) };
-            }
 
             static void reset()
             {
+                auto& storage = base_type::storage;
                 storage.masks[0] = mask_type(true);
                 storage.mask_index = 0;
             }
 
-            //static batch_write_mask push(bool condition, loop_tag)
-            //{
-            //    auto mask = static_cast<mask_type>(condition);
-
-            //    mask &= storage.break_masks[storage.break_mask_index];
-
-            //    // clean up the break mask for a nested loop
-            //    storage.break_masks[storage.break_mask_index+1] = storage.break_masks[storage.break_mask_index];
-
-            //    ++storage.break_mask_index;
-
-            //    return{ mask };
-            //}
-
-            static batch_write_mask push(invert_tag)
+            static const bool multiply_to(batch_write_mask& mask)
             {
-                return{ !storage.single_masks[storage.mask_index] };
+                auto& storage = base_type::storage;
+                auto top_level_mask = !storage.masks[storage.mask_index];
+
+                for (int i = mask.index; i < storage.mask_index; ++i) {
+                    storage.masks[i] &= top_level_mask;
+                }
+
+                return mask; 
             }
 
-            static void do_break()
+            batch_write_mask() = delete;
+            batch_write_mask(const batch_write_mask&) = delete;
+
+            inline batch_write_mask(invert_tag) noexcept
             {
-                storage.break_mask[storage.break_mask_index] = !storage.masks[storage.mask_index];
+                auto& storage = base_type::storage;
+                index = ++storage.mask_index;
+                // invert the previous mask leftover
+                storage.masks[index]        = !storage.masks[index] & storage.masks[index - 1];
+            } 
+
+            inline batch_write_mask(copy_tag) noexcept
+            {
+                auto& storage = base_type::storage;
+                index = ++storage.mask_index;
+                storage.masks[index]        = storage.masks[index - 1];
             }
 
-            inline batch_write_mask(const mask_type& mask, bool is_loop = false)
+            inline batch_write_mask(bool b) noexcept
+                : this_type(static_cast<mask_type>(b))
+            {}
+
+            inline batch_write_mask(const mask_type& mask) noexcept
             {
-                // save the mask for later negation in "else"
-                storage.single_masks[storage.mask_index] = mask;
-                //storage.is_loop[storage.mask_index] = is_loop;
-
-                // compute and store the new mask
-                // TODO: is the condition needed?
-                auto newMask = storage.mask_index == 0 ? mask : mask & storage.masks[storage.mask_index];
-                storage.masks[++storage.mask_index] = newMask;
-
-
-                //storage.is_loop[storage.mask_index] = is_loop;
+                auto& storage = base_type::storage;
+                index = ++storage.mask_index;
+                storage.masks[index]        = mask & storage.masks[index - 1];
             }
 
             inline ~batch_write_mask()
             {
-                // pop!
-                --storage.mask_index;
+                auto& storage = base_type::storage;
+                assert(storage.mask_index == index);
+                storage.mask_index = index - 1;
             }
 
             inline operator bool() const
             {
+                auto& storage = base_type::storage;
                 // let the mask type decide what it means by being "true"
-                return batch_collapse(storage.masks[storage.mask_index]);
+                return batch_collapse(storage.masks[index]);
             }
+
+            inline batch_write_mask& operator&=(const mask_type& mask)
+            {
+                auto& storage = base_type::storage;
+                assert(index == storage.mask_index);
+                storage.masks[index] &= mask;
+                return *this;
+            }
+
         };
 
         //template <typename TMask, size_t TStackSize, bool TIsSingleThreaded = false>

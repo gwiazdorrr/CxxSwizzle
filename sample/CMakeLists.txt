@@ -19,11 +19,18 @@ endmacro()
 find_package(SDL2 CONFIG REQUIRED)
 find_package(SDL2-image CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
-find_package(OpenMP REQUIRED)
+find_package(OpenMP)
 
 # other compiler required options
 set(TARGET_ADDITIONAL_FLAGS "")
 set(TARGET_ADDITIONAL_LIBS "")
+
+if (OPENMP_FOUND)
+    list(APPEND TARGET_ADDITIONAL_LIBS OpenMP::OpenMP_CXX)
+endif()
+
+
+set(SAMPLE_TRACY_PROFILER_ROOT "" CACHE PATH "Path to the Tracy Profiler root. Leave empty if you don't want to use it.")
 
 # handle -march flag (otherwise g++ fails its GitHub Action)
 option(SAMPLE_OPTIMIZE_FOR_NATIVE "Build with -march=native (if compiler supports it)" ON)
@@ -155,11 +162,20 @@ macro(create_sample_from_template template_dir target_name shadertoy_dir custom_
     source_group("shared" FILES ${shared_file_list} "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt" REGULAR_EXPRESSION "\\.natvis")
 
     add_executable(${target_name} ${shared_file_list} ${codegen_file_list}  ${shader_file_list} ${config_json_path})
+    
     target_include_directories(${target_name} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include ${gen_include_dir} ${template_dir})
-    target_link_libraries(${target_name} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image nlohmann_json::nlohmann_json OpenMP::OpenMP_CXX ${TARGET_ADDITIONAL_LIBS})
+    target_link_libraries(${target_name} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image nlohmann_json::nlohmann_json ${TARGET_ADDITIONAL_LIBS})
     set_target_properties(${target_name} PROPERTIES CXX_STANDARD 17)
     set_target_properties(${target_name} PROPERTIES CXX_STANDARD_REQUIRED ON)
     target_compile_options(${target_name} PRIVATE ${TARGET_ADDITIONAL_FLAGS})
+
+    if (NOT SAMPLE_TRACY_PROFILER_ROOT STREQUAL "")
+        source_group("shared" FILES   "${SAMPLE_TRACY_PROFILER_ROOT}/TracyClient.cpp")
+        target_sources(${target_name} PRIVATE "${SAMPLE_TRACY_PROFILER_ROOT}/TracyClient.cpp")
+        target_include_directories(${target_name} PRIVATE ${SAMPLE_TRACY_PROFILER_ROOT})
+        target_compile_options(${target_name} PRIVATE "-DTRACY_ENABLE")
+    endif()
+
 endmacro()
 
 foreach(SAMPLE_DIR ${SAMPLES_DIRS})

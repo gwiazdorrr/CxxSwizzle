@@ -23,12 +23,19 @@ static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 #include <unordered_map>
 
 #include <nlohmann/json.hpp>
+
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
 #include <SDL_video.h>
 #include <SDL_image.h>
+
+#ifdef TRACY_ENABLE
+#include <Tracy.hpp>
+#endif
 
 using swizzle::detail::nonmasked;
 
@@ -345,7 +352,7 @@ static render_stats render(TPixelFunc func, shader_inputs uniforms, TRenderTarge
     swizzle::float_type y_offsets(0);
 
     int num_pixels = 0;
-    int num_threads = 0;
+    int num_threads = 1;
 
     {
         float_traits::aligned_storage_type aligned_storage;
@@ -362,12 +369,16 @@ static render_stats render(TPixelFunc func, shader_inputs uniforms, TRenderTarge
     const int max_x = rt.width;
     const int max_y = rt.height;
 
+#ifdef _OPENMP
     #pragma omp parallel default(shared)
     {
         #pragma omp master
         num_threads = omp_get_num_threads();
 
         #pragma omp for
+#else
+    {
+#endif
         for (int y = 0; y < max_y; y += rows_per_batch)
         {
             if (cancelled)
@@ -391,7 +402,9 @@ static render_stats render(TPixelFunc func, shader_inputs uniforms, TRenderTarge
                 ptr += rt.bytes_per_pixel * columns_per_batch;
             }
 
+#ifdef _OPENMP
             #pragma omp atomic
+#endif
             num_pixels += (max_x) * rows_per_batch;
         }
     }
@@ -829,10 +842,7 @@ int __cdecl main(int argc, char* argv[])
         bool mouse_pressed = false;
         bool mouse_clicked = false;
 
-        bool multithreaded = true;
-#if _DEBUG
-        multithreaded = false;
-#endif
+        
 
         render_stats last_render_stats = { };
         float last_frame_timestamp = 0.0f;
@@ -841,9 +851,15 @@ int __cdecl main(int argc, char* argv[])
         int fps_frames_num = 0;
         double current_fps = 0;
 
+#if _OPENMP
+        bool multithreaded = true;
+#if _DEBUG
+        multithreaded = false;
+#endif     
         const int max_thread_count = omp_get_max_threads();
         omp_set_num_threads(multithreaded ? max_thread_count : 1);
-
+#endif
+        
         std::atomic_bool abort_render_token = false;
 
         auto render_all = [&config](shader_inputs inputs, render_target_rgba32& target, buffer_render_target_list& buffers, const textures_context& context, const std::atomic_bool& cancel) -> auto
@@ -1025,10 +1041,12 @@ int __cdecl main(int argc, char* argv[])
                         case SDLK_p:
                             time_scale = (time_scale > 0 ? 0.0f : 1.0f);
                             break;
+#ifdef _OPENMP
                         case SDLK_t:
                             multithreaded = !multithreaded;
                             omp_set_num_threads(multithreaded ? max_thread_count : 1);
                             break;
+#endif
                         case SDLK_LEFT:
                             time = std::max(0.0f, time - 1.0f);
                             break;
@@ -1113,6 +1131,10 @@ int __cdecl main(int argc, char* argv[])
 
                     if (frame_ready)
                     {
+#ifdef TRACY_ENABLE
+                        FrameMark;
+#endif
+
                         ++num_frames;
                         last_render_stats = render_task.get();
                         last_frame_timestamp = current_frame_timestamp;

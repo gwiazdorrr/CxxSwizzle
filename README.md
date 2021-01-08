@@ -32,9 +32,9 @@ Parts of [GLSL Lang Spec 4.60](https://www.khronos.org/registry/OpenGL/specs/gl/
   - [x] `mat2..4x2..4`
   - [ ] `dmat2..4`
   - [ ] `dmat2..4x2..4`
-  - [x] `sampler1D` *(as sampler_naive_generic)*
-  - [x] `sampler2D` *(as sampler_naive_generic)*
-  - [x] `samplerCube` *(as sampler_naive_generic)*
+  - [x] `sampler1D` *(as sampler_generic)*
+  - [x] `sampler2D` *(as sampler_generic)*
+  - [x] `samplerCube` *(as sampler_generic)*
   - [ ] `sampler3D`
   - [ ] other sampler types 
 - [ ] Implicit Conversions [4.1.10]
@@ -49,9 +49,9 @@ Parts of [GLSL Lang Spec 4.60](https://www.khronos.org/registry/OpenGL/specs/gl/
   - [x] `lowp` *(no effect)*
 - [ ] Operators [5.1]
 - [x] Constructors [5.4]
-  - [ ] Conversion and Scalar Constructors [5.4.1] *needs tests*
+  - [x] Conversion and Scalar Constructors [5.4.1]
   - [ ] Vector and Matrix Constructors [5.4.2] *needs tests*
-  - [ ] Structure Constructors [5.4.3] *(see Workarounds)*
+  - [x] Structure Constructors [5.4.3] *(see Workarounds)*
   - [ ] Array Constructors [5.4.4] 
     - [x] One-dimensional  *(see Workarounds)*
     - [ ] Multi-dimensional
@@ -140,7 +140,7 @@ Parts of [GLSL Lang Spec 4.60](https://www.khronos.org/registry/OpenGL/specs/gl/
   - [x] Buffer D
   - [ ] Sound
   - [ ] Cubemap A
-- [ ] Channels:
+- [ ] Channels
   - [ ] Misc
     - [x] Keyboard
     - [ ] Webcam
@@ -156,6 +156,13 @@ Parts of [GLSL Lang Spec 4.60](https://www.khronos.org/registry/OpenGL/specs/gl/
   - [ ] Volumes
   - [ ] Videos
   - [ ] Music
+- [ ] Sampler options
+  - [ ] Filter
+    - [ ] mipmap *Note: there's generally no support for mipmaps at the moment*
+    - [x] linear
+    - [x] nearest
+  - [x] Wrap
+  - [x] VFlip
 
 
 ## GLSL bits that do not work out of the box
@@ -249,6 +256,19 @@ If you intend to copy the shader back to Shadertoy you will need to add this as 
 #endif
 ```
 
+### Ternary operator and swizzles
+
+```glsl
+p.xz = (p.z>p.x) ? p.zx : p.xz;
+```
+```
+error: conditional expression is ambiguous; 'indexed_proxy<[3 * ...], 2UL aka 2, 0UL aka 0>' can be converted to 'indexed_proxy<[3 * ...], 0UL aka 0, 2UL aka 2>' and vice versa
+error: operands to ?: have different types ‘swizzle::detail::vector_base_type_helper<float, 3>::proxy_generator<2, 0>::type’ {aka ‘swizzle::detail::indexed_proxy<swizzle::vector_<float, 0, 1>, std::array<float, 3>, float, 2, 0>’} and ‘swizzle::detail::vector_base_type_helper<float, 3>::proxy_generator<0, 2>::type’ {aka ‘swizzle::detail::indexed_proxy<swizzle::vector_<float, 0, 1>, std::array<float, 3>, float, 0, 2>’}
+```
+*Solution*: MSVC seems to resolve the ambiguity somehow, but g++ and clang need a hint:
+```glsl
+p.xz = (p.z>p.x) ? (vec2)p.zx : p.xz;
+```
 
 
 ## Problematic Shadertoys examples

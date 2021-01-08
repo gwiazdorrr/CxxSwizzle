@@ -60,18 +60,21 @@ CXXSWIZZLE_FORCE_INLINE friend this_type operator-(this_arg a, this_arg b) { ret
 CXXSWIZZLE_FORCE_INLINE friend this_type operator*(this_arg a, this_arg b) { return this_type(construct_tag{}, a.at<TIndices>() * b.at<TIndices>()...); }
 CXXSWIZZLE_FORCE_INLINE friend this_type operator/(this_arg a, this_arg b) { return this_type(construct_tag{}, a.at<TIndices>() / b.at<TIndices>()...); }
 CXXSWIZZLE_FORCE_INLINE friend this_type operator%(this_arg a, this_arg b) { return this_type(construct_tag{}, a.at<TIndices>() % b.at<TIndices>()...); }
+CXXSWIZZLE_FORCE_INLINE friend this_type operator^(this_arg a, this_arg b) { return this_type(construct_tag{}, a.at<TIndices>() ^ b.at<TIndices>()...); }
 
 CXXSWIZZLE_FORCE_INLINE friend this_type operator+(this_arg a, primitive_type _b) { auto b = typename base_type::data_type(_b); return this_type(construct_tag{}, a.at<TIndices>() + b...); }
 CXXSWIZZLE_FORCE_INLINE friend this_type operator-(this_arg a, primitive_type _b) { auto b = typename base_type::data_type(_b); return this_type(construct_tag{}, a.at<TIndices>() - b...); }
 CXXSWIZZLE_FORCE_INLINE friend this_type operator*(this_arg a, primitive_type _b) { auto b = typename base_type::data_type(_b); return this_type(construct_tag{}, a.at<TIndices>() * b...); }
 CXXSWIZZLE_FORCE_INLINE friend this_type operator/(this_arg a, primitive_type _b) { auto b = typename base_type::data_type(_b); return this_type(construct_tag{}, a.at<TIndices>() / b...); }
 CXXSWIZZLE_FORCE_INLINE friend this_type operator%(this_arg a, primitive_type _b) { auto b = typename base_type::data_type(_b); return this_type(construct_tag{}, a.at<TIndices>() % b...); }
+CXXSWIZZLE_FORCE_INLINE friend this_type operator^(this_arg a, primitive_type _b) { auto b = typename base_type::data_type(_b); return this_type(construct_tag{}, a.at<TIndices>() ^ b...); }
 
 CXXSWIZZLE_FORCE_INLINE friend this_type operator+(primitive_type _a, this_arg b) { return b + _a; }
 CXXSWIZZLE_FORCE_INLINE friend this_type operator-(primitive_type _a, this_arg b) { auto a = typename base_type::data_type(_a); return this_type(construct_tag{}, a - b.at<TIndices>()...); }
 CXXSWIZZLE_FORCE_INLINE friend this_type operator*(primitive_type _a, this_arg b) { return b * _a; }
 CXXSWIZZLE_FORCE_INLINE friend this_type operator/(primitive_type _a, this_arg b) { auto a = typename base_type::data_type(_a); return this_type(construct_tag{}, a / b.at<TIndices>()...); }
 CXXSWIZZLE_FORCE_INLINE friend this_type operator%(primitive_type _a, this_arg b) { auto a = typename base_type::data_type(_a); return this_type(construct_tag{}, a % b.at<TIndices>()...); }
+CXXSWIZZLE_FORCE_INLINE friend this_type operator^(primitive_type _a, this_arg b) { auto a = typename base_type::data_type(_a); return this_type(construct_tag{}, a ^ b.at<TIndices>()...); }
 
 
 CXXSWIZZLE_FORCE_INLINE friend this_type operator&(this_arg a, this_arg b) { return this_type(construct_tag{}, a.at<TIndices>() & b.at<TIndices>()...); }

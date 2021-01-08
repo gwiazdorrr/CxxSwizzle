@@ -214,6 +214,7 @@ namespace swizzle
 
         // this type specific operators
         CXXSWIZZLE_FORCE_INLINE this_type& operator%=(this_arg other) { return *this = *this % other; }
+        CXXSWIZZLE_FORCE_INLINE this_type& operator^=(this_arg other) { return *this = *this ^ other; }
 
         // functions: 8.3
         CXXSWIZZLE_FORCE_INLINE friend this_type min(this_arg x, this_arg y) { return this_type(construct_tag{}, min(x.at<TIndices>(), y.at<TIndices>())...); }
@@ -254,6 +255,7 @@ namespace swizzle
 
         // this type specific operators
         CXXSWIZZLE_FORCE_INLINE this_type& operator%=(this_arg other) { return *this = *this % other; }
+        CXXSWIZZLE_FORCE_INLINE this_type& operator^=(this_arg other) { return *this = *this ^ other; }
 
         // functions: 8.3
         CXXSWIZZLE_FORCE_INLINE friend this_type min(this_arg x, this_arg y) { return this_type(construct_tag{}, min(x.at<TIndices>(), y.at<TIndices>())...); }

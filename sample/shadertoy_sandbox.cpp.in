@@ -44,6 +44,14 @@ namespace
         using mat4x4 = swizzle::mat4x4;
     };
 
+    struct _cxxswizzle_scalar
+    {
+        using float_type = float;
+        using int_type =   int32_t;
+        using uint_type =  uint32_t;
+        using bool_type =  bool;
+    };
+
     // change meaning of glsl keywords to match sandbox
     #define uniform extern
     #define in
@@ -57,7 +65,7 @@ namespace
     #define highp
     #define precision
     #define final final_
-    #define discard do { _cxxswizzle_discarded = true; } while(0)
+    #define discard switch(0) default: _cxxswizzle_discarded = true;
     // char is not a type in glsl so can be used freely
     #define char definitely_not_a_char
 
@@ -75,19 +83,29 @@ namespace
     #undef M_2_SQRTPI
     #undef M_SQRT2   
     #undef M_SQRT1_2 
+    #undef INFINITY
 
-    #ifdef CXXSWIZZLE_OVERRIDE_IF
-    #define if(x) CXXSWIZZLE_OVERRIDE_IF(x)
+    #ifdef CXXSWIZZLE_INTERNAL_BATCH_WRITE_MASK_TYPE
+
+    #define CXXSWIZZLE_CAT(a,b)         CXXSWIZZLE_CAT_INNER(a,b) 
+    #define CXXSWIZZLE_CAT_INNER(a,b)   a ## b
+
+    #define if(x)       switch(batch_write_mask _cxxswizzle_if_mask =   static_cast<batch_write_mask::mask_type>(x))    case true:
+    #define else        switch(batch_write_mask _cxxswizzle_else_mask = batch_write_mask::invert_tag{}) case true: 
+    #define while(x)    switch(batch_write_mask _cxxswizzle_loop_mask = batch_write_mask::copy_tag{})   case true: while(CXXSWIZZLE_FOR_CONDITION(x))
+    #define for(x)      switch(batch_write_mask _cxxswizzle_loop_mask = batch_write_mask::copy_tag{})   case true: for(x)
+
+    #define break       {\
+        switch(batch_write_mask::multiply_to(_cxxswizzle_loop_mask)) case true: goto CXXSWIZZLE_CAT(NOT_BREAK, __LINE__);\
+        break;\
+        CXXSWIZZLE_CAT(NOT_BREAK, __LINE__): (void)0; \
+    }
+
+    #define CXXSWIZZLE_FOR_CONDITION(x) (_cxxswizzle_loop_mask &= static_cast<batch_write_mask::mask_type>(x))
+    #else 
+    #define CXXSWIZZLE_FOR_CONDITION(x) x
     #endif
-    #ifdef CXXSWIZZLE_OVERRIDE_ELSE
-    #define else CXXSWIZZLE_OVERRIDE_ELSE
-    #endif
-    #ifdef CXXSWIZZLE_OVERRIDE_WHILE
-    #define while(x) CXXSWIZZLE_OVERRIDE_WHILE(x)
-    #endif
-    #ifdef CXXSWIZZLE_OVERRIDE_CONDITION
-    #define condition(x) CXXSWIZZLE_OVERRIDE_CONDITION(x)
-    #endif
+  
 
     #define CXXSWIZZLE_VA_COUNT(...) std::tuple_size<decltype(std::make_tuple(__VA_ARGS__))>::value
 
@@ -100,6 +118,7 @@ namespace
     #define CXXSWIZZLE
     #define CXXSWIZZLE_ARRAY(type, name, ...) type name[CXXSWIZZLE_VA_COUNT(__VA_ARGS__)] = { __VA_ARGS__ }
     #define CXXSWIZZLE_STATIC static
+    #define CXXSWIZZLE_SCALAR _cxxswizzle_scalar::
 
     #pragma warning(push)
     #pragma warning(disable: 4244) // disable return implicit conversion warning
@@ -151,6 +170,8 @@ namespace
 #undef nonmasked
 #undef swizzle
 #undef detail
+#undef if
+#undef break
 
 namespace shadertoy
 {
