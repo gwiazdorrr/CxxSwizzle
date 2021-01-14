@@ -18,6 +18,18 @@
     <DisplayString>{storage}</DisplayString>
   </Type>
 
+  <Type Name="swizzle::batch_base&lt;*, *, 0, 1&gt;">
+    <DisplayString>({storage[0]}, {storage[1]})</DisplayString>
+  </Type>
+
+  <Type Name="swizzle::batch_base&lt;*, *, 0, 1, 2&gt;">
+    <DisplayString>({storage[0]}, {storage[1]}, {storage[2]})</DisplayString>
+  </Type>
+
+  <Type Name="swizzle::batch_base&lt;*, *, 0, 1, 2, 3&gt;">
+    <DisplayString>({storage[0]}, {storage[1]}, {storage[2]}, {storage[3]})</DisplayString>
+  </Type>
+
   <Type Name="Vc_1::Vector&lt;float,*&gt;">
     <DisplayString Optional="true">({d.data.m128_f32[0]}, {d.data.m128_f32[1]}, {d.data.m128_f32[2]}, {d.data.m128_f32[3]})</DisplayString>
     <DisplayString Optional="true">({d.data.m256_f32[0]}, {d.data.m256_f32[1]}, {d.data.m256_f32[2]}, {d.data.m256_f32[3]}, {d.data.m256_f32[4]}, {d.data.m256_f32[5]}, {d.data.m256_f32[6]}, {d.data.m256_f32[7]})</DisplayString>

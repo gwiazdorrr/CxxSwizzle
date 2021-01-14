@@ -91,6 +91,39 @@ namespace swizzle
     {
         target = src;
     }
+
+    inline uint8_t* batch_store_rgba32f_aligned(
+        const float r, 
+        const float g,
+        const float b,
+        const float a,
+        uint8_t* ptr, size_t = 0) noexcept
+    {
+        float* p = reinterpret_cast<float*>(ptr);
+        p[0] = r;
+        p[1] = g;
+        p[2] = b;
+        p[3] = a;
+        return ptr + 16;
+    }
+
+    inline uint8_t* batch_store_rgba8_aligned(
+        const float r,
+        const float g,
+        const float b,
+        const float a,
+        uint8_t* ptr, size_t = 0) noexcept
+    {
+        using std::max;
+        using std::min;
+        auto ir = max(0, min(255, static_cast<int>(r * 256)));
+        auto ig = max(0, min(255, static_cast<int>(g * 256)));
+        auto ib = max(0, min(255, static_cast<int>(b * 256)));
+        auto ia = max(0, min(255, static_cast<int>(a * 256)));
+        uint32_t rgba = ir | (ig << 8) | (ib << 16) | (static_cast<unsigned>(ia) << 24);
+        *reinterpret_cast<uint32_t*>(ptr) = rgba;
+        return ptr + 4;
+    }
 }
 
 #include <swizzle/detail/cmath_imports.hpp>

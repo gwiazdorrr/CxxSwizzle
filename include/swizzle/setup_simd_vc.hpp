@@ -11,7 +11,7 @@
 namespace swizzle
 {
     // free functions needed for wrappers to work
-#ifndef CXXSWIZZLE_SIMD_MASKING
+#ifdef CXXSWIZZLE_SIMD_MASKING
 #define CXXSWIZZLE_INTERNAL_BATCH_WRITE_MASK_TYPE detail::batch_write_mask<::Vc::float_m, 16, false>
 
     template <typename T>
@@ -136,7 +136,7 @@ namespace swizzle
 
         rbrb = r.interleaveHigh(g);
         gaga = b.interleaveHigh(a);
-
+        
         p = reinterpret_cast<float*>(ptr + pitch);
         rbrb.interleaveLow(gaga).store(p, Aligned);
         rbrb.interleaveHigh(gaga).store(p + float_v::Size, Aligned);

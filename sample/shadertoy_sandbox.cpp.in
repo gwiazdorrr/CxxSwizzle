@@ -181,7 +181,7 @@ namespace shadertoy
         static_cast<shader_inputs&>(shader) = uniforms;
         swizzle::detail::nonmasked(shader.gl_FragColor) = prevFragColor;
         swizzle::detail::nonmasked(shader.gl_FragCoord) = vec4(fragCoord, 0.0f, 0.0f);
-        swizzle::detail::nonmasked(shader._cxxswizzle_discarded) = false;
+        swizzle::detail::nonmasked(shader._cxxswizzle_discarded) = bool_type { false };
         swizzle::batch_write_mask_reset();
         shader.mainImage(shader.gl_FragColor, fragCoord);
         if (discarded)

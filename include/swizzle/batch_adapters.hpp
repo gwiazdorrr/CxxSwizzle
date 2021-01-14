@@ -146,7 +146,7 @@ namespace swizzle
         using this_arg = const this_type&;
         using primitive_type = typename base_type::primitive_type;
 
-        bool_batch(bool b) noexcept : bool_batch(batch_scalar_cast(b)) {}
+        bool_batch(detail::only_if<!std::is_same_v<TData, bool>, TData> b) noexcept : bool_batch(batch_scalar_cast(b)) {}
 
         CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)& noexcept
         {
@@ -176,7 +176,7 @@ namespace swizzle
         // implement if you really need to.
         CXXSWIZZLE_FORCE_INLINE explicit operator bool() const { return (batch_collapse(at<TIndices>()) || ...); }
 
-        CXXSWIZZLE_FORCE_INLINE explicit operator TData() const { return at<0>(); }
+        CXXSWIZZLE_FORCE_INLINE explicit operator detail::only_if<!std::is_same_v<TData, bool>, TData>() const { return at<0>(); }
 
 
         CXXSWIZZLE_FORCE_INLINE friend this_type operator||(this_arg a, this_arg b) { return this_type(construct_tag{}, a.at<TIndices>() || b.at<TIndices>()...); }
@@ -301,22 +301,32 @@ namespace swizzle
 
         friend CXXSWIZZLE_FORCE_INLINE void store_rgba8_aligned(this_arg r, this_arg g, this_arg b, this_arg a, uint8_t* ptr, size_t pitch)
         {
-            store_rgba8_aligned_internal(r, g, b, a, ptr, pitch);
-        }
-
-        static CXXSWIZZLE_FORCE_INLINE void store_rgba8_aligned_internal(this_arg r, this_arg g, this_arg b, this_arg a, uint8_t* ptr, size_t pitch)
-        {
-            ((ptr = batch_store_rgba8_aligned(r.at<TIndices>(), g.at<TIndices>(), b.at<TIndices>(), a.at<TIndices>(), ptr, pitch)), ...);
+            if constexpr (base_type::size == 1)
+            {
+                ((ptr = batch_store_rgba8_aligned(r.at<TIndices>(), g.at<TIndices>(), b.at<TIndices>(), a.at<TIndices>(), ptr, pitch)), ...);
+            }
+            else
+            {
+                // row alternation
+                constexpr size_t half_size = base_type::size / 2;
+                uint8_t* second_row = ptr + pitch;
+                ((ptr = batch_store_rgba8_aligned(r.at<TIndices>(), g.at<TIndices>(), b.at<TIndices>(), a.at<TIndices>(), TIndices == half_size ? second_row : ptr)), ...);
+            }
         }
 
         friend CXXSWIZZLE_FORCE_INLINE void store_rgba32f_aligned(this_arg r, this_arg g, this_arg b, this_arg a, uint8_t* ptr, size_t pitch)
         {
-            store_rgba32f_aligned_internal(r, g, b, a, ptr, pitch);
-        }
-
-        static CXXSWIZZLE_FORCE_INLINE void store_rgba32f_aligned_internal(this_arg r, this_arg g, this_arg b, this_arg a, uint8_t* ptr, size_t pitch)
-        {
-            ((ptr = batch_store_rgba32f_aligned(r.at<TIndices>(), g.at<TIndices>(), b.at<TIndices>(), a.at<TIndices>(), ptr, pitch)), ...);
+            if constexpr (base_type::size == 1)
+            {
+                ((ptr = batch_store_rgba32f_aligned(r.at<TIndices>(), g.at<TIndices>(), b.at<TIndices>(), a.at<TIndices>(), ptr, pitch)), ...);
+            }
+            else
+            {
+                // row alternation
+                constexpr size_t half_size = base_type::size / 2;
+                uint8_t* second_row = ptr + pitch;
+                ((ptr = batch_store_rgba32f_aligned(r.at<TIndices>(), g.at<TIndices>(), b.at<TIndices>(), a.at<TIndices>(), TIndices == half_size ? second_row : ptr)), ...);
+            }
         }
 
 #include <swizzle/detail/common_batch_operators.hpp>
@@ -390,8 +400,33 @@ namespace swizzle
         }
 
         // 8.8
-        CXXSWIZZLE_FORCE_INLINE friend this_type dFdx(this_arg p) { return this_type(construct_tag{}, dFdx(p.at<TIndices>())...); }
-        CXXSWIZZLE_FORCE_INLINE friend this_type dFdy(this_arg p) { return this_type(construct_tag{}, dFdy(p.at<TIndices>())...); }
+        CXXSWIZZLE_FORCE_INLINE friend this_type dFdx(this_arg p) 
+        { 
+            if constexpr (base_type::size % 4 == 0)
+            {
+                // can do this on the batch level
+                return this_type(construct_tag{}, (p.at<1 + (TIndices & ~1)> -p.at<TIndices & ~1>)...);
+            }
+            else
+            {
+                // need to resort on in-primitive dFdx
+                return this_type(construct_tag{}, dFdx(p.at<TIndices>())...);
+            }
+        }
+        CXXSWIZZLE_FORCE_INLINE friend this_type dFdy(this_arg p) 
+        { 
+            if constexpr (base_type::size % 4 == 0)
+            {
+                constexpr size_t half_size = base_type::size / 2;
+                return this_type(construct_tag{}, (p.at<TIndices/2> - p.at<half_size + TIndices/2>)...);
+            }
+            else
+            {
+                return this_type(construct_tag{}, dFdy(p.at<TIndices>())...);
+            }
+        }
+
+
         CXXSWIZZLE_FORCE_INLINE friend this_type fwidth(this_arg p)
         {
             return abs(dFdx(p)) + abs(dFdy(p));
