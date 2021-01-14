@@ -29,12 +29,14 @@ jobs:
             cc: gcc-8
             triplet: x64-linux
             generator: Ninja
+            cxxFlags: -march=native
           - name: ubuntu-gcc-9
             os: ubuntu
             cxx: g++-9
             cc: gcc-9
             triplet: x64-linux
             generator: Ninja
+            cxxFlags: -march=native
           - name: ubuntu-clang
             os: ubuntu
             cxx: clang++
@@ -85,7 +87,7 @@ jobs:
           vcpkgTriplet: ${{ matrix.triplet }}
           useVcpkgToolchainFile: true
           buildDirectory: '${{ runner.workspace }}/b/${{ matrix.name }}/'
-          cmakeAppendedArgs: '-G "${{ matrix.generator }}" -DCMAKE_BUILD_TYPE=${{ matrix.buildType }} '
+          cmakeAppendedArgs: '-G "${{ matrix.generator }}" -DCMAKE_BUILD_TYPE=${{ matrix.buildType }} -DCMAKE_CXX_FLAGS="${{ matrix.cxxFlags }}"'
           
       - name: Run CTest
         run: |
