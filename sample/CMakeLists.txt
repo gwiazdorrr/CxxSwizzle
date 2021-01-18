@@ -7,8 +7,8 @@ include(CheckCXXCompilerFlag)
 set(SAMPLE_TRACY_PROFILER_ROOT "" CACHE PATH "Path to the Tracy Profiler root. Leave empty if you don't want to use it.")
 
 # handle SIMD type
-set(SAMPLE_SIMD_TYPE "none" CACHE STRING "SIMD type")
-set_property(CACHE SAMPLE_SIMD_TYPE PROPERTY STRINGS none naive VcSIMD)
+set(SAMPLE_SETUP "scalar" CACHE STRING "SIMD type")
+set_property(CACHE SAMPLE_SETUP PROPERTY STRINGS scalar simd_naive simd_vc simd_vc_with_masking)
 
 # handle custom structs
 set(SAMPLE_CUSTOM_STRUCTS Ray;ray CACHE STRING "Custom structs that need function-style init or out/inout modifier")
@@ -16,20 +16,13 @@ set(SAMPLE_CUSTOM_STRUCTS Ray;ray CACHE STRING "Custom structs that need functio
 # global shaders
 set(SAMPLE_SHADERTOYS_ROOT "${PROJECT_SOURCE_DIR}/shadertoys" CACHE STRING "Shadertoys root")
 
-macro(create_sample_from_template template_dir target_name shadertoy_dir custom_structs simd tracy_profiler_root)
+macro(create_sample_from_template template_dir target_name shadertoy_dir custom_structs setup_type tracy_profiler_root)
 
     # basic requirements
     find_package(SDL2 CONFIG REQUIRED)
     find_package(SDL2-image CONFIG REQUIRED)
     find_package(nlohmann_json CONFIG REQUIRED)
     find_package(OpenMP)
-
-    if (${simd})
-        find_package(Vc CONFIG REQUIRED)
-        # find_package(Vc CONFIG REQUIRED) seems to disable this policy somehow, hence it is enabled here
-        cmake_policy(SET CMP0057 NEW)
-    endif()
-
 
     file(GLOB shader_file_list "${shadertoy_dir}/*.frag")
     
@@ -98,6 +91,7 @@ macro(create_sample_from_template template_dir target_name shadertoy_dir custom_
         set(config_json_path)
     endif()
 
+    set(CONFIG_SAMPLE_SETUP_INCLUDE "swizzle/setup_${setup_type}.hpp")
     set(codegen_config_path "${gen_include_dir}/config.hpp")
     configure_file("${template_dir}/config.hpp.in" "${codegen_config_path}")
 
@@ -121,9 +115,11 @@ macro(create_sample_from_template template_dir target_name shadertoy_dir custom_
     set_target_properties(${target_name} PROPERTIES CXX_STANDARD 17)
     set_target_properties(${target_name} PROPERTIES CXX_STANDARD_REQUIRED ON)
 
-    if (${simd})
+    if (${setup_type} STREQUAL "simd_vc" OR ${setup_type} STREQUAL "simd_vc_with_masking")
+        find_package(Vc CONFIG REQUIRED)
+        # find_package(Vc CONFIG REQUIRED) seems to disable this policy somehow, hence it is enabled here
+        cmake_policy(SET CMP0057 NEW)
         target_link_libraries(${target_name} PRIVATE Vc::Vc)
-        target_compile_options(${target_name} PRIVATE "-DSAMPLE_USE_SIMD_VC")
     endif()
 
     if (OPENMP_FOUND)
@@ -162,6 +158,6 @@ foreach(shadertoy_dir ${shadertoy_dirs})
         message(STATUS "Sample ${shadertoy_name} ${shadertoy_dir}")
 
         set(target_name "shadertoy_${shadertoy_name}")
-        create_sample_from_template("${CMAKE_CURRENT_SOURCE_DIR}" ${target_name} "${shadertoy_dir}" "${SAMPLE_CUSTOM_STRUCTS}" True "")
+        create_sample_from_template("${CMAKE_CURRENT_SOURCE_DIR}" ${target_name} "${shadertoy_dir}" "${SAMPLE_CUSTOM_STRUCTS}" "${SAMPLE_SETUP}" "${SAMPLE_TRACY_PROFILER_ROOT}")
     endif()
 endforeach()

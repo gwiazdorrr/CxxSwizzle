@@ -10,10 +10,10 @@
 
 namespace swizzle
 {
-    using float_type = float_batch<float, bool, 0, 1, 2, 3>;
-    using int_type = int_batch<int32_t, bool, 0, 1, 2, 3>;
-    using uint_type = uint_batch<uint32_t, bool, 0, 1, 2, 3>;
-    using bool_type = bool_batch<bool, 0, 1, 2, 3>;
+    using float_type = float_batch<float, bool, 4>;
+    using int_type = int_batch<int32_t, bool, 4>;
+    using uint_type = uint_batch<uint32_t, bool, 4>;
+    using bool_type = bool_batch<bool, 4>;
 
     // batch types traits definitions
     namespace detail

@@ -107,10 +107,8 @@ sdl_ptr<SDL_Texture> create_matching_sdl_texture(SDL_Renderer* renderer, int w, 
     return create_sdl_object_or_throw(SDL_CreateTexture, renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h);
 };
 
-constexpr auto pixels_per_batch  = static_cast<int>(::swizzle::detail::batch_traits<swizzle::float_type>::size);
-constexpr auto columns_per_batch = pixels_per_batch > 1 ? pixels_per_batch / 2 : 1;
-constexpr auto rows_per_batch    = pixels_per_batch > 1 ? 2 : 1;
-static_assert(pixels_per_batch == 1 || pixels_per_batch % 2 == 0, "1 or even scalar count");
+constexpr auto columns_per_batch = static_cast<int>(::swizzle::detail::batch_traits<swizzle::float_type>::num_columns);
+constexpr auto rows_per_batch    = static_cast<int>(::swizzle::detail::batch_traits<swizzle::float_type>::num_rows);
 
 struct aligned_render_target_base
 {

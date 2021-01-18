@@ -288,10 +288,10 @@ namespace Vc_VERSIONED_NAMESPACE
 
 namespace swizzle
 {
-    using float_type = float_batch<::Vc::float_v, ::Vc::float_m, 0>;
-    using int_type   = int_batch<::Vc::int32_v, ::Vc::float_m, 0>;
-    using uint_type  = uint_batch<::Vc::uint32_v, ::Vc::float_m, 0>;
-    using bool_type  = bool_batch<::Vc::float_m, 0>;
+    using float_type = float_batch<::Vc::float_v, ::Vc::float_m, 1>;
+    using int_type   = int_batch<::Vc::int32_v, ::Vc::float_m, 1>;
+    using uint_type  = uint_batch<::Vc::uint32_v, ::Vc::float_m, 1>;
+    using bool_type  = bool_batch<::Vc::float_m, 1>;
 
     // batch types traits definitions
     namespace detail

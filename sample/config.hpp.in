@@ -5,8 +5,4 @@
 
 #cmakedefine CONFIG_SAMPLE_CONFIG_PATH "@CONFIG_SAMPLE_CONFIG_PATH@"
 
-#ifdef SAMPLE_USE_SIMD_VC
-#include <swizzle/setup_simd_vc.hpp>
-#else 
-#include <swizzle/setup_scalar.hpp>
-#endif
+#include <@CONFIG_SAMPLE_SETUP_INCLUDE@>

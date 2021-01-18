@@ -138,15 +138,15 @@ namespace swizzle
 
 
     template <typename TData, size_t... TIndices>
-    struct bool_batch : batch_base<TData, bool, TIndices...>
+    struct bool_batch_ : batch_base<TData, bool, TIndices...>
     {
         using base_type = batch_base<TData, bool, TIndices...>;
         using batch_base<TData, bool, TIndices...>::batch_base;
-        using this_type = bool_batch;
+        using this_type = bool_batch_;
         using this_arg = const this_type&;
         using primitive_type = typename base_type::primitive_type;
 
-        bool_batch(detail::only_if<!std::is_same_v<TData, bool>, TData> b) noexcept : bool_batch(batch_scalar_cast(b)) {}
+        bool_batch_(detail::only_if<!std::is_same_v<TData, bool>, TData> b) noexcept : bool_batch_(batch_scalar_cast(b)) {}
 
         CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)& noexcept
         {
@@ -186,16 +186,16 @@ namespace swizzle
 
 
     template <typename TData, typename TBool, size_t... TIndices>
-    struct int_batch : batch_base<TData, int, TIndices...>
+    struct int_batch_ : batch_base<TData, int, TIndices...>
     {
         using base_type = batch_base<TData, int, TIndices...>;
         using batch_base<TData, int, TIndices...>::batch_base;
-        using this_type = int_batch;
+        using this_type = int_batch_;
         using this_arg = const this_type&;
         using primitive_type = typename base_type::primitive_type;
-        using bool_type = bool_batch<TBool, TIndices...>;
+        using bool_type = bool_batch_<TBool, TIndices...>;
 
-        explicit int_batch(double value) : int_batch(static_cast<int>(value)) {}
+        explicit int_batch_(double value) : int_batch_(static_cast<int>(value)) {}
 
         // needed to avoid template as qualifier
         template <size_t TIndex>
@@ -229,14 +229,14 @@ namespace swizzle
     };
 
     template <typename TData, typename TBool, size_t... TIndices>
-    struct uint_batch : batch_base<TData, uint32_t, TIndices...>
+    struct uint_batch_ : batch_base<TData, uint32_t, TIndices...>
     {
         using base_type = batch_base<TData, uint32_t, TIndices...>;
         using batch_base<TData, uint32_t, TIndices...>::batch_base;
-        using this_type = uint_batch;
+        using this_type = uint_batch_;
         using this_arg = const this_type&;
         using primitive_type = typename base_type::primitive_type;
-        using bool_type = bool_batch<TBool, TIndices...>;
+        using bool_type = bool_batch_<TBool, TIndices...>;
 
         // needed to avoid template as qualifier
         template <size_t TIndex>
@@ -270,21 +270,21 @@ namespace swizzle
 
 
     template <typename TData, typename TBool, size_t... TIndices>
-    struct float_batch : batch_base<TData, float, TIndices...>
+    struct float_batch_ : batch_base<TData, float, TIndices...>
     {
         using base_type = batch_base<TData, float, TIndices...>;
         using batch_base<TData, float, TIndices...>::batch_base;
-        using this_type = float_batch;
+        using this_type = float_batch_;
         using this_arg = const this_type&;
         using primitive_type = typename base_type::primitive_type;
         using data_type = typename base_type::data_type;
-        using bool_type = bool_batch<TBool, TIndices...>;
+        using bool_type = bool_batch_<TBool, TIndices...>;
 
 
-        CXXSWIZZLE_FORCE_INLINE float_batch(double value) : float_batch(batch_scalar_cast(static_cast<float>(value))) {}
-        CXXSWIZZLE_FORCE_INLINE float_batch(const bool_type& value) : base_type(value) {}
-        CXXSWIZZLE_FORCE_INLINE explicit float_batch(int32_t value) : float_batch(static_cast<float>(value)) {}
-        CXXSWIZZLE_FORCE_INLINE explicit float_batch(uint32_t value) : float_batch(static_cast<float>(value)) {}
+        CXXSWIZZLE_FORCE_INLINE float_batch_(double value) : float_batch_(batch_scalar_cast(static_cast<float>(value))) {}
+        CXXSWIZZLE_FORCE_INLINE float_batch_(const bool_type& value) : base_type(value) {}
+        CXXSWIZZLE_FORCE_INLINE explicit float_batch_(int32_t value) : float_batch_(static_cast<float>(value)) {}
+        CXXSWIZZLE_FORCE_INLINE explicit float_batch_(uint32_t value) : float_batch_(static_cast<float>(value)) {}
 
         // needed to avoid template as qualifier
         template <size_t TIndex>
