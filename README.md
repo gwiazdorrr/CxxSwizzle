@@ -1,5 +1,7 @@
 # CxxSwizzle
 
+![Samples](https://github.com/gwiazdorrr/CxxSwizzle/workflows/CI/badge.svg?branch=modernisation)
+
 This project provides dependency-free headers that replicate GLSL language syntax and built-in functions in C++17, as completely as possible. Basically, you can do this in C++ now:
 ```glsl
 vec4 foo(0);                        // 0,0,0,0
