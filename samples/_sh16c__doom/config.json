@@ -1,0 +1,123 @@
+{
+  "url": "https://www.shadertoy.com/view/lldGDr",
+  "api_url": "https://www.shadertoy.com/api/v1/shaders/lldGDr?key=BtntM7",
+  "image": {
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_a",
+      "vflip": "true",
+      "filter": "nearest",
+      "wrap": "clamp"
+    },
+    "iChannel2": {
+      "type": "buffer",
+      "src":  "buffer_b",
+      "vflip": "true",
+      "filter": "nearest",
+      "wrap": "clamp"
+    },
+    "iChannel1": {
+      "type": "buffer",
+      "src":  "buffer_c",
+      "vflip": "true",
+      "filter": "nearest",
+      "wrap": "clamp"
+    },
+    "iChannel3": {
+      "type": "buffer",
+      "src":  "buffer_d",
+      "vflip": "true",
+      "filter": "nearest",
+      "wrap": "clamp"
+    }
+  },
+  "buffer_a": {
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_a",
+      "vflip": "true",
+      "filter": "nearest",
+      "wrap": "clamp"
+    },
+    "iChannel1": {
+      "type": "buffer",
+      "src":  "buffer_c",
+      "vflip": "true",
+      "filter": "nearest",
+      "wrap": "clamp"
+    },
+    "iChannel3": {
+      "vflip": "true",
+      "filter": "linear",
+      "wrap": "clamp"
+    }
+  },
+  "buffer_b": {
+    "iChannel1": {
+      "type": "buffer",
+      "src":  "buffer_a",
+      "vflip": "true",
+      "filter": "nearest",
+      "wrap": "clamp"
+    },
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_b",
+      "vflip": "true",
+      "filter": "nearest",
+      "wrap": "clamp"
+    }
+  },
+  "buffer_c": {
+    "iChannel3": {
+      "type": "keyboard",
+      "vflip": "true",
+      "filter": "nearest",
+      "wrap": "clamp"
+    },
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_a",
+      "vflip": "true",
+      "filter": "nearest",
+      "wrap": "clamp"
+    },
+    "iChannel1": {
+      "type": "buffer",
+      "src":  "buffer_c",
+      "vflip": "true",
+      "filter": "nearest",
+      "wrap": "clamp"
+    }
+  },
+  "buffer_d": {
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_a",
+      "vflip": "true",
+      "filter": "nearest",
+      "wrap": "clamp"
+    },
+    "iChannel2": {
+      "type": "buffer",
+      "src":  "buffer_b",
+      "vflip": "true",
+      "filter": "nearest",
+      "wrap": "clamp"
+    },
+    "iChannel1": {
+      "type": "buffer",
+      "src":  "buffer_c",
+      "vflip": "true",
+      "filter": "nearest",
+      "wrap": "clamp"
+    }
+  },
+  "common": {
+    "iChannel": {
+      "vflip": "",
+      "filter": "",
+      "wrap": ""
+    }
+  }
+}

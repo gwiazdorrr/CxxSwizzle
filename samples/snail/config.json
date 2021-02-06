@@ -1,0 +1,27 @@
+{
+  "url": "https://www.shadertoy.com/view/ld3Gz2",
+  "api_url": "https://www.shadertoy.com/api/v1/shaders/ld3Gz2?key=BtntM7",
+  "image": {
+    "iChannel2": {
+      "type": "texture",
+      "src":  "92d7758c402f0927011ca8d0a7e40251439fba3a1dac26f5b8b62026323501aa.jpg",
+      "vflip": "true",
+      "filter": "mipmap",
+      "wrap": "repeat"
+    },
+    "iChannel3": {
+      "type": "texture",
+      "src":  "f735bee5b64ef98879dc618b016ecf7939a5756040c2cde21ccb15e69a6e1cfb.png",
+      "vflip": "true",
+      "filter": "mipmap",
+      "wrap": "repeat"
+    },
+    "iChannel1": {
+      "type": "texture",
+      "src":  "ad56fba948dfba9ae698198c109e71f118a54d209c0ea50d77ea546abad89c57.png",
+      "vflip": "true",
+      "filter": "mipmap",
+      "wrap": "repeat"
+    }
+  }
+}

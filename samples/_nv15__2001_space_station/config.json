@@ -1,0 +1,34 @@
+{
+  "url": "https://www.shadertoy.com/view/4lBGRh",
+  "api_url": "https://www.shadertoy.com/api/v1/shaders/4lBGRh?key=BtntM7",
+  "image": {
+    "iChannel0": {
+      "type": "texture",
+      "src":  "10eb4fe0ac8a7dc348a2cc282ca5df1759ab8bf680117e4047728100969e7b43.jpg",
+      "vflip": "false",
+      "filter": "mipmap",
+      "wrap": "repeat"
+    },
+    "iChannel2": {
+      "type": "texture",
+      "src":  "fb918796edc3d2221218db0811e240e72e340350008338b0c07a52bd353666a6.jpg",
+      "vflip": "false",
+      "filter": "mipmap",
+      "wrap": "repeat"
+    },
+    "iChannel1": {
+      "type": "texture",
+      "src":  "85a6d68622b36995ccb98a89bbb119edf167c914660e4450d313de049320005c.png",
+      "vflip": "false",
+      "filter": "nearest",
+      "wrap": "repeat"
+    },
+    "iChannel3": {
+      "type": "texture",
+      "src":  "f735bee5b64ef98879dc618b016ecf7939a5756040c2cde21ccb15e69a6e1cfb.png",
+      "vflip": "false",
+      "filter": "mipmap",
+      "wrap": "repeat"
+    }
+  }
+}

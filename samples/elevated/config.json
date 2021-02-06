@@ -1,0 +1,22 @@
+{
+  "url": "https://www.shadertoy.com/view/MdX3Rr",
+  "api_url": "https://www.shadertoy.com/api/v1/shaders/MdX3Rr?key=BtntM7",
+  "image": {
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_a",
+      "vflip": "true",
+      "filter": "linear",
+      "wrap": "clamp"
+    }
+  },
+  "buffer_a": {
+    "iChannel0": {
+      "type": "texture",
+      "src":  "0c7bf5fe9462d5bffbd11126e82908e39be3ce56220d900f633d58fb432e56f5.png",
+      "vflip": "false",
+      "filter": "mipmap",
+      "wrap": "repeat"
+    }
+  }
+}

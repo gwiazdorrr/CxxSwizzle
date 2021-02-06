@@ -119,7 +119,7 @@ macro(shadertoyDownload api_key shader_id root_dir download_error_is_fatal)
                     get_filename_component(INPUT_NAME ${${INPUT}.src} NAME)
                     _shadertoyDownloadFile("https://www.shadertoy.com${${INPUT}.src}" "${SHADER_DIRECTORY}/${INPUT_NAME}" "")
                     string(CONCAT ENTRY "${SPACING}  \"type\": \"texture\",\n"
-                                        "${SPACING}  \"src\":  \"${SHADER_DIRECTORY}/${INPUT_NAME}\",\n")
+                                        "${SPACING}  \"src\":  \"${INPUT_NAME}\",\n")
                 elseif (${INPUT}.ctype STREQUAL "cubemap")
                     get_filename_component(INPUT_EXTENSION ${${INPUT}.src} EXT)
                     get_filename_component(INPUT_NAME      ${${INPUT}.src} NAME_WE)
@@ -127,7 +127,8 @@ macro(shadertoyDownload api_key shader_id root_dir download_error_is_fatal)
 
                     set(FACES "")
                     foreach (index RANGE 5)
-                        set(TARGET_FILE "${SHADER_DIRECTORY}/${INPUT_NAME}_${index}${INPUT_EXTENSION}")
+                        set(TARGET_FILE_NAME "${INPUT_NAME}_${index}${INPUT_EXTENSION}")
+                        set(TARGET_FILE "${SHADER_DIRECTORY}/${TARGET_FILE_NAME}")
                         if (index EQUAL 0)
                             _shadertoyDownloadFile("https://www.shadertoy.com${${INPUT}.src}"                                       
                                                    "${TARGET_FILE}" "")
@@ -135,7 +136,7 @@ macro(shadertoyDownload api_key shader_id root_dir download_error_is_fatal)
                             _shadertoyDownloadFile("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_${index}${INPUT_EXTENSION}" 
                                                    "${TARGET_FILE}" "")
                         endif()
-                        list(APPEND FACES "${SPACING}    \"${TARGET_FILE}\"")
+                        list(APPEND FACES "${SPACING}    \"${TARGET_FILE_NAME}\"")
                     endforeach(index)
                     list(JOIN FACES ",\n" FACES)
                     string(CONCAT ENTRY "${SPACING}  \"type\": \"cubemap\",\n"
