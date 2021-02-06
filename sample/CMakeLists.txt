@@ -14,7 +14,7 @@ set_property(CACHE SAMPLE_SETUP PROPERTY STRINGS scalar simd_naive simd_vc simd_
 set(SAMPLE_CUSTOM_STRUCTS Ray;ray CACHE STRING "Custom structs that need function-style init or out/inout modifier")
 
 # global shaders
-set(SAMPLE_SHADERTOYS_ROOT "${PROJECT_SOURCE_DIR}/shadertoys" CACHE STRING "Shadertoys root")
+set(SAMPLE_SHADERTOYS_ROOT "${PROJECT_SOURCE_DIR}/shadertoys" CACHE PATH "Shadertoys root")
 
 macro(create_sample_from_template template_dir target_name shadertoy_dir custom_structs setup_type tracy_profiler_root)
 
