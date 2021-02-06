@@ -44,13 +44,13 @@ namespace swizzle
     using bool_batch = decltype(detail::extract_index_sequence_helper<bool_batch_, TData>(std::make_index_sequence<TSize>{}));
 
     template <typename TData, typename TBool, size_t TSize>
-    using int_batch = decltype(detail::extract_index_sequence_helper<int_batch_, TBool, TData>(std::make_index_sequence<TSize>{}));
+    using int_batch = decltype(detail::extract_index_sequence_helper<int_batch_, TData, TBool>(std::make_index_sequence<TSize>{}));
 
     template <typename TData, typename TBool, size_t TSize>
-    using uint_batch = decltype(detail::extract_index_sequence_helper<uint_batch_, TBool, TData>(std::make_index_sequence<TSize>{}));
+    using uint_batch = decltype(detail::extract_index_sequence_helper<uint_batch_, TData, TBool>(std::make_index_sequence<TSize>{}));
 
     template <typename TData, typename TBool, size_t TSize>
-    using float_batch = decltype(detail::extract_index_sequence_helper<float_batch_, TBool, TData>(std::make_index_sequence<TSize>{}));
+    using float_batch = decltype(detail::extract_index_sequence_helper<float_batch_, TData, TBool>(std::make_index_sequence<TSize>{}));
 
     template <typename TFloat, typename TInt32, typename TUint32>
     struct sampler_generic;

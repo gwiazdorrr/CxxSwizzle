@@ -405,7 +405,7 @@ namespace swizzle
             if constexpr (base_type::size % 4 == 0)
             {
                 // can do this on the batch level
-                return this_type(construct_tag{}, (p.at<1 + (TIndices & ~1)> -p.at<TIndices & ~1>)...);
+                return this_type(construct_tag{}, (p.at<1 + (TIndices & ~1)>() -p.at<TIndices & ~1>())...);
             }
             else
             {
@@ -418,7 +418,7 @@ namespace swizzle
             if constexpr (base_type::size % 4 == 0)
             {
                 constexpr size_t half_size = base_type::size / 2;
-                return this_type(construct_tag{}, (p.at<TIndices/2> - p.at<half_size + TIndices/2>)...);
+                return this_type(construct_tag{}, (p.at<TIndices/2>() - p.at<half_size + TIndices/2>())...);
             }
             else
             {

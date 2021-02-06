@@ -138,8 +138,8 @@ namespace swizzle
             static constexpr bool is_floating_point = IsFloatingPoint;
             static constexpr size_t size = BatchSize * BatchCount;
             static constexpr size_t align = Align;
-            static constexpr bool num_rows = size > 1 ? 2 : 1;
-            static constexpr bool num_columns = size > 1 ? size / 2 : 1;
+            static constexpr size_t num_rows = size > 1 ? 2 : 1;
+            static constexpr size_t num_columns = size > 1 ? size / 2 : 1;
             using aligned_storage_type = std::aligned_storage_t<sizeof(storage_type), align>;
             static_assert(size == 1 || size % 2 == 0, "1 or even scalar count");
         };

@@ -122,9 +122,8 @@ namespace swizzle
 
         inline friend vec4 texelFetch(const this_type& sampler, const ivec2& p, int32_type lod)
         {
-            return sampler.fetch(p.x, p.y);
+            return sampler.fetch(p);
         }
-
 
 
         inline friend vec4 textureGrad(const this_type& sampler, const vec2& p, const vec2& dPdx, const vec2& dPdy)
@@ -145,7 +144,8 @@ namespace swizzle
     private:
 
         template <typename IntType, typename SomeFloatType>
-        std::tuple<IntType, IntType> uv_to_icoord(SomeFloatType u, SomeFloatType v, const sampler_generic_data* data) const {
+        std::tuple<IntType, IntType> uv_to_icoord(SomeFloatType u, SomeFloatType v, const sampler_generic_data* data) const 
+        {
             using std::min;
             auto ix = static_cast<IntType>(u * static_cast<float>(data->width));
             auto iy = static_cast<IntType>(v * static_cast<float>(data->height));
@@ -153,6 +153,17 @@ namespace swizzle
             detail::nonmasked(iy) = min(IntType(data->height - 1), iy);
             return std::make_tuple(ix, iy);
         }
+
+        template <typename IntType>
+        std::tuple<IntType, IntType> clamp_icoords(IntType ix, IntType iy, const sampler_generic_data* data) const
+        {
+            using std::min;
+            using std::max;
+            detail::nonmasked(ix) = max(IntType(0), min(IntType(data->width - 1), ix));
+            detail::nonmasked(iy) = max(IntType(0), min(IntType(data->height - 1), iy));
+            return std::make_tuple(ix, iy);
+        }
+
 
         template <typename IntType>
         IntType icoord_to_index(IntType x, IntType y, const sampler_generic_data* data) const
@@ -166,9 +177,6 @@ namespace swizzle
                 return y * data->pitch_bytes + x * static_cast<int>(data->format);
             }
         }
-
-        
-
 
         std::tuple<float, float, float, float> fetch_pixel(int index, const sampler_generic_data* data) const
         {
@@ -283,6 +291,11 @@ namespace swizzle
             return result;
         }
 
+        vec4 fetch(const ivec2& coord) const
+        {
+            return fetch_no_bounds_check(clamp_icoords(coord.x, coord.y, data));
+        }
+
         vec4 sample(const vec2& coord) const
         {
             vec2 uv = apply_wrap_mode(coord);
@@ -300,10 +313,10 @@ namespace swizzle
                 auto icoord = uv_to_icoord<int32_type>(uv.x, uv.y, data);
                 auto icoord_diag = uv_to_icoord<int32_type>(uv_diag.x, uv_diag.y, data);
 
-                vec4 x0y0 = fetch(std::get<0>(icoord), std::get<1>(icoord));
-                vec4 x0y1 = fetch(std::get<0>(icoord), std::get<1>(icoord_diag));
-                vec4 x1y0 = fetch(std::get<0>(icoord_diag), std::get<1>(icoord));
-                vec4 x1y1 = fetch(std::get<0>(icoord_diag), std::get<1>(icoord_diag));
+                vec4 x0y0 = fetch_no_bounds_check(std::get<0>(icoord), std::get<1>(icoord));
+                vec4 x0y1 = fetch_no_bounds_check(std::get<0>(icoord), std::get<1>(icoord_diag));
+                vec4 x1y0 = fetch_no_bounds_check(std::get<0>(icoord_diag), std::get<1>(icoord));
+                vec4 x1y1 = fetch_no_bounds_check(std::get<0>(icoord_diag), std::get<1>(icoord_diag));
 
                 vec4 y0 = vec4::call_mix(x0y0, x1y0, error_abs.x);
                 vec4 y1 = vec4::call_mix(x0y1, x1y1, error_abs.x);
@@ -311,7 +324,7 @@ namespace swizzle
             }
             else
             {
-                return fetch(uv_to_icoord<int32_type>(uv.x, uv.y, data));
+                return fetch_no_bounds_check(uv_to_icoord<int32_type>(uv.x, uv.y, data));
             }
         }
 
@@ -328,12 +341,12 @@ namespace swizzle
             }
         }
 
-        vec4 fetch(const std::tuple<int32_type, int32_type>& coord) const
+        vec4 fetch_no_bounds_check(const std::tuple<int32_type, int32_type>& coord) const
         {
-            return fetch(std::get<0>(coord), std::get<1>(coord));
+            return fetch_no_bounds_check(std::get<0>(coord), std::get<1>(coord));
         }
 
-        vec4 fetch(const int32_type& x, const int32_type& y) const
+        vec4 fetch_no_bounds_check(const int32_type& x, const int32_type& y) const
         {
             if (!data->bytes)
             {
