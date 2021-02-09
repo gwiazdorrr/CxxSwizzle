@@ -112,11 +112,14 @@ macro(cxxswizzle_create_sandbox template_dir target_name shadertoy_dir custom_st
         target_link_libraries(${target_name} PRIVATE OpenMP::OpenMP_CXX)
     endif()
 
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        # filesystem support
+        target_link_libraries(${target_name} PRIVATE stdc++fs)
+    endif()
 
     if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         # GLSL has "not" function, so better get rid of C++ operator mnemonics
         target_compile_options(${target_name} PRIVATE "-fno-operator-names")
-        target_link_libraries(${target_name} PRIVATE stdc++fs)
     elseif(MSVC)
         # fast math, _vectorcall
         # the resons permissive can't be disabled in MSVC, because there's no way to disable mnemonics then

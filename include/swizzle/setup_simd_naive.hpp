@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <swizzle/detail/cmath_imports.hpp>
+#include <algorithm>
 
 namespace swizzle
 {
