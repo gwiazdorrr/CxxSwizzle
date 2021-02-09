@@ -44,4 +44,7 @@ create_sample_scalar("zone_plate_checkerboard" "")
 create_sample_scalar("_sh16c__doom" "PrintState;DataMap;DataSector;DataSideDefPacked;DataEntity;Entity;GameState;TraceResult;TraceSectorState;CharDef;Pose;SceneResult")
 
 create_sample_simd_naive("isoline_triangle" "")
+create_sample_simd_naive("snail" "")
 create_sample_simd_vc("isoline_triangle" "")
+create_sample_simd_vc("snail" "")
+create_sample_simd_vc_masked("snail" "")

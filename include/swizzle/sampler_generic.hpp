@@ -147,10 +147,14 @@ namespace swizzle
         std::tuple<IntType, IntType> uv_to_icoord(SomeFloatType u, SomeFloatType v, const sampler_generic_data* data) const 
         {
             using std::min;
+            using std::max;
             auto ix = static_cast<IntType>(u * static_cast<float>(data->width));
             auto iy = static_cast<IntType>(v * static_cast<float>(data->height));
             detail::nonmasked(ix) = min(IntType(data->width - 1), ix);
             detail::nonmasked(iy) = min(IntType(data->height - 1), iy);
+            // lazy Nan workaround
+            detail::nonmasked(ix) = max(IntType(0), ix);
+            detail::nonmasked(iy) = max(IntType(0), iy);
             return std::make_tuple(ix, iy);
         }
 

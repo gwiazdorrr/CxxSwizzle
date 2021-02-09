@@ -70,7 +70,8 @@ namespace swizzle
                 auto& storage = base_type::storage;
                 auto top_level_mask = !storage.masks[storage.mask_index];
 
-                for (int i = mask.index; i < storage.mask_index; ++i) {
+                for (int i = mask.index; i < storage.mask_index; ++i) 
+                {
                     storage.masks[i] &= top_level_mask;
                 }
 

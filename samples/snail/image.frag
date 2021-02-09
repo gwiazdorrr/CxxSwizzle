@@ -334,7 +334,7 @@ vec3 calcNormalOpaque( in vec3 pos, in float eps )
 #else
     // inspired by tdhooper and klems - a way to prevent the compiler from inlining map() 4 times
     vec3 n = vec3(0.0);
-    for( int i=ZERO; i<4; i++ )
+    for( CXXSWIZZLE_SCALAR int i=0; CXXSWIZZLE_FOR_CONDITION(i<4); i++ )
     {
         vec3 e = 0.5773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);
         n += e*mapOpaque(pos+eps*e,kk).x;
@@ -401,7 +401,7 @@ float calcAO( in vec3 pos, in vec3 nor )
 {
     vec4 kk;
 	float ao = 0.0;
-    for( int i=ZERO; i<32; i++ )
+    for( CXXSWIZZLE_SCALAR int i=0; CXXSWIZZLE_FOR_CONDITION(i<32); i++ )
     {
         vec3 ap = forwardSF( float(i), 32.0 );
         float h = hash1(float(i));
@@ -417,7 +417,7 @@ float calcSSS( in vec3 pos, in vec3 nor )
 {
     vec4 kk;
 	float occ = 0.0;
-    for( int i=ZERO; i<8; i++ )
+    for( CXXSWIZZLE_SCALAR int i=0; i<8; i++ )
     {
         float h = 0.002 + 0.11*float(i)/7.0;
         vec3 dir = normalize( sin( float(i)*13.0 + vec3(0.0,2.1,4.2) ) );
@@ -434,7 +434,7 @@ float calcSoftShadow( in vec3 ro, in vec3 rd, float k )
     vec4 kk;    
     float res = 1.0;
     float t = 0.01;
-    for( int i=ZERO; i<32; i++ )
+    for( CXXSWIZZLE_SCALAR int i=0; CXXSWIZZLE_FOR_CONDITION(i<32); i++ )
     {
         float h = mapOpaque(ro + rd*t, kk ).x;
         res = min( res, smoothstep(0.0,1.0,k*h/t) );
@@ -491,7 +491,7 @@ vec3 shadeOpaque( in vec3 ro, in vec3 rd, in float t, in float m, in vec4 matInf
         float b = 1.0-smoothstep( 0.25,0.55,abs(pos.y));
         focc = 0.2 + 0.8*smoothstep( 0.0, 0.15, sdSphere(pos,vec4(0.05,0.52,0.0,0.13)) );
     }
-	else if( m<2.5 ) // shell
+	else_if( m<2.5 ) // shell
     {
         mateK = vec2(0.0);
         
@@ -511,7 +511,7 @@ vec3 shadeOpaque( in vec3 ro, in vec3 rd, in float t, in float m, in vec4 matInf
         mateK = vec2( 64.0, 0.2 );
         mateS = 1.5*vec3(1.0,0.65,0.6) * (1.0-tip);//*0.5;
     }
-    else if( m<3.5 ) // plant
+    else_if( m<3.5 ) // plant
     {
         mateD = vec3(0.05,0.1,0.0)*0.2;
         mateS = vec3(0.1,0.2,0.02)*25.0;
@@ -651,7 +651,7 @@ vec2 intersectOpaque( in vec3 ro, in vec3 rd, const float mindist, const float m
     vec2 res = vec2(-1.0);
     
     float t = mindist;
-    for( int i=ZERO; i<64; i++ )
+    for(CXXSWIZZLE_SCALAR int i=0; CXXSWIZZLE_FOR_CONDITION(i<64); i++ )
     {
         vec3 p = ro + t*rd;
         vec2 h = mapOpaque( p, matInfo );
@@ -669,7 +669,7 @@ vec2 intersectTransparent( in vec3 ro, in vec3 rd, const float mindist, const fl
     vec2 res = vec2(-1.0);
     
     float t = mindist;
-    for( int i=ZERO; i<64; i++ )
+    for(CXXSWIZZLE_SCALAR int i = 0; CXXSWIZZLE_FOR_CONDITION(i<64); i++ )
     {
         vec3 p = ro + t*rd;
         vec2 h = mapTransparent( p, matInfo );
@@ -692,7 +692,7 @@ vec3 background( in vec3 d )
     
     // fancy blur
     vec3  col = vec3( 0.0 );
-    for( int i=ZERO; i<200; i++ )
+    for(CXXSWIZZLE_SCALAR int i = 0; CXXSWIZZLE_FOR_CONDITION(i<200); i++ )
     {
         float h = float(i)/200.0;
         float an = 31.0*6.2831*h;

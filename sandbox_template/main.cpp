@@ -879,7 +879,7 @@ int __cdecl main(int argc, char* argv[])
         double current_fps = 0;
 
 #if _OPENMP
-        bool multithreaded = false;
+        bool multithreaded = true;
 #if _DEBUG
         multithreaded = false;
 #endif     

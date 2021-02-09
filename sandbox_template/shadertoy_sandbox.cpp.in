@@ -90,21 +90,21 @@ namespace
     #define CXXSWIZZLE_CAT(a,b)         CXXSWIZZLE_CAT_INNER(a,b) 
     #define CXXSWIZZLE_CAT_INNER(a,b)   a ## b
 
-    #define if(x)       switch(batch_write_mask(static_cast<batch_write_mask::mask_type>(x), batch_write_mask::if_tag{}))       case true:
-    #define else_if(x)  switch(batch_write_mask(static_cast<batch_write_mask::mask_type>(x), batch_write_mask::else_if_tag{}))  case true:
-    #define else        switch(batch_write_mask(batch_write_mask::else_tag{}))                                                  case true: 
+    #define if(x)       switch(batch_write_mask _cxxswizzle_if_scope      = { static_cast<batch_write_mask::mask_type>(x), batch_write_mask::if_tag{} })       case true:
+    #define else_if(x)  switch(batch_write_mask _cxxswizzle_else_if_scope = { static_cast<batch_write_mask::mask_type>(x), batch_write_mask::else_if_tag{} })  case true:
+    #define else        switch(batch_write_mask _cxxswizzle_else_scope    = batch_write_mask::else_tag{})                                                      case true: 
 
-    #define while(x)    switch(batch_write_mask _cxxswizzle_loop_mask = batch_write_mask::loop_tag{})   case true: while(CXXSWIZZLE_FOR_CONDITION(x))
-    #define for(x)      switch(batch_write_mask _cxxswizzle_loop_mask = batch_write_mask::loop_tag{})   case true: for(x)
+    #define while(x)    switch(batch_write_mask _cxxswizzle_loop_scope    = batch_write_mask::loop_tag{}) case true: while(CXXSWIZZLE_FOR_CONDITION(x))
+    #define for(x)      switch(batch_write_mask _cxxswizzle_loop_scope    = batch_write_mask::loop_tag{}) case true: for(x)
     
 
     #define break       {\
-        switch(batch_write_mask::multiply_to(_cxxswizzle_loop_mask)) case true: goto CXXSWIZZLE_CAT(NOT_BREAK, __LINE__);\
+        switch(batch_write_mask::multiply_to(_cxxswizzle_loop_scope)) case true: goto CXXSWIZZLE_CAT(NOT_BREAK, __LINE__);\
         break;\
         CXXSWIZZLE_CAT(NOT_BREAK, __LINE__): (void)0; \
     }
 
-    #define CXXSWIZZLE_FOR_CONDITION(x) (_cxxswizzle_loop_mask &= static_cast<batch_write_mask::mask_type>(x))
+    #define CXXSWIZZLE_FOR_CONDITION(x) (_cxxswizzle_loop_scope &= static_cast<batch_write_mask::mask_type>(x))
     #else 
     #define CXXSWIZZLE_FOR_CONDITION(x) x
     #define else_if else if

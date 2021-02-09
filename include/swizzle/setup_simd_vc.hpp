@@ -6,6 +6,16 @@
 #include <Vc/vector.h>
 #include <Vc/global.h>
 #include <type_traits>
+
+namespace swizzle
+{
+    // needed for the batch_write_mask to work
+    inline bool batch_collapse(const ::Vc::float_m& value) noexcept
+    {
+        return value.isNotEmpty();
+    }
+}
+
 #include <swizzle/detail/batch_write_mask.hpp>
 
 namespace swizzle
@@ -58,11 +68,6 @@ namespace swizzle
     inline ::Vc::float_m batch_scalar_cast(bool value) noexcept
     {
         return ::Vc::float_m(value);
-    }
-
-    inline bool batch_collapse(const ::Vc::float_m& value) noexcept
-    {
-        return value.isNotEmpty();
     }
 
     template <typename T>
