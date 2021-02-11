@@ -528,9 +528,6 @@ struct shadertoy_render_buffers
 #define VT100_DOWN(x)   "\33[" STR2(x) "B"
 #define STATS_LINES 12
 
-
-
-
 template <class Rep, class Period>
 constexpr auto duration_to_seconds(const std::chrono::duration<Rep, Period>& d)
 {
@@ -553,6 +550,7 @@ void print_help()
     printf("-o <path>                   render one frame, save to <path> (PNG) and quit.\n");
     printf("-r <width> <height>         set initial resolution\n");
     printf("-c <path>                   config path (default: %s)\n", CONFIG_SAMPLE_CONFIG_PATH);
+    printf("--textures-root <path>      config path (default: %s)\n", CONFIG_SAMPLE_TEXTURES_ROOT);
     printf("-t <time>                   set initial time & pause\n");
 }
 
@@ -763,91 +761,92 @@ int __cdecl main(int argc, char* argv[])
     image_map images;
     shadertoy_config config;
 
-    {
-        std::filesystem::path config_path = CONFIG_SAMPLE_CONFIG_PATH;
-        std::filesystem::path textures_root = config_path.parent_path();
-        bool had_textures_root = false;
-
-        for (int i = 1; i < argc; ++i)
-        {
-            char* arg = argv[i];
-            if (!strcmp(arg, "-r"))
-            {
-                if (i + 2 < argc && from_string(argv[++i], resolution.x) && from_string(argv[++i], resolution.y))
-                {
-                }
-                else
-                {
-                    return print_args_error();
-                }
-            }
-            else if (!strcmp(arg, "-t"))
-            {
-                if (i + 1 < argc && from_string(argv[++i], time))
-                {
-                    time_scale = 0.0f;
-                }
-                else
-                {
-                    return print_args_error();
-                }
-            }
-            else if (!strcmp(arg, "-o"))
-            {
-                if (i + 1 < argc)
-                {
-                    output_path = argv[++i];
-                }
-                else
-                {
-                    return print_args_error();
-                }
-            }
-            else if (!strcmp(arg, "-h"))
-            {
-                print_help();
-                return 0;
-            }
-            else if (!strcmp(arg, "-c"))
-            {
-                if (i + 1 < argc)
-                {
-                    config_path = argv[++i];
-                    if (!had_textures_root)
-                    {
-                        textures_root = config_path.parent_path();
-                    }
-                }
-                else
-                {
-                    return print_args_error();
-                }
-            }
-            else if (!strcmp(arg, "--textures-root"))
-            {
-                if (i + 1 < argc)
-                {
-                    textures_root = argv[++i];
-                    had_textures_root = true;
-                }
-                else
-                {
-                    return print_args_error();
-                }
-            }
-        }
-
-        config = apply_config(config_path, images, textures_root);
-    }
-    
-    if (resolution.x <= 0 || resolution.y < 0 )
-    {
-        fprintf(stderr, "ERROR: invalid resolution: %dx%d\n", resolution.x, resolution.y);
-        return 1;
-    }
-
     try
     {
+        {
+            std::filesystem::path config_path = CONFIG_SAMPLE_CONFIG_PATH;
+            std::filesystem::path textures_root = CONFIG_SAMPLE_TEXTURES_ROOT;
+            bool had_textures_root = !textures_root.empty();
+
+            for (int i = 1; i < argc; ++i)
+            {
+                char* arg = argv[i];
+                if (!strcmp(arg, "-r"))
+                {
+                    if (i + 2 < argc && from_string(argv[++i], resolution.x) && from_string(argv[++i], resolution.y))
+                    {
+                    }
+                    else
+                    {
+                        return print_args_error();
+                    }
+                }
+                else if (!strcmp(arg, "-t"))
+                {
+                    if (i + 1 < argc && from_string(argv[++i], time))
+                    {
+                        time_scale = 0.0f;
+                    }
+                    else
+                    {
+                        return print_args_error();
+                    }
+                }
+                else if (!strcmp(arg, "-o"))
+                {
+                    if (i + 1 < argc)
+                    {
+                        output_path = argv[++i];
+                    }
+                    else
+                    {
+                        return print_args_error();
+                    }
+                }
+                else if (!strcmp(arg, "-h"))
+                {
+                    print_help();
+                    return 0;
+                }
+                else if (!strcmp(arg, "-c"))
+                {
+                    if (i + 1 < argc)
+                    {
+                        config_path = argv[++i];
+                        if (!had_textures_root)
+                        {
+                            textures_root = config_path.parent_path();
+                        }
+                    }
+                    else
+                    {
+                        return print_args_error();
+                    }
+                }
+                else if (!strcmp(arg, "--textures-root"))
+                {
+                    if (i + 1 < argc)
+                    {
+                        textures_root = argv[++i];
+                        had_textures_root = true;
+                    }
+                    else
+                    {
+                        return print_args_error();
+                    }
+                }
+            }
+
+            config = apply_config(config_path, images, textures_root);
+        }
+    
+        if (resolution.x <= 0 || resolution.y < 0 )
+        {
+            fprintf(stderr, "ERROR: invalid resolution: %dx%d\n", resolution.x, resolution.y);
+            return 1;
+        }
+
+
         shadertoy_render_buffers render_targets(resolution.x, resolution.y);
 
         // keyboard texture is a special one: first row contains down state, second whether it was pressed 

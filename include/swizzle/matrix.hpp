@@ -33,6 +33,8 @@ namespace swizzle
         typedef vector<TScalar, num_rows> column_type;
         typedef TScalar scalar_type;
 
+        using this_type = matrix_;
+
     // CONSTRUCTION
     public:
 
@@ -72,10 +74,15 @@ namespace swizzle
         //}
 
         //! Init with s diagonally
-        matrix_(const scalar_type& s)
+        explicit matrix_(const scalar_type& s)
         {
             column_type zero(0);
             ((TColumns < num_rows ? data[TColumns] = set_return<TColumns>(zero, s) : zero), ...);
+        }
+
+        explicit matrix_(const detail::only_if<num_rows == 2 && num_columns == 2, vector<scalar_type, num_rows * num_columns>>& vec)
+        {
+            detail::static_for<0, num_rows * num_columns>([&](size_t i) -> void { cell(i % num_rows, i / num_rows) = vec[i]; });
         }
 
         template <class T0, class T1, class... T,
@@ -298,6 +305,24 @@ namespace swizzle
 
     template <class TScalar, size_t TNumRows>
     struct matrix_<TScalar, TNumRows>;
+
+    namespace detail 
+    {
+        using m2f = matrix_<float_type, 2, 0, 1>;
+        using m3f = matrix_<float_type, 3, 0, 1, 2>;
+        using m4f = matrix_<float_type, 2, 0, 1, 2, 3>;
+    }
+
+    inline float_type determinant(const detail::m2f& m)
+    {
+        return m.cell(0, 0) * m.cell(1, 1) - m.cell(0, 1) * m.cell(1, 0);
+    }
+
+    inline detail::m2f inverse(const detail::m2f& m)
+    {
+        return detail::m2f(m.cell(1, 1), -m.cell(1, 0), -m.cell(0, 1), m.cell(0, 0)) / determinant(m);
+    }
+
 
     //template <class TScalar, size_t M, size_t TNumRows, size_t OtherNumColumns>
     //matrix<TVector, TScalar, TNumRows, OtherNumColumns> operator*(const matrix<TVector, TScalar, N, M>& m1, const matrix<TVector, TScalar, M, OtherNumColumns>& m2 )

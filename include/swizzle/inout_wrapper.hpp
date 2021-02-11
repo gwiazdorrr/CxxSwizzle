@@ -14,7 +14,7 @@ namespace swizzle
     template <class TVector>
     struct inout_wrapper : public detail::clean_up_before_other_destructors<inout_wrapper<TVector>>, public TVector
     {
-        typedef TVector vector_type;
+        using vector_type = TVector;
         using this_type = inout_wrapper;
 
         inout_wrapper(vector_type& value)
@@ -57,6 +57,13 @@ namespace swizzle
         this_type& operator=(const this_type& other)
         {
             vector_type::operator=(other);
+            return *this;
+        }
+
+        template <typename TSomeData, size_t... TIndices>
+        this_type& operator=(const detail::indexed_proxy_storage<TSomeData, typename vector_type::scalar_type, vector_type::num_components, TIndices...>& other)
+        {
+            vector_type::operator=(vector_type(other));
             return *this;
         }
     };

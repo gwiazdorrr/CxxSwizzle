@@ -13,7 +13,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang
 endif()
 
 set(HEADERS "setup.h")
-set(SOURCE "main.cpp" "test_basic.cpp" "test_proxies.cpp" "test_specs.cpp")
+set(SOURCE "main.cpp" "test_basic.cpp" "test_proxies.cpp" "test_specs.cpp" "test_inout_proxies.cpp")
 
 source_group("" FILES ${SOURCE} ${HEADERS})
 

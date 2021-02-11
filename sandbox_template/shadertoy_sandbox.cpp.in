@@ -4,7 +4,8 @@
 using namespace swizzle;
 
 namespace
-{
+{ 
+    #define CXXSWIZZLE_MASK_FUNCTION_NAMES
     #include <swizzle/define_vector_functions.hpp>
 
     struct builtin_inout_proxy
@@ -67,7 +68,10 @@ namespace
     #define final final_
     #define discard switch(0) default: _cxxswizzle_discarded = true;
     // char is not a type in glsl so can be used freely
-    #define char definitely_not_a_char
+    #define char _cxxswizzle_keyword_mask_char
+    #define signed _cxxswizzle_keyword_mask_signed
+    #define unsigned _cxxswizzle_keyword_mask_unsigned
+    #define new _cxxswizzle_keyword_mask_new
 
     // cmath constants need to be undefined, as sometimes shaders define their own
     #undef M_E       
@@ -84,6 +88,40 @@ namespace
     #undef M_SQRT2   
     #undef M_SQRT1_2 
     #undef INFINITY
+
+    // undef other common stuff
+    #ifdef _UPPER
+    #undef _UPPER
+    #endif
+    #ifdef _LOWER
+    #undef _LOWER
+    #endif
+    #ifdef _DIGIT
+    #undef _DIGIT
+    #endif
+    #ifdef _SPACE
+    #undef _SPACE
+    #endif
+    #ifdef _PUNCT
+    #undef _PUNCT
+    #endif
+    #ifdef _CONTROL
+    #undef _CONTROL
+    #endif
+    #ifdef _BLANK
+    #undef _BLANK
+    #endif
+    #ifdef _HEX
+    #undef _HEX
+    #endif
+    #ifdef _LEADBYTE
+    #undef _LEADBYTE
+    #endif
+    #ifdef _ALPHA
+    #undef _ALPHA
+    #endif
+
+
 
     #ifdef CXXSWIZZLE_INTERNAL_BATCH_WRITE_MASK_TYPE
 

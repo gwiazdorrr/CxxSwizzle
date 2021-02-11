@@ -63,6 +63,7 @@ namespace swizzle
     using mat4 = mat4x4;
 
     using sampler2D = sampler_generic<float_type, int_type, uint_type>;
+    using samplerCube = sampler_generic<float_type, int_type, uint_type>;
 
 #ifdef CXXSWIZZLE_INTERNAL_BATCH_WRITE_MASK_TYPE
     using batch_write_mask = CXXSWIZZLE_INTERNAL_BATCH_WRITE_MASK_TYPE;

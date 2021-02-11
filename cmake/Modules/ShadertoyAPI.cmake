@@ -28,6 +28,8 @@ macro(_shadertoySanitizeName result name)
     string(REPLACE "<"  "_" ${result} ${${result}})
     string(REPLACE ">"  "_" ${result} ${${result}})
     string(REPLACE "|"  "_" ${result} ${${result}})
+    string(REPLACE "#"  "_" ${result} ${${result}})
+    string(REPLACE "^"  "_" ${result} ${${result}})
 endmacro()
 
 macro(_shadertoyCreateFile path contents msg)
@@ -40,15 +42,15 @@ macro(_shadertoyDownloadFile url path msg)
     file(DOWNLOAD ${url} ${path})
 endmacro()
 
-macro(shadertoyDownload api_key shader_id root_dir download_error_is_fatal)
-    set(SHADERTOY_JSON_PATH "${CMAKE_CURRENT_BINARY_DIR}/${shader_id}.json")
-    set(SHADERTOY_QUERY "https://www.shadertoy.com/api/v1/shaders/${shader_id}?key=${api_key}")
+macro(shadertoyDownload api_key shader_id root_dir textures_root download_error_is_fatal)
+    set(shadertoy_json_path "${CMAKE_CURRENT_BINARY_DIR}/${shader_id}.json")
+    set(shadertoy_query "https://www.shadertoy.com/api/v1/shaders/${shader_id}?key=${api_key}")
         
-    _shadertoyDownloadFile(${SHADERTOY_QUERY} ${SHADERTOY_JSON_PATH} "(Shadertoy JSON shader description)")
+    _shadertoyDownloadFile(${shadertoy_query} ${shadertoy_json_path} "(Shadertoy JSON shader description)")
 
-    message(STATUS "Parsing ${SHADERTOY_JSON_PATH}")
-    file(READ "${SHADERTOY_JSON_PATH}" SHADERTOY_JSON)
-    sbeParseJson(SHADER SHADERTOY_JSON)
+    message(STATUS "Parsing ${shadertoy_json_path}")
+    file(READ "${shadertoy_json_path}" shadertoy_json)
+    sbeParseJson(SHADER shadertoy_json)
 
     if (SHADER.Error)
         if (${download_error_is_fatal})
@@ -73,115 +75,139 @@ macro(shadertoyDownload api_key shader_id root_dir download_error_is_fatal)
         #     message("${var} = ${${var}}") 
         # endforeach()
 
-        set(SHADER_NAME ${SHADER.Shader.info.name})
+        set(shader_name ${SHADER.Shader.info.name})
 
         # create directory
-        _shadertoySanitizeName(SHADER_NAME_SANITIZED ${SHADER_NAME})
+        _shadertoySanitizeName(shader_name_sanitized ${shader_name})
     
-        set(SHADER_DIRECTORY "${root_dir}/${SHADER_NAME_SANITIZED}")
+        set(shader_directory "${root_dir}/${shader_name_sanitized}")
 
-        file(MAKE_DIRECTORY ${SHADER_DIRECTORY})
+        if ("${textures_root}" STREQUAL "")
+            message(STATUS "No textures_root provided, going to download textures to the shadertoy's directory")
+            set (textures_root ${shader_directory})
+        endif()
 
-        set(SHADER_INFO "")
 
-        list(APPEND SHADER_INFO "  \"url\": \"https://www.shadertoy.com/view/${shader_id}\"")
-        list(APPEND SHADER_INFO "  \"api_url\": \"${SHADERTOY_QUERY}\"")
+        file(MAKE_DIRECTORY ${shader_directory})
+
+        set(shader_info "")
+
+        list(APPEND shader_info "  \"url\": \"https://www.shadertoy.com/view/${shader_id}\"")
 
         foreach(r ${SHADER.Shader.renderpass})
-            set(RENDERPASS SHADER.Shader.renderpass_${r})
+            set(renderpass SHADER.Shader.renderpass_${r})
             
-            if (${RENDERPASS}.name)
-                _shadertoySanitizeName(RENDER_PASS_NAME ${${RENDERPASS}.name})
+            if (${renderpass}.name)
+                _shadertoySanitizeName(renderpass_name ${${renderpass}.name})
             else()
                 # seems this fallback is needed sometimes
-                _shadertoySanitizeName(RENDER_PASS_NAME ${${RENDERPASS}.type})
+                _shadertoySanitizeName(renderpass_name ${${renderpass}.type})
             endif()
 
-            string(REPLACE "buf_" "buffer_" RENDER_PASS_NAME ${RENDER_PASS_NAME})
+            string(REPLACE "buf_" "buffer_" renderpass_name ${renderpass_name})
 
-            message(STATUS "Creating ${SHADER_DIRECTORY}/${RENDER_PASS_NAME}.frag (Shader pass)")
-            file(WRITE "${SHADER_DIRECTORY}/${RENDER_PASS_NAME}.frag" "${${RENDERPASS}.code}")
+            message(STATUS "Creating ${shader_directory}/${renderpass_name}.frag (Shader pass)")
+            file(WRITE "${shader_directory}/${renderpass_name}.frag" "${${renderpass}.code}")
             
-            set(INPUT_PREFIX "${RENDER_PASS_NAME}_")
-            if(RENDER_PASS_NAME STREQUAL "image")
-                set(INPUT_PREFIX "")
+            set(input_prefix "${renderpass_name}_")
+            if(renderpass_name STREQUAL "image")
+                set(input_prefix "")
             endif()
 
-            set(RENDERPASS_INFO "")
-            set(SPACING "    ")
+            set(renderpass_info "")
+            set(spacing "    ")
 
+            foreach(i ${${renderpass}.inputs})
+                set(entry "")
+                set(input ${renderpass}.inputs_${i})
+                set(input_index ${${input}.channel})
+                if (${input}.ctype STREQUAL "texture")
+                    get_filename_component(input_name ${${input}.src} NAME)
+                    set(target_file "${textures_root}/${input_name}")
+                    set(source_url "https://www.shadertoy.com${${input}.src}")
 
-            foreach(i ${${RENDERPASS}.inputs})
-                set(ENTRY "")
-                set(INPUT ${RENDERPASS}.inputs_${i})
-                set(INPUT_INDEX ${${INPUT}.channel})
-                if (${INPUT}.ctype STREQUAL "texture")
-                    get_filename_component(INPUT_NAME ${${INPUT}.src} NAME)
-                    _shadertoyDownloadFile("https://www.shadertoy.com${${INPUT}.src}" "${SHADER_DIRECTORY}/${INPUT_NAME}" "")
-                    string(CONCAT ENTRY "${SPACING}  \"type\": \"texture\",\n"
-                                        "${SPACING}  \"src\":  \"${INPUT_NAME}\",\n")
-                elseif (${INPUT}.ctype STREQUAL "cubemap")
-                    get_filename_component(INPUT_EXTENSION ${${INPUT}.src} EXT)
-                    get_filename_component(INPUT_NAME      ${${INPUT}.src} NAME_WE)
-                    get_filename_component(INPUT_DIR       ${${INPUT}.src} DIRECTORY)
-
-                    set(FACES "")
-                    foreach (index RANGE 5)
-                        set(TARGET_FILE_NAME "${INPUT_NAME}_${index}${INPUT_EXTENSION}")
-                        set(TARGET_FILE "${SHADER_DIRECTORY}/${TARGET_FILE_NAME}")
-                        if (index EQUAL 0)
-                            _shadertoyDownloadFile("https://www.shadertoy.com${${INPUT}.src}"                                       
-                                                   "${TARGET_FILE}" "")
-                        else()
-                            _shadertoyDownloadFile("https://www.shadertoy.com${INPUT_DIR}/${INPUT_NAME}_${index}${INPUT_EXTENSION}" 
-                                                   "${TARGET_FILE}" "")
-                        endif()
-                        list(APPEND FACES "${SPACING}    \"${TARGET_FILE_NAME}\"")
-                    endforeach(index)
-                    list(JOIN FACES ",\n" FACES)
-                    string(CONCAT ENTRY "${SPACING}  \"type\": \"cubemap\",\n"
-                                        "${SPACING}  \"src\":  [\n${FACES}\n${SPACING}  ],\n")
-                elseif(${INPUT}.ctype STREQUAL "buffer")
-                    set(BUFFER_NAME "")
-                    if(${INPUT}.src STREQUAL "/media/previz/buffer00.png")
-                        set(BUFFER_NAME "buffer_a")
-                    elseif(${INPUT}.src STREQUAL "/media/previz/buffer01.png")
-                        set(BUFFER_NAME "buffer_b")
-                    elseif(${INPUT}.src STREQUAL "/media/previz/buffer02.png")
-                        set(BUFFER_NAME "buffer_c")
-                    elseif(${INPUT}.src STREQUAL "/media/previz/buffer03.png")
-                        set(BUFFER_NAME "buffer_d")
+                    if (EXISTS ${target_file})
+                        message(STATUS "Skipping texture ${source_url}, already in cache.")
                     else()
-                        message(WARNING "Unable to guess buffer index: ${${INPUT}.src} (channel ${INPUT_INDEX})")
+                        _shadertoyDownloadFile(${source_url} ${target_file}  "")
+                    endif()
+                    string(CONCAT entry "${spacing}  \"type\": \"texture\",\n"
+                                        "${spacing}  \"src\":  \"${input_name}\",\n")
+                elseif (${input}.ctype STREQUAL "cubemap")
+                    get_filename_component(input_ext    ${${input}.src} EXT)
+                    get_filename_component(input_name   ${${input}.src} NAME_WE)
+                    get_filename_component(input_dir    ${${input}.src} DIRECTORY)
+
+                    set(faces "")
+
+                    if ("${input_name}" STREQUAL "cubemap00")
+                        message(WARNING "Cubemap buffers are not supported (channel ${input_index})")
+                    else()
+                        foreach (index RANGE 5)
+                            set(target_file_name "${input_name}_${index}${input_ext}")
+                            set(target_file "${textures_root}/${target_file_name}")
+
+                            if (index EQUAL 0)
+                                set(source_url "https://www.shadertoy.com${${input}.src}")
+                            else()
+                                set(source_url "https://www.shadertoy.com${input_dir}/${input_name}_${index}${input_ext}")
+                            endif()
+
+                            if (EXISTS ${target_file})
+                                message(STATUS "Skipping texture ${source_url}, already in cache.")
+                            else()
+                                _shadertoyDownloadFile(${source_url} ${target_file}  "")
+                            endif()
+
+                            list(APPEND faces "${spacing}    \"${target_file_name}\"")
+                        endforeach(index)
                     endif()
 
-                    string(CONCAT ENTRY "${SPACING}  \"type\": \"buffer\",\n"
-                                        "${SPACING}  \"src\":  \"${BUFFER_NAME}\",\n")
+                    list(JOIN faces ",\n" faces)
+                    string(CONCAT entry "${spacing}  \"type\": \"cubemap\",\n"
+                                        "${spacing}  \"src\":  [\n${faces}\n${spacing}  ],\n")
+                    
+                elseif(${input}.ctype STREQUAL "buffer")
+                    set(buffer_name "")
+                    if(${input}.src STREQUAL "/media/previz/buffer00.png")
+                        set(buffer_name "buffer_a")
+                    elseif(${input}.src STREQUAL "/media/previz/buffer01.png")
+                        set(buffer_name "buffer_b")
+                    elseif(${input}.src STREQUAL "/media/previz/buffer02.png")
+                        set(buffer_name "buffer_c")
+                    elseif(${input}.src STREQUAL "/media/previz/buffer03.png")
+                        set(buffer_name "buffer_d")
+                    else()
+                        message(WARNING "Unable to guess buffer index: ${${input}.src} (channel ${input_index})")
+                    endif()
 
-                elseif(${INPUT}.ctype STREQUAL "keyboard")
-                    string(CONCAT ENTRY "${SPACING}  \"type\": \"keyboard\",\n")
+                    string(CONCAT entry "${spacing}  \"type\": \"buffer\",\n"
+                                        "${spacing}  \"src\":  \"${buffer_name}\",\n")
 
-                elseif(${INPUT}.ctype)
-                    message(WARNING "Channel type ${${INPUT}.ctype} not supported (channel ${INPUT_INDEX})")
+                elseif(${input}.ctype STREQUAL "keyboard")
+                    string(CONCAT entry "${spacing}  \"type\": \"keyboard\",\n")
+
+                elseif(${input}.ctype)
+                    message(WARNING "Channel type ${${input}.ctype} not supported (channel ${input_index})")
                 endif()
 
-                string(CONCAT ENTRY "${ENTRY}"
-                                    "${SPACING}  \"vflip\": \"${${INPUT}.sampler.vflip}\",\n"
-                                    "${SPACING}  \"filter\": \"${${INPUT}.sampler.filter}\",\n"
-                                    "${SPACING}  \"wrap\": \"${${INPUT}.sampler.wrap}\"")
+                string(CONCAT entry "${entry}"
+                                    "${spacing}  \"vflip\": \"${${input}.sampler.vflip}\",\n"
+                                    "${spacing}  \"filter\": \"${${input}.sampler.filter}\",\n"
+                                    "${spacing}  \"wrap\": \"${${input}.sampler.wrap}\"")
 
-                list(APPEND RENDERPASS_INFO "${SPACING}\"iChannel${${INPUT}.channel}\": {\n${ENTRY}\n${SPACING}}")
+                list(APPEND renderpass_info "${spacing}\"iChannel${${input}.channel}\": {\n${entry}\n${spacing}}")
 
             endforeach()
 
-            list(JOIN RENDERPASS_INFO ",\n" RENDERPASS_INFO)
-            list(APPEND SHADER_INFO "  \"${RENDER_PASS_NAME}\": {\n${RENDERPASS_INFO}\n  }")
+            list(JOIN renderpass_info ",\n" renderpass_info)
+            list(APPEND shader_info "  \"${renderpass_name}\": {\n${renderpass_info}\n  }")
             
 
         endforeach()
 
-        list(JOIN SHADER_INFO ",\n" SHADER_INFO)
-        _shadertoyCreateFile("${SHADER_DIRECTORY}/config.json" "{\n${SHADER_INFO}\n}" "")
+        list(JOIN shader_info ",\n" shader_info)
+        _shadertoyCreateFile("${shader_directory}/config.json" "{\n${shader_info}\n}" "")
 
     endif()
 
@@ -190,14 +216,14 @@ macro(shadertoyDownload api_key shader_id root_dir download_error_is_fatal)
 endmacro()
 
 macro(shadertoyQuery api_key sort_type query max_count out_list)
-    set(SHADERTOY_JSON_PATH "${CMAKE_CURRENT_BINARY_DIR}/sort_${sort_type}.json")
-    set(SHADERTOY_QUERY "https://www.shadertoy.com/api/v1/shaders/query/${query}?sort=${sort_type}&key=${api_key}&from=0&num=${max_count}")
+    set(shadertoy_json_path "${CMAKE_CURRENT_BINARY_DIR}/sort_${sort_type}.json")
+    set(shadertoy_query "https://www.shadertoy.com/api/v1/shaders/query/${query}?sort=${sort_type}&key=${api_key}&from=0&num=${max_count}")
 
-    _shadertoyDownloadFile(${SHADERTOY_QUERY} ${SHADERTOY_JSON_PATH} "(Shadertoy JSON shader list)")
+    _shadertoyDownloadFile(${shadertoy_query} ${shadertoy_json_path} "(Shadertoy JSON shader list)")
 
-    message(STATUS "Parsing ${SHADERTOY_JSON_PATH}")
-    file(READ "${SHADERTOY_JSON_PATH}" SHADERTOY_JSON)
-    sbeParseJson(SHADER_LIST SHADERTOY_JSON)
+    message(STATUS "Parsing ${shadertoy_json_path}")
+    file(READ "${shadertoy_json_path}" shadertoy_json)
+    sbeParseJson(SHADER_LIST shadertoy_json)
 
     if (SHADER_LIST.Error)
         message(FATAL_ERROR "Shartoy API returned an error: ${SHADER_LIST.Error}.")

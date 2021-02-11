@@ -141,10 +141,10 @@ namespace swizzle
             compose<0>(t0);
         }
 
-        template <class TProxyVector, class TProxyData, class TProxyScalar, size_t... TProxyIndices, class = std::enable_if_t<sizeof...(TProxyIndices) == num_components>>
-        inline explicit vector_(const detail::indexed_proxy<TProxyVector, TProxyData, TProxyScalar, TProxyIndices...>& t0)
+        template <class TProxyData, class TProxyScalar, size_t... TProxyIndices>
+        inline explicit vector_(const detail::indexed_proxy_storage<TProxyData, TProxyScalar, num_components, TProxyIndices...>& proxy)
         {
-            compose<0>(t0.decay());
+            ((at_rvalue(TIndices) = proxy.data[TProxyIndices]), ...);
         }
 
         // Block of generic proxy-constructors calling construct member function. Compiler
@@ -435,7 +435,7 @@ namespace swizzle
             return this_type(modf(x.at(TIndices), &i)...);
         }
 
-        static this_type call_min(number_vector_arg x, number_vector_arg y)
+        static this_type call_min(number_vector_arg x, detail::only_if<(num_components>1), number_vector_arg> y)
         {
             return this_type(min(x.at(TIndices), y.at(TIndices))...);
         }
@@ -443,7 +443,7 @@ namespace swizzle
         {
             return this_type(min(x.at(TIndices), y)...);
         }
-        static this_type call_max(number_vector_arg x, number_vector_arg y)
+        static this_type call_max(number_vector_arg x, detail::only_if<(num_components>1), number_vector_arg> y)
         {
             return this_type(max(x.at(TIndices), y.at(TIndices))...);
         }
@@ -740,6 +740,32 @@ namespace swizzle
         {
             return *this = mat.mul(*this, mat);
         }
+
+        inline detail::only_if<scalar_is_number, this_type>& operator++()
+        {
+            return ((at(TIndices) += 1), ..., *this);
+        }
+
+        inline detail::only_if<scalar_is_number, this_type> operator++(int)
+        {
+            this_type result(*this);
+            ++(*this);
+            return result;
+        }
+
+        inline detail::only_if<scalar_is_number, this_type>& operator--()
+        {
+            return ((at(TIndices) -= 1), ..., *this);
+        }
+
+        inline detail::only_if<scalar_is_number, this_type> operator--(int)
+        {
+            this_type result(*this);
+            --(*this);
+            return result;
+        }
+
+
 
     private:
         static scalar_type smoothstep_helper(scalar_arg edge0, scalar_arg edge1, scalar_arg x)
