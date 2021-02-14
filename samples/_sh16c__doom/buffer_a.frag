@@ -2367,16 +2367,16 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
     else
     {
-	    if( isBigFont )
-    	{
-            float fFontDigit = floor( vFontCoord.x / 16.0);
-            vec2 vFontPixel = floor( vFontCoord.xy );
-            vFontPixel.x = mod( vFontPixel.x, 16.0 );
-            float fValue = NumFont_BinChar( vFontPixel, fFontDigit );
-            //float fValue = NumFont_Char( vFontPixel, fFontDigit );            
-            fragColor =  vec4( fValue );	        
-            return;
-        }
+	    //if( isBigFont )
+    	//{
+     //       float fFontDigit = floor( vFontCoord.x / 16.0);
+     //       vec2 vFontPixel = floor( vFontCoord.xy );
+     //       vFontPixel.x = mod( vFontPixel.x, 16.0 );
+     //       float fValue = NumFont_BinChar( vFontPixel, fFontDigit );
+     //       //float fValue = NumFont_Char( vFontPixel, fFontDigit );            
+     //       fragColor =  vec4( fValue );	        
+     //       return;
+     //   }
         
         if ( isMessage )
         {

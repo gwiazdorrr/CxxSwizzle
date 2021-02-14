@@ -942,6 +942,9 @@ int __cdecl main(int argc, char* argv[])
                 (mouse_clicked ? 1.0f : -1.0f)* (render_targets.height - 1 - mouse_press_y)
             );
 
+
+            vec4::call_outerProduct(mouse, mouse);
+
             mouse_clicked = false;
 
             auto make_date = []() -> vec4 {

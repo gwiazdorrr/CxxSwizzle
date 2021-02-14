@@ -2,6 +2,7 @@
 
 #include <swizzle/vector.hpp>
 #include <swizzle/matrix.hpp>
+#include <swizzle/array.hpp>
 #include <swizzle/sampler_generic.hpp>
 #include <swizzle/detail/simd_mask.h>
 #include <swizzle/inout_wrapper.hpp>

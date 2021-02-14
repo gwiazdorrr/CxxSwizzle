@@ -281,9 +281,21 @@ namespace swizzle
         }
 
     public:
-        int length() const
+        constexpr int length() const noexcept
         {
             return num_components;
+        }
+
+        constexpr int _cxxswizzle_func_length() const noexcept
+        {
+            return length();
+        }
+
+        static matrix<scalar_type, num_components, num_components> call_outerProduct(this_type_arg c, this_type_arg r)
+        {
+            matrix<scalar_type, num_components, num_components> m;
+            ((m.column(TIndices) = c * (r.at(TIndices))), ...);
+            return m;
         }
 
 

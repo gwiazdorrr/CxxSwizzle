@@ -187,5 +187,20 @@ namespace swizzle
             }
         }
 
+        template <typename T>
+        constexpr auto narrowing_cast(T&& t)
+        {
+            if constexpr (std::is_same_v<double, std::remove_cv_t<std::remove_reference_t<T>>>)
+                return static_cast<float>(t);
+            else
+                return t;
+        }
+
+        template <typename T, typename ...Arg>
+        constexpr auto make_with_narrowing(Arg&& ...arg)
+        {
+            return T{ narrowing_cast(std::forward<Arg>(arg))... };
+        }
+
     }
 }

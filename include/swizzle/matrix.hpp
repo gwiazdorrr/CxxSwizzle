@@ -34,9 +34,19 @@ namespace swizzle
         typedef TScalar scalar_type;
 
         using this_type = matrix_;
+        using rows_sequence = std::make_index_sequence<num_rows>;
+
+
 
     // CONSTRUCTION
     public:
+
+        //! Decays the vector. For Size==1 this is going to return a scalar, for all other sizes - same vector
+        inline matrix_type decay() const
+        {
+            return *this;
+        }
+
 
         //! Default zeroing constructor.
         matrix_()
@@ -111,13 +121,13 @@ namespace swizzle
         //! Row accessor.
         column_type& operator[](size_t i)
         {
-            return data[i];
+            return data[i >= 0 && i < num_columns ? i : 0];
         }
 
         //! Row accessor.
         const column_type& operator[](size_t i) const
         {
-            return data[i];
+            return data[i >= 0 && i < num_columns ? i : 0];
         }
 
         // Scalar operators
@@ -226,10 +236,29 @@ namespace swizzle
             return matrix<TScalar, num_columns, num_rows>::make_transposed(m);
         }
 
+
+        //! Matrix-vector multiplication.
+        static row_type mul(const column_type& v, const matrix_type& m)
+        {
+            return row_type(v.call_dot(v, m.column(TColumns))...);
+        }
+
+        //static row_type mul666(const column_type& v, const matrix_type& m)
+        //{
+        //    return row_type(v.call_dot(v, m.column(TColumns))...);
+        //}
+
         //! Matrix-vector multiplication.
         static column_type mul(const matrix_type& m, const row_type& v)
         {
-            return mul(v, transpose(m));
+            return m.mul_by_row(v, rows_sequence{});
+            //return column_type(v.call_dot(v, m.row(TColumns))...);
+        }
+
+        template <size_t... TRows>
+        column_type mul_by_row(const row_type& v, std::index_sequence<TRows...>) const
+        {
+            return column_type(v.call_dot(v, row(TRows))...);
         }
 
         //! Matrix-matrix multiplication.
@@ -241,11 +270,6 @@ namespace swizzle
             return matrix<TScalar, TOtherNumRows, num_columns>((m2.column(TColumns) * tr)...);
         }
 
-        //! Matrix-vector multiplication.
-        static row_type mul(const column_type& v, const matrix_type& m)
-        {
-            return row_type(v.call_dot(v, m.column(TColumns))...);
-        }
 
     private:
 
@@ -288,9 +312,14 @@ namespace swizzle
 
 
     public:
-        int length() const
+        constexpr int length() const noexcept
         {
             return num_columns;
+        }
+
+        constexpr int _cxxswizzle_func_length() const noexcept
+        {
+            return length();
         }
     };
 
@@ -317,6 +346,12 @@ namespace swizzle
     {
         return m.cell(0, 0) * m.cell(1, 1) - m.cell(0, 1) * m.cell(1, 0);
     }
+
+    //template <typename TScalar 
+    //inline friend matrix_type outerProduct(const detail::only_if<num_columns == num_rows, column_type>& c, column_type r)
+    //{
+    //    return {};
+    //}
 
     inline detail::m2f inverse(const detail::m2f& m)
     {

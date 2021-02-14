@@ -27,6 +27,14 @@
 // it yields better error messages in MSVC if something goes wrong (can't specialize vs.
 // internal complier linkage).
 
+#ifdef FUNCNAME
+
+#else
+//#define FUNCNAME aaaa
+//#include "self"
+//#undef FUNCNAME
+#endif
+
 
 #ifdef CXXSWIZZLE_MASK_FUNCTION_NAMES
 
@@ -98,6 +106,7 @@
 #define dFdx(...)             _cxxswizzle_func_dFdx(__VA_ARGS__)
 #define dFdy(...)             _cxxswizzle_func_dFdy(__VA_ARGS__)
 #define fwidth(...)           _cxxswizzle_func_fwidth(__VA_ARGS__)
+#define outerProduct(...)     _cxxswizzle_func_outerProduct(__VA_ARGS__)
 
 #else
 
@@ -185,6 +194,8 @@ SWIZZLE_FORWARD_FUNC(dFdx)
 SWIZZLE_FORWARD_FUNC(dFdy)
 SWIZZLE_FORWARD_FUNC(fwidth)
 
+SWIZZLE_FORWARD_FUNC(outerProduct)
+
 // a convenient list of functions
 // radians
 // degrees
@@ -249,6 +260,7 @@ SWIZZLE_FORWARD_FUNC(fwidth)
 // dFdx
 // dFdy
 // fwidth
+// outerProduct
 
 
 #undef SWIZZLE_FORWARD_FUNC

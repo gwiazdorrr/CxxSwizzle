@@ -30,6 +30,7 @@ macro(_shadertoySanitizeName result name)
     string(REPLACE "|"  "_" ${result} ${${result}})
     string(REPLACE "#"  "_" ${result} ${${result}})
     string(REPLACE "^"  "_" ${result} ${${result}})
+    string(REPLACE "."  "_" ${result} ${${result}})
 endmacro()
 
 macro(_shadertoyCreateFile path contents msg)
@@ -42,11 +43,139 @@ macro(_shadertoyDownloadFile url path msg)
     file(DOWNLOAD ${url} ${path})
 endmacro()
 
-macro(shadertoyDownload api_key shader_id root_dir textures_root download_error_is_fatal)
+macro(_shadertoyUnescapeStr str result)
+	string(REPLACE "@BRACKET_OPEN@"  "["  tmp "${str}")
+	string(REPLACE "@BRACKET_CLOSE@" "]"  tmp "${tmp}")
+	string(REPLACE "@SEMICOLON@"     ";"  tmp "${tmp}")
+	string(REPLACE "@SLASH@"         "\\" tmp "${tmp}")
+	set(${result} "${tmp}")
+endmacro()
+
+macro(_shadertoyEscapeStr str result)
+	string(REPLACE "\\" "@SLASH@"         tmp "${str}")
+	string(REPLACE ";"  "@SEMICOLON@"     tmp "${tmp}")
+	string(REPLACE "]"  "@BRACKET_CLOSE@" tmp "${tmp}")
+	string(REPLACE "["  "@BRACKET_OPEN@"  tmp "${tmp}")
+	set(${result} "${tmp}")
+endmacro()
+
+macro(_shadertoyPatchSourceCode path)
+
+	message(STATUS "PATCHING ${path}")
+	set(lines)
+	file(STRINGS ${path} lines)
+
+	set(out)
+	list(APPEND out "#ifndef CXXSWIZZLE" )
+	list(APPEND out "#define CXXSWIZZLE_CONST const")
+	list(APPEND out "#define CXXSWIZZLE_IGNORE(x) x")
+	list(APPEND out "#define CXXSWIZZLE_ARRAY_AUTO(type) type[]")
+	list(APPEND out "#define CXXSWIZZLE_ARRAY(type, size) type[size]")
+	list(APPEND out "#define CXXSWIZZLE_MAKE_ARRAY(type) type[]")
+	list(APPEND out "#endif")
+
+	# set(func_decl_regex "[A-Za-z0-9_]+[ \t]+[A-Za-z0-9_]+[ \t]*\\(.*\\);")
+
+	unset(pending_array_line)
+
+	foreach(line ${lines})
+
+		_shadertoyUnescapeStr("${line}" line)
+
+		
+
+		if (pending_array_line)
+			if (line MATCHES "^[ \t]*\\(")
+				string(REGEX REPLACE "([A-Za-z0-9_]+)[ \t]*\\[[A-Za-z0-9_ \t]*\\][ \t]*$" "CXXSWIZZLE_MAKE_ARRAY(\\1)" pending_array_line "${pending_array_line}")
+				#string(REGEX REPLACE "^([ \t]*)\\(" "\\1," line "${line}")
+			endif()
+
+			_shadertoyEscapeStr("${pending_array_line}" pending_array_line)
+			list(APPEND out "${pending_array_line}")
+			unset(pending_array_line)
+		endif()
+		# message(STATUS "${line}")
+
+		if (line MATCHES "\\^\\^")
+			#message(STATUS "Replacing ^^ in line: ${line}")
+			string(REPLACE "^^" "!=" line "${line}")
+		endif()
+
+		if (line MATCHES "^const ")
+			# message(STATUS "Replacing const in line: ${line}")
+			string(REGEX REPLACE "^const " "CXXSWIZZLE_CONST " line "${line}")
+		endif()
+
+		# matches xxxxx xxxxxx(xxxxx);
+		if (line MATCHES "^[A-Za-z0-9_]+[ \t]+[A-Za-z0-9_]+[ \t]*\\([^\\)]*\\)[ \t]*;[ \t]*$")
+			#message(STATUS "Hiding function declaration: ${line}")
+			set(line "CXXSWIZZLE_IGNORE(${line})")
+		endif()
+
+
+
+		# matches xxxxx [xxx] xxxxx
+		# matches xxxxx xxxxx [xxx]
+		if (NOT line MATCHES "^#define.*")
+			if (line MATCHES "([A-Za-z0-9_]+)[ \t]*\\[([A-Za-z0-9_ \t]*)\\][ \t]*([A-Za-z0-9_]+)")
+				#message(STATUS "Array found ${line}")
+				if ("${CMAKE_MATCH_2}" STREQUAL "")
+					string(REGEX REPLACE "([A-Za-z0-9_]+)[ \t]*\\[([A-Za-z0-9_ \t]*)\\][ \t]*([A-Za-z0-9_]+)" "CXXSWIZZLE_ARRAY_AUTO(\\1) \\3" line "${line}")
+				else()
+					string(REGEX REPLACE "([A-Za-z0-9_]+)[ \t]*\\[([A-Za-z0-9_ \t]*)\\][ \t]*([A-Za-z0-9_]+)" "CXXSWIZZLE_ARRAY(\\1, \\2) \\3" line "${line}")
+				endif()
+			elseif (line MATCHES "([A-Za-z0-9_]+)[ \t]+([A-Za-z0-9_]+)[ \t]*\\[([A-Za-z0-9_ \t]*)\\]")
+				#message(STATUS "Array 2 found ${line}")
+				if (NOT "${CMAKE_MATCH_1}" STREQUAL "return")
+					if ("${CMAKE_MATCH_3}" STREQUAL "")
+						string(REGEX REPLACE "([A-Za-z0-9_]+)[ \t]+([A-Za-z0-9_]+)[ \t]*\\[([A-Za-z0-9_ \t]*)\\]" "CXXSWIZZLE_ARRAY_AUTO(\\1) \\2" line "${line}")
+					else()
+						string(REGEX REPLACE "([A-Za-z0-9_]+)[ \t]+([A-Za-z0-9_]+)[ \t]*\\[([A-Za-z0-9_ \t]*)\\]" "CXXSWIZZLE_ARRAY(\\1, \\3) \\2" line "${line}")
+					endif()
+				endif()
+			endif()
+
+			if (line MATCHES "([A-Za-z0-9_]+)[ \t]*\\[[A-Za-z0-9_ \t]*\\][ \t]*\\(")
+				#message(STATUS "Array value function declaration: ${line}")
+				string(REGEX REPLACE "([A-Za-z0-9_]+)[ \t]*\\[[A-Za-z0-9_ \t]*\\][ \t]*\\(" "CXXSWIZZLE_MAKE_ARRAY(\\1)( " line "${line}")
+			elseif(line MATCHES "([A-Za-z0-9_]+)[ \t]*\\[[A-Za-z0-9_ \t]*\\][ \t]*$")
+				set(pending_array_line ${line})
+			endif()
+		endif()
+
+		if (NOT pending_array_line)
+			#string(REPLACE "\\" "@SLASH@" line "${line}")
+			#message(STATUS "${line}")
+			_shadertoyEscapeStr("${line}" line)
+			#message(STATUS "${line}")
+			list(APPEND out "${line}")
+		endif()
+
+	endforeach()
+
+	list(JOIN out "\n" out)
+	_shadertoyUnescapeStr("${out}" out)
+	file(WRITE ${path} "${out}")
+
+    # logical xor operator
+    # string(REPLACE "^^" "!=" result "${code}")
+    # global consts
+    # string(REGEX REPLACE "\nconst" "\nCXXSWIZZLE_CONST" result "${result}")
+
+    # function declarations
+    # string(REGEX REPLACE "\n([A-Za-z0-9_]+[ \t]+[A-Za-z0-9_]+[ \t]*\\([^\n\\(\\)]*\\);)" "\nCXXSWIZZLE_IGNORE(\\1)" result "${result}")
+
+    # arrays
+    # string(REGEX REPLACE "([A-Za-z0-9_]+)[ \t]*\\[([A-Za-z0-9_]+)\\][ \t]*\\(" "CXXSWIZZLE_ARRAY_VAL(\\1, \\2" result "${result}")
+
+    # set(${result_var} "${result}")
+endmacro()
+
+macro(shadertoyDownload api_key shader_id root_dir textures_root download_error_is_fatal patch_source_files)
     set(shadertoy_json_path "${CMAKE_CURRENT_BINARY_DIR}/${shader_id}.json")
     set(shadertoy_query "https://www.shadertoy.com/api/v1/shaders/${shader_id}?key=${api_key}")
         
-    _shadertoyDownloadFile(${shadertoy_query} ${shadertoy_json_path} "(Shadertoy JSON shader description)")
+    #_shadertoyDownloadFile(${shadertoy_query} ${shadertoy_json_path} "(Shadertoy JSON shader description)")
 
     message(STATUS "Parsing ${shadertoy_json_path}")
     file(READ "${shadertoy_json_path}" shadertoy_json)
@@ -106,8 +235,20 @@ macro(shadertoyDownload api_key shader_id root_dir textures_root download_error_
 
             string(REPLACE "buf_" "buffer_" renderpass_name ${renderpass_name})
 
-            message(STATUS "Creating ${shader_directory}/${renderpass_name}.frag (Shader pass)")
-            file(WRITE "${shader_directory}/${renderpass_name}.frag" "${${renderpass}.code}")
+            set (shader_path "${shader_directory}/${renderpass_name}.frag")
+            message(STATUS "Creating ${shader_path} (Shader pass)")
+
+            if (${patch_source_files})
+            	# escape eveything
+            	string(REPLACE "\\" "@SLASH@@SLASH@" shader_code "${${renderpass}.code}")
+				_shadertoyEscapeStr("${shader_code}" shader_code)
+				file(WRITE "${shader_path}" "${shader_code}")
+                _shadertoyPatchSourceCode("${shader_path}")
+            else()
+        		set(shader_code "${${renderpass}.code}")
+        		file(WRITE "${shader_path}" "${shader_code}")
+            endif()
+            
             
             set(input_prefix "${renderpass_name}_")
             if(renderpass_name STREQUAL "image")
@@ -219,7 +360,7 @@ macro(shadertoyQuery api_key sort_type query max_count out_list)
     set(shadertoy_json_path "${CMAKE_CURRENT_BINARY_DIR}/sort_${sort_type}.json")
     set(shadertoy_query "https://www.shadertoy.com/api/v1/shaders/query/${query}?sort=${sort_type}&key=${api_key}&from=0&num=${max_count}")
 
-    _shadertoyDownloadFile(${shadertoy_query} ${shadertoy_json_path} "(Shadertoy JSON shader list)")
+    #_shadertoyDownloadFile(${shadertoy_query} ${shadertoy_json_path} "(Shadertoy JSON shader list)")
 
     message(STATUS "Parsing ${shadertoy_json_path}")
     file(READ "${shadertoy_json_path}" shadertoy_json)

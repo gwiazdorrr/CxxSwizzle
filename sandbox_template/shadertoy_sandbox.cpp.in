@@ -157,12 +157,20 @@ namespace
         constexpr std::size_t va_count(Args&&...) { return sizeof...(Args); }
     }
 
+    template <typename T, typename ...Arg>
+    constexpr auto _cxxswizzle_make(Arg&& ...arg)
+    {
+        return ::swizzle::detail::make_with_narrowing<T>(std::forward<Arg>(arg)...);
+    }
+
     #define CXXSWIZZLE
-    #define CXXSWIZZLE_ARRAY(type, name, ...) type name[CXXSWIZZLE_VA_COUNT(__VA_ARGS__)] = { __VA_ARGS__ }
-    #define CXXSWIZZLE_ARRAY_VAL(type, size, ...) { __VA_ARGS__ }
+    #define CXXSWIZZLE_ARRAY_AUTO(type) auto
+    #define CXXSWIZZLE_ARRAY(type, size) array<type, size>
+    #define CXXSWIZZLE_MAKE_ARRAY(type) make_array<type>
     #define CXXSWIZZLE_STATIC static
     #define CXXSWIZZLE_SCALAR _cxxswizzle_scalar::
     #define CXXSWIZZLE_CONST static inline const
+    #define CXXSWIZZLE_IGNORE(...)
 
     #pragma warning(push)
     #pragma warning(disable: 4244) // disable return implicit conversion warning
