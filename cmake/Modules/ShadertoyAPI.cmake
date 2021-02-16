@@ -106,6 +106,10 @@ macro(_shadertoyPatchSourceCode path)
 			string(REGEX REPLACE "^const " "CXXSWIZZLE_CONST " line "${line}")
 		endif()
 
+		if (line MATCHES "^precision ")
+			set(line "CXXSWIZZLE_IGNORE(${line})")
+		endif()
+
 		# matches xxxxx xxxxxx(xxxxx);
 		if (line MATCHES "^[A-Za-z0-9_]+[ \t]+[A-Za-z0-9_]+[ \t]*\\([^\\)]*\\)[ \t]*;[ \t]*$")
 			#message(STATUS "Hiding function declaration: ${line}")

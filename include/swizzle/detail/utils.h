@@ -187,11 +187,19 @@ namespace swizzle
             }
         }
 
+        struct int_or_uint {
+            int value;
+            operator int() const { return value; }
+            operator unsigned() const { return static_cast<unsigned>(value); }
+        };
+
         template <typename T>
         constexpr auto narrowing_cast(T&& t)
         {
             if constexpr (std::is_same_v<double, std::remove_cv_t<std::remove_reference_t<T>>>)
                 return static_cast<float>(t);
+            else if constexpr (std::is_same_v<unsigned, std::remove_cv_t<std::remove_reference_t<T>>>)
+                return int_or_uint{ static_cast<int>(t) };
             else
                 return t;
         }
