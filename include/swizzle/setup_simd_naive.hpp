@@ -89,48 +89,18 @@ namespace swizzle
 namespace swizzle
 {
     using float_type = float_batch<float, bool, 4>;
-    using int_type = int_batch<int32_t, bool, 4>;
-    using uint_type = uint_batch<uint32_t, bool, 4>;
-    using bool_type = bool_batch<bool, 4>;
+    using int_type   = int_batch<int32_t, bool, 4>;
+    using uint_type  = uint_batch<uint32_t, bool, 4>;
+    using bool_type  = bool_batch<bool, 4>;
 
     // batch types traits definitions
     namespace detail
     {
-        template <>
-        struct batch_traits<float_type> : batch_traits_builder<
-            float,
-            float,
-            std::alignment_of_v<float>, 1, float_type::size,
-            bool_type,
-            false, false, true>
-        {};
-
-        template <>
-        struct batch_traits<int_type> : batch_traits_builder<
-            int32_t,
-            int32_t,
-            std::alignment_of_v<int32_t>, 1, int_type::size,
-            bool_type,
-            false, true, false>
-        {};
-
-        template <>
-        struct batch_traits<uint_type> : batch_traits_builder<
-            uint32_t,
-            uint32_t,
-            std::alignment_of_v<uint32_t>, 1, uint_type::size,
-            bool_type,
-            false, true, false>
-        {};
-
-        template <>
-        struct batch_traits<bool_type> : batch_traits_builder<
-            bool,
-            bool,
-            std::alignment_of_v<bool>, 1, bool_type::size,
-            bool_type,
-            true, false, false>
-        {};
+        template <> struct scalar_type_storage<float_type> { using type = float; };
+        template <> struct scalar_type_storage<int_type  > { using type = int32_t; };
+        template <> struct scalar_type_storage<uint_type > { using type = uint32_t; };
+        template <> struct scalar_type_storage<bool_type > { using type = bool; };
+        struct scalar_types_info : scalar_types_info_builder<float_type, int_type, uint_type, bool_type, 1, float_type::size> {};
     }
 }
 

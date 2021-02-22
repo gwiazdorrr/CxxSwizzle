@@ -27,6 +27,7 @@ namespace swizzle
     public:
         static constexpr size_t num_rows = TNumRows;
         static constexpr size_t num_columns = sizeof...(TColumns);
+        static constexpr size_t num_cells = num_rows * num_columns;
 
         typedef matrix_ matrix_type;
         typedef vector<TScalar, num_columns> row_type;
@@ -35,7 +36,7 @@ namespace swizzle
 
         using this_type = matrix_;
         using rows_sequence = std::make_index_sequence<num_rows>;
-
+        using cells_sequence = std::make_index_sequence<num_cells>;
 
 
     // CONSTRUCTION
@@ -58,52 +59,33 @@ namespace swizzle
             data = other.data;
         }
 
-        template <size_t TIndex>
-        column_type set_return(column_type src, TScalar value)
+        template <size_t TOtherNumRows, size_t... TOtherColumns>
+        matrix_(const matrix_<scalar_type, TOtherNumRows, TOtherColumns...>& other) : matrix_(scalar_type(1))
         {
-            src[TIndex] = value;
-            return src;
+            ((TOtherColumns < num_columns ? blend_column(column(TOtherColumns), other.column(TOtherColumns)) : void(0)), ...);
         }
-
-        template <size_t TNumOfComponents, typename TSomeVector>
-        column_type pad_with_zeros(const TSomeVector& src)
-        {
-            return column_type((TColumns < TNumOfComponents ? src[TColumns] : 0)...);
-        }
-
-        // This should work but doesn't (I'm tired)
-        ////! Constructor for matrices smaller than current one
-        //template <size_t OtherNumColumns, size_t TOtherNumRows>
-        //matrix_(const matrix<TVector, TScalar, TOtherNumRows, OtherNumColumns>& other)
-        //{
-        //    static_assert(OtherNumColumns <= num_columns);
-        //    static_assert(TOtherNumRows <= num_rows);
-
-        //    // copy columns
-        //    ((TColumns < OtherNumColumns ? data[TColumns] = pad_with_zeros<TOtherNumRows>(other.data[TColumns]) : set_return<TColumns>(zero, 1)), ...);
-        //}
 
         //! Init with s diagonally
         explicit matrix_(const scalar_type& s)
         {
-            column_type zero(0);
-            ((TColumns < num_rows ? data[TColumns] = set_return<TColumns>(zero, s) : zero), ...);
+            ((TColumns < num_rows ? data[TColumns] = make_identity_column<TColumns>(s) : column_type(0)), ...);
         }
 
-        explicit matrix_(const detail::only_if<num_rows == 2 && num_columns == 2, vector<scalar_type, num_rows * num_columns>>& vec)
+        //! Only 2x2 matrix can be initialised with a single vector
+        explicit matrix_(const detail::only_if<num_cells == 4, vector<scalar_type, 4>>& vec)
         {
-            detail::static_for<0, num_rows * num_columns>([&](size_t i) -> void { cell(i % num_rows, i / num_rows) = vec[i]; });
+            detail::static_for<0, num_cells>([&](size_t i) -> void { cell(i % num_rows, i / num_rows) = vec[i]; });
         }
 
         template <class T0, class T1, class... T,
             class = typename std::enable_if< 
-                !(num_rows*num_columns <= detail::get_total_component_count_v<T0, T1, T...> - detail::get_total_component_count_v<typename detail::last<T0, T1, T...>::type >) &&
-                (num_rows*num_columns <= detail::get_total_component_count_v<T0, T1, T...>),
+                !(num_cells <= detail::get_total_component_count_v<T0, T1, T...> - detail::get_total_component_count_v<detail::last_t<T0, T1, T...>>) &&
+                 (num_cells <= detail::get_total_component_count_v<T0, T1, T...>),
                 void>::type 
             >
         explicit matrix_(T0&& t0, T1&& t1, T&&... ts)
         {
-            construct<0>(std::forward<T0>(t0), std::forward<T1>(t1), std::forward<T>(ts)..., detail::nothing{});
+            construct<0>(std::forward<T0>(t0), std::forward<T1>(t1), std::forward<T>(ts)...);
         }
 
         
@@ -243,11 +225,6 @@ namespace swizzle
             return row_type(v.call_dot(v, m.column(TColumns))...);
         }
 
-        //static row_type mul666(const column_type& v, const matrix_type& m)
-        //{
-        //    return row_type(v.call_dot(v, m.column(TColumns))...);
-        //}
-
         //! Matrix-vector multiplication.
         static column_type mul(const matrix_type& m, const row_type& v)
         {
@@ -276,35 +253,42 @@ namespace swizzle
         template <size_t TOffset, class T0, class... Tail>
         void construct(T0&& t0, Tail&&... tail)
         {
-            // the pyramid of MSVC shame
-            compose<TOffset>(detail::decay(std::forward<T0>(t0)));
-            construct<TOffset + detail::get_total_component_count_v<T0> >(std::forward<Tail>(tail)...);
+            using raw_t = std::remove_reference_t<T0>;
+            if constexpr (std::is_constructible_v<scalar_type, raw_t>) 
+            {
+                cell(TOffset % num_rows, TOffset / num_rows) = scalar_type(std::forward<T0>(t0));
+            }
+            else 
+            {
+                compose_vector<TOffset>(std::forward<T0>(t0));
+            }
+             
+            if constexpr (sizeof...(Tail) > 0)
+            {
+                construct<TOffset + detail::get_total_component_count_v<T0> >(std::forward<Tail>(tail)...);
+            }
         }
 
-        template <size_t>
-        void construct(detail::nothing)
-        {}
-
-        //! Optimised setter used when setting whole column
-        template <size_t TCellIdx>
-        typename std::enable_if<TCellIdx % num_rows == 0, void>::type compose(const column_type& v)
+        template <size_t... TOtherRows>
+        void blend_column(column_type& column, const vector_<scalar_type, TOtherRows...>& other)
         {
-            detail::nonmasked(column( TCellIdx / num_rows )) = v;
+            ((TOtherRows < num_rows ? column[TOtherRows] = other[TOtherRows], (void)0 : (void)0), ...);
         }
 
-        //! Vector fallback setter, when TCellIdx is not aligned
-        template <size_t TCellIdx, class TVectorScalar, size_t TVectorSize>
-        typename std::enable_if<TCellIdx % num_rows != 0 || TVectorSize != num_rows, void>::type compose(const vector<TVectorScalar, TVectorSize>& v)
+        template <size_t TIndex>
+        column_type make_identity_column(TScalar value)
         {
-            // do not go over the matrix size!
-            const size_t c_limit = (TCellIdx + TVectorSize > num_rows * num_columns) ? (num_rows * num_columns) : (TCellIdx + TVectorSize);
-            detail::static_for<TCellIdx, c_limit>([&](size_t i) -> void { cell(i % num_rows, i / num_rows) = v[i - TCellIdx]; });
+            column_type result(0);
+            result[TIndex] = value;
+            return result;
         }
 
-        template <size_t TCellIdx, typename TSomeScalar>
-        void compose(TSomeScalar&& scalar, std::enable_if_t<std::is_constructible_v<scalar_type, TSomeScalar>>* = nullptr)
+        template <size_t index, typename TVectorScalar, size_t... TVectorIndices>
+        constexpr void compose_vector(const vector_<TVectorScalar, TVectorIndices...> v)
         {
-            cell(TCellIdx % num_rows, TCellIdx / num_rows) = scalar_type(std::forward<TSomeScalar>(scalar));
+            constexpr size_t left_to_assign = num_cells - index;
+            constexpr size_t limit = v.num_components > left_to_assign ? left_to_assign : v.num_components;
+            ((TVectorIndices < limit ? cell((index + TVectorIndices) % num_rows, (index + TVectorIndices) / num_rows) = v[TVectorIndices] : cell(0, 0)), ...);
         }
 
     private:

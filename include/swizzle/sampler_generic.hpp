@@ -228,19 +228,19 @@ namespace swizzle
 
             using namespace swizzle::detail;
 
-            alignas(batch_traits<float_type>::align) float px[batch_traits<float_type>::size];
-            alignas(batch_traits<float_type>::align) float py[batch_traits<float_type>::size];
-            alignas(batch_traits<float_type>::align) float pz[batch_traits<float_type>::size];
-            alignas(batch_traits<float_type>::align) float pr[batch_traits<float_type>::size];
-            alignas(batch_traits<float_type>::align) float pg[batch_traits<float_type>::size];
-            alignas(batch_traits<float_type>::align) float pb[batch_traits<float_type>::size];
-            alignas(batch_traits<float_type>::align) float pa[batch_traits<float_type>::size];
+            alignas(scalar_traits<float_type>::align) float px[scalar_traits<float_type>::size];
+            alignas(scalar_traits<float_type>::align) float py[scalar_traits<float_type>::size];
+            alignas(scalar_traits<float_type>::align) float pz[scalar_traits<float_type>::size];
+            alignas(scalar_traits<float_type>::align) float pr[scalar_traits<float_type>::size];
+            alignas(scalar_traits<float_type>::align) float pg[scalar_traits<float_type>::size];
+            alignas(scalar_traits<float_type>::align) float pb[scalar_traits<float_type>::size];
+            alignas(scalar_traits<float_type>::align) float pa[scalar_traits<float_type>::size];
 
             store_aligned(coord.x, px);
             store_aligned(coord.y, py);
             store_aligned(coord.z, pz);
 
-            static_for<0, batch_traits<float_type>::size>([&](size_t i)
+            static_for<0, scalar_traits<float_type>::size>([&](size_t i)
             {
                 float x = px[i];
                 float y = py[i];
@@ -360,16 +360,16 @@ namespace swizzle
             {
                 using namespace swizzle::detail;
 
-                alignas(batch_traits<int32_type>::align) int ibuffer[batch_traits<int32_type>::size];
+                alignas(scalar_traits<int32_type>::align) int ibuffer[scalar_traits<int32_type>::size];
                 {
                     int32_type index = icoord_to_index(x, y, data);
                     store_aligned(index, ibuffer);
                 }
                 
-                alignas(batch_traits<float_type>::align) float pr[batch_traits<float_type>::size];
-                alignas(batch_traits<float_type>::align) float pg[batch_traits<float_type>::size];
-                alignas(batch_traits<float_type>::align) float pb[batch_traits<float_type>::size];
-                alignas(batch_traits<float_type>::align) float pa[batch_traits<float_type>::size];
+                alignas(scalar_traits<float_type>::align) float pr[scalar_traits<float_type>::size];
+                alignas(scalar_traits<float_type>::align) float pg[scalar_traits<float_type>::size];
+                alignas(scalar_traits<float_type>::align) float pb[scalar_traits<float_type>::size];
+                alignas(scalar_traits<float_type>::align) float pa[scalar_traits<float_type>::size];
 
                 fetch_pixels(ibuffer, pr, pg, pb, pa);
 

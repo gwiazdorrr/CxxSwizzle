@@ -12,6 +12,11 @@ namespace swizzle
 {
     namespace detail
     {
+        template <> struct scalar_traits<float_type> : scalar_traits_builder<scalar_types_info, float_type> {};
+        template <> struct scalar_traits<int_type>   : scalar_traits_builder<scalar_types_info, int_type>{};
+        template <> struct scalar_traits<uint_type>  : scalar_traits_builder<scalar_types_info, uint_type>{};
+        template <> struct scalar_traits<bool_type>  : scalar_traits_builder<scalar_types_info, bool_type>{};
+
         template <> struct get_vector_type_impl<float_type> : default_vector_type_impl<float_type> {};
         template <> struct get_vector_type_impl<int_type>   : default_vector_type_impl<int_type> {};
         template <> struct get_vector_type_impl<uint_type>  : default_vector_type_impl<uint_type> {};

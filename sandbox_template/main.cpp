@@ -108,8 +108,8 @@ sdl_ptr<SDL_Texture> create_matching_sdl_texture(SDL_Renderer* renderer, int w, 
     return create_sdl_object_or_throw(SDL_CreateTexture, renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h);
 };
 
-constexpr auto columns_per_batch = static_cast<int>(::swizzle::detail::batch_traits<swizzle::float_type>::num_columns);
-constexpr auto rows_per_batch    = static_cast<int>(::swizzle::detail::batch_traits<swizzle::float_type>::num_rows);
+constexpr auto columns_per_batch = static_cast<int>(::swizzle::detail::scalar_traits<float_type>::num_columns);
+constexpr auto rows_per_batch    = static_cast<int>(::swizzle::detail::scalar_traits<float_type>::num_rows);
 
 struct aligned_render_target_base
 {
@@ -358,7 +358,7 @@ static render_stats render(TPixelFunc func, shader_inputs uniforms, TRenderTarge
 
     using ::swizzle::detail::static_for;
     using namespace ::swizzle;
-    using float_traits = ::swizzle::detail::batch_traits<swizzle::float_type>;
+    using float_traits = ::swizzle::detail::scalar_traits<swizzle::float_type>;
 
     auto render_begin = std::chrono::steady_clock::now();
 

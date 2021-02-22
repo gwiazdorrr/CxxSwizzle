@@ -20,7 +20,7 @@ namespace swizzle
         using data_type = TData;
         using primitive_type = TPrimitive;
 
-        using storage_type = std::conditional_t< size == 1, data_type, std::array<TData, size> >;
+        using storage_type = detail::conditional_array_t<data_type, size>;
 
         storage_type storage;
 

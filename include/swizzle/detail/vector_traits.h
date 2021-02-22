@@ -19,14 +19,13 @@ namespace swizzle
         template <class T>
         struct default_vector_type_impl
         {
-            typedef swizzle::vector<T, 1> type;
+            using type = swizzle::vector_<T, 0>;
         };
 
         //! Used for graceful SFINAE - becomes true_type if get_vector_type_impl defines nested type.
         template <class T>
-        struct has_vector_type_impl : std::integral_constant<bool, has_type< get_vector_type_impl< typename remove_reference_cv<T>::type > >::value >
+        struct has_vector_type_impl : std::bool_constant< has_type_v< get_vector_type_impl< remove_reference_cv_t<T> > > >
         {};
-
 
 
         //! A generic common vector type implementation. Defines a type if:
@@ -37,23 +36,17 @@ namespace swizzle
         struct common_vector_type_generic_fallback
         {
         private:
-            typedef typename std::common_type<TScalar1, TScalar2>::type common_scalar_type;
-            static_assert( std::is_same<common_scalar_type, TScalar1>::value || std::is_same<common_scalar_type, TScalar2>::value, 
+            using common_scalar_type = std::common_type_t<TScalar1, TScalar2>;
+            static_assert( std::is_same_v<common_scalar_type, TScalar1> || std::is_same_v<common_scalar_type, TScalar2>, 
                 "Common type must be same as at least one of scalar types");
             static_assert( TSize1 == TSize2 || TSize1 == 1 || TSize2 == 1,
                 "Either both vectors must have same size or either one of them has to have a size equal to 1 (auto promotion to the bigger vector)");
 
         public:
-            typedef typename std::conditional< TSize1 == TSize2,
-                typename std::conditional< std::is_same<common_scalar_type, TScalar1>::value,
-                    TVector1,
-                    TVector2
-                >::type,
-                typename std::conditional< TSize2 == 1,
-                    TVector1,
-                    TVector2
-                >::type
-            >::type type;
+            using type = std::conditional_t<TSize1 == TSize2,
+                std::conditional_t< std::is_same_v<common_scalar_type, TScalar1>, TVector1, TVector2>,
+                std::conditional_t< TSize2 == 1, TVector1, TVector2>
+            >;
         };
 
 
@@ -127,36 +120,97 @@ namespace swizzle
         template <class... T>
         constexpr size_t get_total_component_count_v = get_total_component_count<T...>::value;
 
-        template <typename TStorage, typename TPrimitive, size_t Align, size_t BatchSize, size_t BatchCount, typename TBool, bool IsBool, bool IsIntegral, bool IsFloatingPoint>
-        struct batch_traits_builder
+        template <typename TScalarType>
+        struct scalar_type_storage
         {
-            using bool_type = TBool;
-            using storage_type = std::conditional_t< (BatchCount == 1), TStorage, std::array<TStorage, BatchCount> >;
-            using primitive_type = TPrimitive;
-            static constexpr bool is_bool = IsBool;
-            static constexpr bool is_integral = IsIntegral;
-            static constexpr bool is_floating_point = IsFloatingPoint;
-            static constexpr size_t size = BatchSize * BatchCount;
-            static constexpr size_t align = Align;
-            static constexpr size_t num_rows = size > 1 ? 2 : 1;
-            static constexpr size_t num_columns = size > 1 ? size / 2 : 1;
-            using aligned_storage_type = std::aligned_storage_t<sizeof(storage_type), align>;
-            static_assert(size == 1 || size % 2 == 0, "1 or even scalar count");
+            using type = TScalarType;
         };
 
+        template <typename TScalarType>
+        struct scalar_type_align : std::integral_constant<size_t, alignof(TScalarType)> {};
+
+        template <typename TScalarTypesInfo, typename T, typename = std::enable_if_t<TScalarTypesInfo::template is_scalar_type<T>::value> >
+        struct scalar_traits_builder
+        {
+            using scalar_types = TScalarTypesInfo;
+            
+            static constexpr bool is_floating_point = scalar_types::template is_floating_point<T>::value;
+            static constexpr bool is_bool           = scalar_types::template is_bool<T>::value;
+            static constexpr bool is_integral       = scalar_types::template is_integral<T>::value;
+            static constexpr bool is_unsigned       = scalar_types::template is_unsigned<T>::value;
+
+            static constexpr size_t size        = scalar_types::size;
+            static constexpr size_t num_rows    = scalar_types::num_rows;
+            static constexpr size_t num_columns = scalar_types::num_columns;
+            static constexpr size_t align       = scalar_type_align<T>::value;
+
+            using storage_type         = conditional_array_t<typename scalar_type_storage<T>::type, scalar_types::batch_count>;
+            using primitive_type       = typename scalar_types::template primitive_type_t<T>;
+            using aligned_storage_type = std::aligned_storage_t<sizeof(storage_type), align>;
+        };
+
+        template <typename TFloat, typename TInt, typename TUInt, typename TBool, size_t TBatchSize = 1, size_t TBatchCount = 1>
+        struct scalar_types_info_builder
+        {
+            using float_type = TFloat;
+            using int_type   = TInt;
+            using uint_type  = TUInt;
+            using bool_type  = TBool;
+
+            static constexpr size_t batch_count = TBatchCount;
+            static constexpr size_t batch_size  = TBatchSize;
+            static constexpr size_t size        = TBatchSize * batch_count;
+            static constexpr size_t num_rows    = size > 1 ? 2 : 1;
+            static constexpr size_t num_columns = size > 1 ? size / 2 : 1;
+            static_assert(size == 1 || size % 2 == 0, "1 or even scalar count");
+            
+            template <typename T>
+            using primitive_type_t = 
+                std::conditional_t< std::is_same_v<T, float_type>, float,
+                    std::conditional_t< std::is_same_v<T, int_type>, int,
+                        std::conditional_t< std::is_same_v<T, uint_type>, unsigned, 
+                            std::conditional_t<std::is_same_v<T, bool_type>, bool, void> 
+                        >
+                    >
+                >;
+
+            template <typename T>
+            using is_scalar_type = std::integral_constant<bool, std::is_same_v<T, float_type> || std::is_same_v<T, int_type> || std::is_same_v<T, uint_type> || std::is_same_v<T, bool_type>>;
+        
+            template <typename T>
+            using is_integral = std::bool_constant<std::is_same_v<T, int_type> || std::is_same_v<T, uint_type>>;
+
+            template <typename T>
+            using is_unsigned = std::is_same<T, uint_type>;
+
+            template <typename T>
+            using is_floating_point = std::is_same<T, float_type>;
+
+            template <typename T>
+            using is_bool = std::is_same<T, bool_type>;
+        };
+
+        // default scalar types need to be extended to handle all fundamental C++ types
+        struct default_scalar_types : scalar_types_info_builder<float, int32_t, uint32_t, bool>
+        {
+            template <typename T>
+            using is_scalar_type = std::integral_constant<bool, std::is_arithmetic_v<T> || std::is_same_v<bool, T>>;
+
+            template <typename T>
+            using is_integral = std::bool_constant<std::is_integral_v<T> && !std::is_same_v<bool, T>>;
+
+            template <typename T>
+            using is_unsigned = std::is_unsigned<T>;
+
+            template <typename T>
+            using is_floating_point = std::is_floating_point<T>;
+
+            template <typename T>
+            using is_bool = std::is_same<bool, T>;
+        };
+        
         template <typename T>
-        struct batch_traits : batch_traits_builder<
-            T,
-            T,
-            alignof(T), 
-            1,
-            1,
-            bool,
-            std::is_same_v<T, bool>,
-            std::is_integral_v<T> && !std::is_same_v<T, bool>,
-            std::is_floating_point_v<T>
-        >
-        {};
+        struct scalar_traits : scalar_traits_builder<default_scalar_types, T> {};
         
     }
 }

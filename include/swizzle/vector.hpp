@@ -27,10 +27,13 @@ namespace swizzle
         using scalar_type = TScalar;
         using scalar_arg  = const scalar_type&;
 
-        static constexpr bool scalar_is_bool           = detail::batch_traits<TScalar>::is_bool;
-        static constexpr bool scalar_is_integral       = detail::batch_traits<TScalar>::is_integral;
-        static constexpr bool scalar_is_floating_point = detail::batch_traits<TScalar>::is_floating_point;
+        using scalar_types = typename detail::scalar_traits<TScalar>::scalar_types;
+
+        static constexpr bool scalar_is_bool           = detail::scalar_traits<TScalar>::is_bool;
+        static constexpr bool scalar_is_integral       = detail::scalar_traits<TScalar>::is_integral;
+        static constexpr bool scalar_is_floating_point = detail::scalar_traits<TScalar>::is_floating_point;
         static constexpr bool scalar_is_number         = scalar_is_integral || scalar_is_floating_point;
+        static_assert(scalar_is_bool || scalar_is_integral || scalar_is_floating_point);
 
         using number_scalar_arg   = detail::only_if< scalar_is_number, scalar_arg >;
         using number_integral_arg = detail::only_if< scalar_is_integral, scalar_arg >;
@@ -42,7 +45,14 @@ namespace swizzle
         using integral_scalar_arg = detail::only_if< scalar_is_integral, scalar_arg >;
         using integral_vector_arg = detail::only_if< scalar_is_integral, this_type_arg >;
 
-        using bool_type        = typename detail::batch_traits<TScalar>::bool_type;
+        using bool_type =  typename scalar_types::bool_type;
+        using int_type =   typename scalar_types::int_type;
+        using uint_type =  typename scalar_types::uint_type;
+        using float_type = typename scalar_types::float_type;
+
+        using int_vector_arg =  detail::only_if< std::is_same_v<int_type, scalar_type>, this_type_arg >;
+        using uint_vector_arg = detail::only_if< std::is_same_v<uint_type, scalar_type>, this_type_arg >;
+
         using bool_vector_type = vector_<bool_type, TIndices...>;
         using bool_scalar_arg  = detail::only_if< scalar_is_bool, this_type_arg >;
         using bool_vector_arg  = detail::only_if< scalar_is_bool, this_type_arg >;
@@ -132,13 +142,13 @@ namespace swizzle
         template <class TLikelyOtherScalar, size_t TMoreIndexStart, size_t... TMoreIndices>
         inline explicit vector_(const vector_<TLikelyOtherScalar, TIndices..., TMoreIndexStart, TMoreIndices...>& t0)
         {
-            compose<0>(t0);
+            construct_from_vector_helper<0>(t0);
         }
 
         template <class TLikelyOtherScalar>
         inline explicit vector_(const vector_<TLikelyOtherScalar, TIndices...>& t0)
         {
-            compose<0>(t0);
+            construct_from_vector_helper<0>(t0);
         }
 
         template <class TProxyData, class TProxyScalar, size_t... TProxyIndices>
@@ -157,7 +167,7 @@ namespace swizzle
         >
         inline vector_(T0&& t0, T1&& t1, T&&... ts)
         {
-            construct<0>(std::forward<T0>(t0), std::forward<T1>(t1), std::forward<T>(ts)..., detail::nothing{});
+            construct<0>(std::forward<T0>(t0), std::forward<T1>(t1), std::forward<T>(ts)...);
         }
 
         inline scalar_type& operator[](size_t i)
@@ -181,7 +191,7 @@ namespace swizzle
         }
 
 
-        template <typename TSomeBatchedType, typename = std::enable_if_t<detail::batch_traits<TSomeBatchedType>::is_integral && detail::batch_traits<TSomeBatchedType>::size == detail::batch_traits<scalar_type>::size> >
+        template <typename TSomeBatchedType, typename = std::enable_if_t<detail::scalar_traits<TSomeBatchedType>::is_integral && detail::scalar_traits<TSomeBatchedType>::size == detail::scalar_traits<scalar_type>::size> >
         scalar_type operator[](const TSomeBatchedType& b) const
         {
             scalar_type result;
@@ -229,56 +239,32 @@ namespace swizzle
         }
 
     private:
-        template <size_t TOffset, typename T0, typename... Tail>
+        template <size_t TIndex, typename T0, typename... Tail>
         void construct(T0&& t0, Tail&&... tail)
         {
-            compose<TOffset>(detail::decay(std::forward<T0>(t0)));
-            construct<TOffset + detail::get_total_component_count_v<T0>>(std::forward<Tail>(tail)...);
+            using raw_t = std::remove_reference_t<T0>;
+            if constexpr (std::is_constructible_v<scalar_type, raw_t>)
+            {
+                at_rvalue(TIndex) = scalar_type(std::forward<T0>(t0));
+            }
+            else
+            {
+                construct_from_vector_helper<TIndex>(detail::decay(std::forward<T0>(t0)));
+            }
+
+            if constexpr (sizeof...(Tail) > 0)
+            {
+                construct<TIndex + detail::get_total_component_count_v<T0> >(std::forward<Tail>(tail)...);
+            }
         }
-
-        template <size_t>
-        void construct(detail::nothing)
-        {}
-
-        template <size_t TIndex, typename TSomeScalar>
-        void compose(TSomeScalar&& scalar, std::enable_if_t<std::is_constructible_v<scalar_type, TSomeScalar>>* = nullptr)
-        {
-            at_rvalue(TIndex) = scalar_type(std::forward<TSomeScalar>(scalar));
-        }
-
-        ////! Puts scalar at given position. Used only during construction.
-        //template <size_t TIndices>
-        //void compose(scalar_arg v)
-        //{
-        //    data[TIndices] = static_cast<internal_scalar_type>(v);
-        //}
-
-        ////! For construction from int literal to work
-        //template <size_t TIndices>
-        //void compose(detail::only_if<!std::is_same_v<scalar_type, int>, int, __LINE__> v)
-        //{
-        //    compose<TIndices>(scalar_type(v));
-        //}
-
-        ////! For construction from double literal to work
-        //template <size_t TIndices>
-        //void compose(detail::only_if<build_info::scalar_is_floating_point, double> v)
-        //{
-        //    compose<TIndices>(scalar_type(v));
-        //}
 
         template <size_t TIndex, typename TOtherScalar, size_t... TOtherIndices>
-        void compose(const vector_<TOtherScalar, TOtherIndices...>& v)
+        void construct_from_vector_helper(const vector_<TOtherScalar, TOtherIndices...>& v)
         {
             const size_t limit = sizeof...(TOtherIndices) > num_components - TIndex ? (num_components - TIndex) : sizeof...(TOtherIndices);
-            compose_impl<TIndex>(v, detail::take_n<limit, TOtherIndices...> {});
+            ((TOtherIndices < limit ? at_rvalue(TIndex + TOtherIndices) = scalar_type(v.at(TOtherIndices)), (void)0 : (void)0), ...);
         }
 
-        template <size_t TOffset, typename TDataB, size_t... TDataIndices>
-        inline void compose_impl(const TDataB& src, std::index_sequence<TDataIndices...>)
-        {
-            ((at_rvalue(TDataIndices + TOffset) = scalar_type(src.at(TDataIndices))), ...);
-        }
 
     public:
         constexpr int length() const noexcept
@@ -518,11 +504,25 @@ namespace swizzle
             return bool_vector_type(isinf(x.at(TIndices))...);
         }
 
-        //static auto call_floatBitsToInt(float_vector_arg value)
-        //{
-        //    using int_vector_type = vector<decltype(floatBitsToInt(0)), num_components>;
-        //    return int_vector_type{ (floatBitsToInt(value.data[TIndices]))... };
-        //}
+        static vector<int_type, num_components> call_floatBitsToInt(float_vector_arg value)
+        {
+            return { bit_cast<int_type>(value.at(TIndices))... };
+        }
+
+        static vector<uint_type, num_components> call_floatBitsToUInt(float_vector_arg value)
+        {
+            return { bit_cast<uint_type>(value.at(TIndices))... };
+        }
+
+        static vector<float_type, num_components> call_uintBitsToFloat(uint_vector_arg value)
+        {
+            return { bit_cast<float_type>(value.at(TIndices))... };
+        }
+
+        static vector<float_type, num_components> call_intBitsToFloat(int_vector_arg value)
+        {
+            return { bit_cast<float_type>(value.at(TIndices))... };
+        }
 
         //static uint_vector_type call_floatBitsToUint(float_vector_arg value)
         //{
@@ -589,7 +589,7 @@ namespace swizzle
 
         static this_type call_refract(float_vector_arg I, float_vector_arg N, float_scalar_arg eta)
         {
-            scalar_type k = 1.0 - eta * eta * (1.0 - call_dot(N, I) * call_dot(N, I));
+            scalar_type k = scalar_type(1) - eta * eta * (scalar_type(1) - call_dot(N, I) * call_dot(N, I));
             scalar_type mask = step(scalar_type(0), k);
             return mask * (eta * I - (eta * call_dot(N, I) + sqrt(k)) * N);
         }

@@ -19,9 +19,9 @@ TEST(Spec, Par_5_4_2__Constructors)
     dvec4 _dvec4(22, 23, 24, 25);
     mat2 _mat2(26, 27, 28, 29);
 
-    mat4x4 _mat4x4;
-    mat4x2 _mat4x2;
-    mat3x3 _mat3x3;
+    mat4x4 _mat4x4(44);
+    mat4x2 _mat4x2(42);
+    mat3x3 _mat3x3(33);
     
     (vec3(_float)); // initializes each component of the vec3 with the float
     (vec4(_ivec4)); // makes a vec4 with component-wise conversion
@@ -48,7 +48,7 @@ TEST(Spec, Par_5_4_2__Constructors)
     mat2(_vec2, _vec2); // one column per argument
     mat3(_vec3, _vec3, _vec3); // one column per argument
     mat4(_vec4, _vec4, _vec4, _vec4); // one column per argument
-    //mat3x2(_vec2, _vec2, _vec2); // one column per argument
+    mat3x2(_vec2, _vec2, _vec2); // one column per argument
     dmat2(_dvec2, _dvec2);
     dmat3(_dvec3, _dvec3, _dvec3);
     dmat4(_dvec4, _dvec4, _dvec4, _dvec4);
@@ -61,15 +61,22 @@ TEST(Spec, Par_5_4_2__Constructors)
         _float, _float, _float, _float, // second column
         _float, _float, _float, _float, // third column
         _float, _float, _float, _float); // fourth column
-    //mat2x3(_vec2, _float, // first column
-    //    _vec2, _float); // second column
+    mat2x3(_vec2, _float, // first column
+        _vec2, _float); // second column
     //dmat2x4(_dvec3, _double, // first column
     //    _double, _dvec3); // second column
 
-    //(mat3x3(_mat4x4)); // takes the upper-left 3x3 of the mat4x4
-    //(mat2x3(_mat4x2)); // takes the upper-left 2x2 of the mat4x4, last row is 0,0
-    //(mat4x4(_mat3x3)); // puts the mat3x3 in the upper-left, sets the lower right
+    (mat3x3(_mat4x4)); // takes the upper-left 3x3 of the mat4x4
+    (mat2x3(_mat4x2)); // takes the upper-left 2x2 of the mat4x4, last row is 0,0
+    (mat4x4(_mat3x3)); // puts the mat3x3 in the upper-left, sets the lower right
     // component to 1, and the rest to 0 
+    (mat2(_vec4));
+    (mat2(_vec3, _float));
+    (mat2(_vec3, _vec4));
+
+    (mat2(_mat2));
+    (mat2(_mat3x3));
+    
 }
 
 TEST(Spec, Par_5_5__Vector_and_Scalar_Components_and_Length)

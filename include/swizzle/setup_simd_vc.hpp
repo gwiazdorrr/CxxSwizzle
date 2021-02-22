@@ -301,41 +301,17 @@ namespace swizzle
     // batch types traits definitions
     namespace detail
     {
-        template <>
-        struct batch_traits<float_type> : batch_traits_builder<
-            ::Vc::float_v,
-            float,
-            ::Vc::VectorAlignment, ::Vc::float_v::Size, float_type::size,
-            bool_type,
-            false, false, true>
-        {};
+        template <> struct scalar_type_storage<float_type> { using type = ::Vc::float_v; };
+        template <> struct scalar_type_storage<int_type>   { using type = ::Vc::int32_v; };
+        template <> struct scalar_type_storage<uint_type>  { using type = ::Vc::uint32_v; };
+        template <> struct scalar_type_storage<bool_type>  { using type = ::Vc::float_m; };
 
-        template <>
-        struct batch_traits<int_type> : batch_traits_builder<
-            ::Vc::int32_v,
-            int32_t,
-            ::Vc::VectorAlignment, ::Vc::int32_v::Size, int_type::size,
-            bool_type,
-            false, true, false>
-        {};
+        template <> struct scalar_type_align<float_type> : std::integral_constant<size_t, ::Vc::VectorAlignment> {};
+        template <> struct scalar_type_align<int_type>   : std::integral_constant<size_t, ::Vc::VectorAlignment> {};
+        template <> struct scalar_type_align<uint_type>  : std::integral_constant<size_t, ::Vc::VectorAlignment> {};
+        template <> struct scalar_type_align<bool_type>  : std::integral_constant<size_t, ::Vc::VectorAlignment> {};
 
-        template <>
-        struct batch_traits<uint_type> : batch_traits_builder<
-            ::Vc::uint32_v,
-            uint32_t,
-            ::Vc::VectorAlignment, ::Vc::uint32_v::Size, uint_type::size,
-            bool_type,
-            false, true, false>
-        {};
-
-        template <>
-        struct batch_traits<bool_type> : batch_traits_builder<
-            ::Vc::float_m,
-            bool,
-            ::Vc::VectorAlignment, ::Vc::float_m::Size, bool_type::size,
-            bool_type,
-            true, false, false>
-        {};
+        struct scalar_types_info : scalar_types_info_builder<float_type, int_type, uint_type, bool_type, ::Vc::float_v::Size, float_type::size> {};
     }
 }
 

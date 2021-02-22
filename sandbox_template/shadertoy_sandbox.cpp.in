@@ -66,7 +66,7 @@ namespace
     #define highp
     #define precision
     #define final final_
-    #define discard switch(0) default: _cxxswizzle_discarded = true;
+    #define discard switch(0) case 0: _cxxswizzle_discarded = true;
     // char is not a type in glsl so can be used freely
     #define char _cxxswizzle_keyword_mask_char
     #define signed _cxxswizzle_keyword_mask_signed

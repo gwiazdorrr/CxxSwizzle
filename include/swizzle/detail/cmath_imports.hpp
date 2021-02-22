@@ -150,4 +150,8 @@ namespace swizzle
         // NaN bug "simulation": https://www.shadertoy.com/view/4tsyzf
         return a > b || (b != b) ? a : b;
     }
+
+    inline float dFdx(float) { return 0; };
+    inline float dFdy(float) { return 0; };
+    inline float fwidth(float) { return 0; };
 }

@@ -15,6 +15,10 @@ namespace swizzle
         template <class T>
         struct remove_reference_cv : std::remove_cv< typename std::remove_reference<T>::type > {};
 
+        template <typename T>
+        using remove_reference_cv_t = typename remove_reference_cv<T>::type;
+
+
         //! Detects presence of nested "typedef <something> type"
         template <typename T>
         struct has_type_helper {
@@ -28,6 +32,10 @@ namespace swizzle
         template <typename T>
         struct has_type : std::integral_constant< bool, has_type_helper<T>::value >
         {};
+
+        template <typename T>
+        static constexpr bool has_type_v = has_type<T>::value;
+        
 
 
         // is a > b?
@@ -210,5 +218,8 @@ namespace swizzle
             return T{ narrowing_cast(std::forward<Arg>(arg))... };
         }
 
+
+        template <typename T, size_t TSize>
+        using conditional_array_t = std::conditional_t<(TSize > 1), std::array<T, TSize>, T>;
     }
 }

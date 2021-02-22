@@ -16,7 +16,7 @@ namespace swizzle
         template <typename TScalar, size_t TSize>
         struct vector_base_type_helper
         {
-            using data_type = std::array<typename batch_traits<TScalar>::storage_type, TSize>;
+            using data_type = std::array<typename scalar_traits<TScalar>::storage_type, TSize>;
 
             template <size_t... TIndices>
             struct proxy_generator

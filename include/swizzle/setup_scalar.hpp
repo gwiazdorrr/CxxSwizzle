@@ -14,21 +14,18 @@ namespace swizzle
     using int_type = int32_t;
     using uint_type = uint32_t;
     using bool_type = bool;
-    using byte_type = uint8_t;
 
     //struct partial_derivatives_dont_work_for_scalars
     //{};
 
-    inline float dFdx(float) { return 0; };
-    inline float dFdy(float) { return 0; };
-    inline float fwidth(float) { return 0; };
+
 
     // aux functions
 
-    template <typename T, typename U, typename = std::enable_if_t<std::is_fundamental_v<T> && std::is_fundamental_v<U> && sizeof(T) == sizeof(U)>>
-    inline void bitcast(T src, U& target)
+    template <typename U, typename T, typename = std::enable_if_t<std::is_fundamental_v<T> && std::is_fundamental_v<U> && sizeof(T) == sizeof(U)>>
+    inline U bit_cast(T src)
     {
-        target = *reinterpret_cast<U*>(src);
+        return *reinterpret_cast<U*>(&src);
     }
 
     template <typename T, typename = std::enable_if_t<std::is_fundamental_v<T>>>
@@ -59,6 +56,11 @@ namespace swizzle
         p[1] = g;
         p[2] = b;
         p[3] = a;
+    }
+
+    namespace detail
+    {
+        using scalar_types_info = default_scalar_types;// scalar_types_info_builder<float_type, int_type, uint_type, bool_type, 1, 1> {};
     }
 }
 
