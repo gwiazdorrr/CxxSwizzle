@@ -260,7 +260,7 @@ namespace swizzle
             }
             else 
             {
-                compose_vector<TOffset>(std::forward<T0>(t0));
+                compose_vector<TOffset>(detail::decay(std::forward<T0>(t0)));
             }
              
             if constexpr (sizeof...(Tail) > 0)

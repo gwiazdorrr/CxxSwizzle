@@ -54,7 +54,7 @@ namespace
     };
 
     // change meaning of glsl keywords to match sandbox
-    #define uniform extern
+    #define uniform 
     #define in
     #define out inout
     #define inout inout_proxy::

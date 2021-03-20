@@ -509,7 +509,7 @@ namespace swizzle
             return { bit_cast<int_type>(value.at(TIndices))... };
         }
 
-        static vector<uint_type, num_components> call_floatBitsToUInt(float_vector_arg value)
+        static vector<uint_type, num_components> call_floatBitsToUint(float_vector_arg value)
         {
             return { bit_cast<uint_type>(value.at(TIndices))... };
         }
@@ -711,6 +711,8 @@ namespace swizzle
         this_type& operator&=(integral_scalar_arg other)& { return ((at(TIndices) &= other.at(TIndices)), ..., *this); }
         this_type& operator|=(integral_scalar_arg other)& { return ((at(TIndices) |= other.at(TIndices)), ..., *this); }
         this_type& operator^=(integral_scalar_arg other)& { return ((at(TIndices) ^= other.at(TIndices)), ..., *this); }
+        this_type& operator<<=(integral_scalar_arg other)& { return ((at(TIndices) <<= other.at(TIndices)), ..., *this); }
+        this_type& operator>>=(integral_scalar_arg other)& { return ((at(TIndices) >>= other.at(TIndices)), ..., *this); }
 
         this_type& operator&=(integral_vector_arg other)&& { return ((at_rvalue(TIndices) &= other.at(TIndices)), ..., *this); }
         this_type& operator|=(integral_vector_arg other)&& { return ((at_rvalue(TIndices) |= other.at(TIndices)), ..., *this); }
@@ -718,22 +720,34 @@ namespace swizzle
         this_type& operator&=(integral_scalar_arg other)&& { return ((at_rvalue(TIndices) &= other.at(TIndices)), ..., *this); }
         this_type& operator|=(integral_scalar_arg other)&& { return ((at_rvalue(TIndices) |= other.at(TIndices)), ..., *this); }
         this_type& operator^=(integral_scalar_arg other)&& { return ((at_rvalue(TIndices) ^= other.at(TIndices)), ..., *this); }
+        this_type& operator<<=(integral_scalar_arg other)&& { return ((at_rvalue(TIndices) <<= other.at(TIndices)), ..., *this); }
+        this_type& operator>>=(integral_scalar_arg other)&& { return ((at_rvalue(TIndices) >>= other.at(TIndices)), ..., *this); }
 
         friend this_type operator&(integral_vector_arg_cond a, integral_vector_arg_cond b) { return this_type(a.at(TIndices) & b.at(TIndices)...); }
         friend this_type operator|(integral_vector_arg_cond a, integral_vector_arg_cond b) { return this_type(a.at(TIndices) | b.at(TIndices)...); }
         friend this_type operator^(integral_vector_arg_cond a, integral_vector_arg_cond b) { return this_type(a.at(TIndices) ^ b.at(TIndices)...); }
+        friend this_type operator<<(integral_vector_arg_cond a, integral_vector_arg_cond b) { return this_type(a.at(TIndices) << b.at(TIndices)...); }
+        friend this_type operator>>(integral_vector_arg_cond a, integral_vector_arg_cond b) { return this_type(a.at(TIndices) >> b.at(TIndices)...); }
         friend this_type operator&(integral_vector_arg_cond a, integral_scalar_arg b) { return this_type(a.at(TIndices) & b...); }
         friend this_type operator|(integral_vector_arg_cond a, integral_scalar_arg b) { return this_type(a.at(TIndices) | b...); }
         friend this_type operator^(integral_vector_arg_cond a, integral_scalar_arg b) { return this_type(a.at(TIndices) ^ b...); }
+        friend this_type operator<<(integral_vector_arg_cond a, integral_scalar_arg b) { return this_type(a.at(TIndices) << b...); }
+        friend this_type operator>>(integral_vector_arg_cond a, integral_scalar_arg b) { return this_type(a.at(TIndices) >> b...); }
         friend this_type operator&(integral_scalar_arg a, integral_vector_arg_cond b) { return b & a; }
         friend this_type operator|(integral_scalar_arg a, integral_vector_arg_cond b) { return b | a; }
         friend this_type operator^(integral_scalar_arg a, integral_vector_arg_cond b) { return b ^ a; }
+        friend this_type operator<<(integral_scalar_arg a, integral_vector_arg_cond b) { return b << a; }
+        friend this_type operator>>(integral_scalar_arg a, integral_vector_arg_cond b) { return b >> a; }
         friend this_type operator&(integral_vector_arg_cond a, literal_arg b) { return this_type(a.at(TIndices) & b...); }
         friend this_type operator|(integral_vector_arg_cond a, literal_arg b) { return this_type(a.at(TIndices) | b...); }
         friend this_type operator^(integral_vector_arg_cond a, literal_arg b) { return this_type(a.at(TIndices) ^ b...); }
+        friend this_type operator<<(integral_vector_arg_cond a, literal_arg b) { return this_type(a.at(TIndices) << b...); }
+        friend this_type operator>>(integral_vector_arg_cond a, literal_arg b) { return this_type(a.at(TIndices) >> b...); }
         friend this_type operator&(literal_arg a, integral_vector_arg_cond b) { return b & a; }
         friend this_type operator|(literal_arg a, integral_vector_arg_cond b) { return b | a; }
         friend this_type operator^(literal_arg a, integral_vector_arg_cond b) { return b ^ a; }
+        friend this_type operator>>(literal_arg a, integral_vector_arg_cond b) { return b >> a; }
+        friend this_type operator<<(literal_arg a, integral_vector_arg_cond b) { return b << a; }
 
 
         inline detail::only_if<scalar_is_number, this_type> operator-() const
