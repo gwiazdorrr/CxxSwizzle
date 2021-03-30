@@ -164,9 +164,12 @@ namespace
     }
 
     #define CXXSWIZZLE
-    #define CXXSWIZZLE_ARRAY_AUTO(type) auto
-    #define CXXSWIZZLE_ARRAY(type, size) array<type, size>
-    #define CXXSWIZZLE_MAKE_ARRAY(type) make_array<type>
+    #define CXXSWIZZLE_ARRAY_AUTO(type)         auto
+    #define CXXSWIZZLE_ARRAY_AUTO_FIELD(type)   auto_array<type>
+    #define CXXSWIZZLE_ARRAY(type, size)        array<type, size>
+    #define CXXSWIZZLE_MAKE_ARRAY(type)         make_array<type>
+    #define CXXSWIZZLE_ARRAY_RAW(type, ...)     type[CXXSWIZZLE_VA_COUNT(__VA_ARGS__)]
+
     #define CXXSWIZZLE_STATIC static
     #define CXXSWIZZLE_SCALAR _cxxswizzle_scalar::
     #define CXXSWIZZLE_CONST static inline const
