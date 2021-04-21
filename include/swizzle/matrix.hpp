@@ -159,6 +159,11 @@ namespace swizzle
 
         // Other operators
 
+        matrix_type operator-() const
+        {
+            return matrix_type(-column(TColumns)...);
+        }
+
         bool operator==(const matrix_type& o) const
         {
             return ((column(TColumns) == o.column(TColumns)) && ...);
@@ -245,6 +250,11 @@ namespace swizzle
             // TODO: questionable
             auto tr = transpose(m1);
             return matrix<TScalar, TOtherNumRows, num_columns>((m2.column(TColumns) * tr)...);
+        }
+
+        friend this_type matrixCompMult(const this_type& a, const this_type& b)
+        {
+            return this_type((a.column(TColumns) * b.column(TColumns))...);
         }
 
 

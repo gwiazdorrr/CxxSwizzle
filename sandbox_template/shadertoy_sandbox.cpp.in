@@ -43,6 +43,9 @@ namespace
         using mat4x2 = swizzle::mat4x2;
         using mat4x3 = swizzle::mat4x3;
         using mat4x4 = swizzle::mat4x4;
+
+        template <typename TElement, size_t TSize>
+        using array = swizzle::array<TElement, TSize>&;
     };
 
     struct _cxxswizzle_scalar
@@ -64,6 +67,7 @@ namespace
     #define bool bool_type
     #define lowp
     #define highp
+    #define mediump
     #define precision
     #define final final_
     #define discard switch(0) case 0: _cxxswizzle_discarded = true;
@@ -121,18 +125,16 @@ namespace
     #undef _ALPHA
     #endif
 
-
-
-    #ifdef CXXSWIZZLE_INTERNAL_BATCH_WRITE_MASK_TYPE
-
     #define CXXSWIZZLE_CAT(a,b)         CXXSWIZZLE_CAT_INNER(a,b) 
     #define CXXSWIZZLE_CAT_INNER(a,b)   a ## b
+
+    #ifdef CXXSWIZZLE_INTERNAL_BATCH_WRITE_MASK_TYPE
 
     #define if(x)       switch(batch_write_mask _cxxswizzle_if_scope      = { static_cast<batch_write_mask::mask_type>(x), batch_write_mask::if_tag{} })       case true:
     #define else_if(x)  switch(batch_write_mask _cxxswizzle_else_if_scope = { static_cast<batch_write_mask::mask_type>(x), batch_write_mask::else_if_tag{} })  case true:
     #define else        switch(batch_write_mask _cxxswizzle_else_scope    = batch_write_mask::else_tag{})                                                      case true: 
 
-    #define while(x)    switch(batch_write_mask _cxxswizzle_loop_scope    = batch_write_mask::loop_tag{}) case true: while(CXXSWIZZLE_FOR_CONDITION(x))
+    #define while(x)    switch(batch_write_mask _cxxswizzle_loop_scope    = batch_write_mask::loop_tag{}) case true: while(CXX_FOR_CONDITION(x))
     #define for(x)      switch(batch_write_mask _cxxswizzle_loop_scope    = batch_write_mask::loop_tag{}) case true: for(x)
     
 
@@ -142,9 +144,9 @@ namespace
         CXXSWIZZLE_CAT(NOT_BREAK, __LINE__): (void)0; \
     }
 
-    #define CXXSWIZZLE_FOR_CONDITION(x) (_cxxswizzle_loop_scope &= static_cast<batch_write_mask::mask_type>(x))
+    #define CXX_FOR_CONDITION(x) (_cxxswizzle_loop_scope &= static_cast<batch_write_mask::mask_type>(x))
     #else 
-    #define CXXSWIZZLE_FOR_CONDITION(x) x
+    #define CXX_FOR_CONDITION(x) x
     #define else_if else if
     #endif
   
@@ -164,15 +166,34 @@ namespace
     }
 
     #define CXXSWIZZLE
-    #define CXXSWIZZLE_ARRAY(type)          auto
-    #define CXXSWIZZLE_ARRAY_FIELD(type)    auto_array<type>
-    #define CXXSWIZZLE_ARRAY_N(type, size)  array<type, size>
-    #define CXXSWIZZLE_MAKE_ARRAY(type)     make_array<type>
+    #define CXX_MAKE_ARRAY(type)        make_array<type>
+    #define CXX_ARRAY(type)             array
+    #define CXX_ARRAY_N(type, size)     array<type, size>
 
-    #define CXXSWIZZLE_STATIC static
-    #define CXXSWIZZLE_SCALAR _cxxswizzle_scalar::
-    #define CXXSWIZZLE_CONST static inline const
-    #define CXXSWIZZLE_IGNORE(...)
+#if _MSC_VER
+    // VC's __LINE__ behaviour is different gcc/clang; for macros it seems to be expanded
+    // to the last line the macro's in. 
+    #include <swizzle/detail/preprocessor_sub.hpp>
+    #define CXXSWIZZLE_LINE_ID(x) CXXSWIZZLE_SUB(__COUNTER__, x)
+#else
+    #define CXXSWIZZLE_LINE_ID(x) __LINE__
+#endif
+
+    // C++ rules do not allow any useful deduction (eg. CTAD) for fields and this is impossible to marry
+    // with GLSL implicit array size syntax and type narrowing rules. To make array field macro compatible
+    // with GLSL preprocessor this rather nasty workaround is in place
+    #define CXX_ARRAY_FIELD(type, name) \
+        using CXXSWIZZLE_CAT(cxxswizzle_array_type_, CXXSWIZZLE_LINE_ID(0)) = type;\
+        array_ptr<type> name = CXXSWIZZLE_CAT(cxxswizzle_array_placeholder_, CXXSWIZZLE_LINE_ID(1));\
+        CXX_ARRAY_FIELD_PLACEHOLDER 
+
+    #define CXX_ARRAY_FIELD_PLACEHOLDER(...) \
+        array<CXXSWIZZLE_CAT(cxxswizzle_array_type_, CXXSWIZZLE_LINE_ID(2)), CXXSWIZZLE_VA_COUNT(__VA_ARGS__)> CXXSWIZZLE_CAT(cxxswizzle_array_placeholder_, CXXSWIZZLE_LINE_ID(3)) = make_array<CXXSWIZZLE_CAT(cxxswizzle_array_type_, CXXSWIZZLE_LINE_ID(4))>( __VA_ARGS__ )
+
+    #define CXX_STATIC static
+    #define CXX_SCALAR _cxxswizzle_scalar::
+    #define CXX_CONST  static inline const
+    #define CXX_IGNORE(...)
 
     #pragma warning(push)
     #pragma warning(disable: 4244) // disable return implicit conversion warning

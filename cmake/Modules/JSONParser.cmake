@@ -199,7 +199,7 @@ macro(_sbeParseValue prefix)
         if("\"" STREQUAL "${json_char}" AND json_inValue)
             set(json_inValue no)
             
-            set(${prefix} ${json_value})
+            set(${prefix} "${json_value}")
             list(APPEND ${json_AllVariables} ${prefix})
             _sbeMoveToNextNonEmptyCharacter()
             break()

@@ -39,6 +39,52 @@ namespace swizzle
         }
     };
 
+    template <typename TElement>
+    struct array_ptr
+    {
+        TElement* ptr;
+        int size;
+
+        template <size_t TSize>
+        array_ptr(array<TElement, TSize>& arr) 
+        {
+            ptr = arr.elems;
+            size = static_cast<int>(TSize);
+        }
+
+        constexpr int length() const noexcept
+        {
+            return size;
+        }
+
+        constexpr int _cxxswizzle_func_length() const noexcept
+        {
+            return length();
+        }
+
+        constexpr TElement& operator[](int p) noexcept
+        {
+            return ptr[p >= 0 && p < size ? p : 0];
+        }
+
+        constexpr const TElement& operator[](int p) const noexcept
+        {
+            return ptr[p >= 0 && p < size ? p : 0];
+        }
+
+        template <size_t TSize>
+        operator array<TElement, TSize>() const
+        {
+            array<TElement, TSize> result;
+            for (int i = 0; i < size; ++i) {
+                result[i] = ptr[i];
+            }
+            return std::move(result);
+        }
+
+    };
+
+
     template <typename Dest = void, typename ...Arg>
     static constexpr auto make_array(Arg&& ...arg)
     {
