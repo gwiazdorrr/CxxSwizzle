@@ -84,9 +84,7 @@ macro(_shadertoyPatchSourceCode path)
 
 	unset(pending_array_line)
 
-	foreach(line ${lines})
-
-        # message(STATUS ${line})
+    foreach(line IN LISTS lines)
 
 		_shadertoyUnescapeStr("${line}" line)
 

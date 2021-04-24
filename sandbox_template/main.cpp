@@ -733,6 +733,33 @@ shadertoy_config apply_config(std::filesystem::path path, image_map& textures, s
     return std::move(result);
 }
 
+swizzle::vec4 make_shadertoy_date() 
+{
+    using sc = std::chrono::system_clock;
+    auto now = sc::now();
+    auto seconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
+    auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(now - seconds).count();
+
+    auto t = sc::to_time_t(now);
+    std::tm* lt = std::localtime(&t);
+    return {
+        static_cast<float>(1900 + lt->tm_year),
+        static_cast<float>(lt->tm_mon),
+        static_cast<float>(lt->tm_mday),
+        static_cast<float>((lt->tm_hour * 60 + lt->tm_min) * 60 + lt->tm_sec + microseconds / 1000000.0)
+    };
+}
+
+std::string replace_all(std::string str, std::string token, std::string replacement)
+{
+    size_t start_pos = 0;
+    while ((start_pos = str.find(token, start_pos)) != std::string::npos) {
+        str.replace(start_pos, token.length(), replacement);
+        start_pos += replacement.length();
+    }
+    return str;
+}
+
 
 #ifndef _MSC_VER
 #define __cdecl
@@ -753,7 +780,10 @@ int __cdecl main(int argc, char* argv[])
 
     swizzle::vector<int, 2> resolution(512, 288);
     float time = 0.0f;
+    int output_frames = 0;
     float time_scale = 1.0f;
+    float time_delta = 0.0f;
+    bool has_time_detla = false;
     const char* output_path = nullptr;
 
     static_assert(::shadertoy::num_samplers >= 4);
@@ -786,6 +816,27 @@ int __cdecl main(int argc, char* argv[])
                     if (i + 1 < argc && from_string(argv[++i], time))
                     {
                         time_scale = 0.0f;
+                    }
+                    else
+                    {
+                        return print_args_error();
+                    }
+                }
+                else if (!strcmp(arg, "-n"))
+                {
+                    if (i + 1 < argc && from_string(argv[++i], output_frames))
+                    {
+                    }
+                    else
+                    {
+                        return print_args_error();
+                    }
+                }
+                else if (!strcmp(arg, "-d"))
+                {
+                    if (i + 1 < argc && from_string(argv[++i], time_delta))
+                    {
+                        has_time_detla = true;
                     }
                     else
                     {
@@ -848,6 +899,7 @@ int __cdecl main(int argc, char* argv[])
 
 
         shadertoy_render_buffers render_targets(resolution.x, resolution.y);
+        render_stats last_render_stats = { };
 
         // keyboard texture is a special one: first row contains down state, second whether it was pressed 
         // in this frame and the last one is a toggle; also, keyboard needs to be double buffered
@@ -859,24 +911,6 @@ int __cdecl main(int argc, char* argv[])
         const int keyboard_row_pressed = 1;
         const int keyboard_row_toggle = 2;
 
-
-        int num_frames = 0;
-        float current_frame_timestamp = 0.0f;
-        int mouse_x = 0, mouse_y = 0;
-        int mouse_press_x = 0, mouse_press_y = 0;
-        bool pending_resize = false;
-        bool mouse_pressed = false;
-        bool mouse_clicked = false;
-
-        
-
-        render_stats last_render_stats = { };
-        float last_frame_timestamp = 0.0f;
-
-        std::chrono::microseconds fps_frames_duration = {};
-        int fps_frames_num = 0;
-        double current_fps = 0;
-
 #if _OPENMP
         bool multithreaded = true;
 #if _DEBUG
@@ -885,8 +919,6 @@ int __cdecl main(int argc, char* argv[])
         const int max_thread_count = omp_get_max_threads();
         omp_set_num_threads(multithreaded ? max_thread_count : 1);
 #endif
-        
-        std::atomic_bool abort_render_token = false;
         std::atomic<pass_type> current_pass;
 
         auto render_all = [&config, &current_pass](shader_inputs inputs, render_target_rgba32& target, buffer_render_target_list& buffers, const textures_context& context, const std::atomic_bool& cancel) -> auto
@@ -921,71 +953,92 @@ int __cdecl main(int argc, char* argv[])
             return result;
         };
 
-
-        auto render_async = [&]() -> std::future<render_stats>
-        {
-            abort_render_token = false;
-            
-            // bring about keyboard changes
-            memcpy(keyboard_surface_data.first_row, keyboard_data.first_row, keyboard_data.pixels_size);
-
-            // clear down flag
-            for (int i = 0; i < 256; ++i)
-            {
-                keyboard_data.set(i, keyboard_row_pressed, 0);
-            }
-
-            vec4 mouse(
-                static_cast<float>(mouse_x),
-                static_cast<float>(render_targets.height - 1 - mouse_y),
-                (mouse_pressed ? 1.0f : -1.0f)* mouse_press_x,
-                (mouse_clicked ? 1.0f : -1.0f)* (render_targets.height - 1 - mouse_press_y)
-            );
-
-
-            vec4::call_outerProduct(mouse, mouse);
-
-            mouse_clicked = false;
-
-            auto make_date = []() -> vec4 {
-                using sc = std::chrono::system_clock;
-                auto now = sc::now();
-                auto seconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
-                auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(now - seconds).count();
-
-                auto t = sc::to_time_t(now);
-                std::tm* lt = std::localtime(&t);
-                return {
-                    static_cast<float>(1900 + lt->tm_year),
-                    static_cast<float>(lt->tm_mon),
-                    static_cast<float>(lt->tm_mday),
-                    static_cast<float>((lt->tm_hour * 60 + lt->tm_min) * 60 + lt->tm_sec + microseconds / 1000000.0)
-                };
-            };
-
-            shader_inputs inputs;
-            nonmasked(inputs.iTime      ) = time;
-            nonmasked(inputs.iTimeDelta ) = static_cast<float>(duration_to_seconds(last_render_stats.duration));
-            nonmasked(inputs.iFrameRate ) = static_cast<int>(current_fps);
-            nonmasked(inputs.iFrame     ) = num_frames;
-            nonmasked(inputs.iResolution) = vec3(static_cast<float>(render_targets.width), static_cast<float>(render_targets.height), 0.0f);
-            nonmasked(inputs.iMouse     ) = mouse;
-            nonmasked(inputs.iDate      ) = make_date();
-
-            textures_context context(images, render_targets.buffers[1 - num_frames & 1], keyboard_surface.get());
-            return std::async(render_all, inputs, std::ref(render_targets.target), std::ref(render_targets.buffers[num_frames & 1]), context, std::ref(abort_render_token));
-        };
-
-        std::future<render_stats> render_task = render_async();
-
         if (output_path != nullptr)
         {
-            render_task.wait();
             sdl_ptr<SDL_Surface> target_surface = create_matching_sdl_surface(render_targets.target);
-            IMG_SavePNG(target_surface.get(), output_path);
+            std::atomic_bool abort;
+            float delta = 0.0f;
+            int fps = 0;
+
+            for (int i = 0; i < output_frames; ++i)
+            {
+                shader_inputs inputs;
+                nonmasked(inputs.iTime) = time;
+                nonmasked(inputs.iTimeDelta) = delta;
+                nonmasked(inputs.iFrameRate) = fps;
+                nonmasked(inputs.iFrame) = i;
+                nonmasked(inputs.iResolution) = vec3(static_cast<float>(render_targets.width), static_cast<float>(render_targets.height), 0.0f);
+                nonmasked(inputs.iMouse) = vec4(0);
+                nonmasked(inputs.iDate) = make_shadertoy_date();
+
+                textures_context context(images, render_targets.buffers[1 - i & 1], keyboard_surface.get());
+                last_render_stats = render_all(inputs, render_targets.target, render_targets.buffers[i & 1], context, abort);
+                
+                std::string output = replace_all(output_path, "%n", std::to_string(i));
+                output = replace_all(output, "%t", std::to_string(time));
+                IMG_SavePNG(target_surface.get(), output.c_str());
+
+                delta = has_time_detla ? time_delta : static_cast<float>(duration_to_seconds(last_render_stats.duration));
+                time += delta;
+                fps  = static_cast<int>(1 / duration_to_seconds(last_render_stats.duration));
+            }
         }
         else
         {
+            float last_frame_timestamp = 0.0f;
+
+            std::chrono::microseconds fps_frames_duration = {};
+            int fps_frames_num = 0;
+            double current_fps = 0;
+
+            int num_frames = 0;
+            float current_frame_timestamp = 0.0f;
+            int mouse_x = 0, mouse_y = render_targets.height - 1;
+            int mouse_press_x = 0, mouse_press_y = 0;
+            bool pending_resize = false;
+            bool mouse_pressed = false;
+            bool mouse_clicked = false;
+
+            std::atomic_bool abort_render_token = false;
+
+            auto render_async = [&]() -> std::future<render_stats>
+            {
+                abort_render_token = false;
+
+                // bring about keyboard changes
+                memcpy(keyboard_surface_data.first_row, keyboard_data.first_row, keyboard_data.pixels_size);
+
+                // clear down flag
+                for (int i = 0; i < 256; ++i)
+                {
+                    keyboard_data.set(i, keyboard_row_pressed, 0);
+                }
+
+                vec4 mouse(
+                    static_cast<float>(mouse_x),
+                    static_cast<float>(render_targets.height - 1 - mouse_y),
+                    (mouse_pressed ? 1.0f : -1.0f) * mouse_press_x,
+                    (mouse_clicked ? 1.0f : -1.0f) * (render_targets.height - 1 - mouse_press_y)
+                );
+
+                mouse_clicked = false;
+
+                shader_inputs inputs;
+                nonmasked(inputs.iTime) = time;
+                nonmasked(inputs.iTimeDelta) = static_cast<float>(duration_to_seconds(last_render_stats.duration));
+                nonmasked(inputs.iFrameRate) = static_cast<int>(current_fps);
+                nonmasked(inputs.iFrame) = num_frames;
+                nonmasked(inputs.iResolution) = vec3(static_cast<float>(render_targets.width), static_cast<float>(render_targets.height), 0.0f);
+                nonmasked(inputs.iMouse) = mouse;
+                nonmasked(inputs.iDate) = make_shadertoy_date();
+
+                textures_context context(images, render_targets.buffers[1 - num_frames & 1], keyboard_surface.get());
+                return std::async(render_all, inputs, std::ref(render_targets.target), std::ref(render_targets.buffers[num_frames & 1]), context, std::ref(abort_render_token));
+            };
+
+
+            std::future<render_stats> render_task = render_async();
+
             // initial setup
             SDL_SetMainReady();
             if (SDL_Init(SDL_INIT_VIDEO) < 0)
