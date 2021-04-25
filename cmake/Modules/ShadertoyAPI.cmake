@@ -205,7 +205,7 @@ macro(shadertoyDownload api_key shader_id root_dir textures_root download_error_
     set(shadertoy_json_path "${CMAKE_CURRENT_BINARY_DIR}/${shader_id}.json")
     set(shadertoy_query "https://www.shadertoy.com/api/v1/shaders/${shader_id}?key=${api_key}")
         
-    #_shadertoyDownloadFile(${shadertoy_query} ${shadertoy_json_path} "(Shadertoy JSON shader description)")
+    _shadertoyDownloadFile(${shadertoy_query} ${shadertoy_json_path} "(Shadertoy JSON shader description)")
 
     message(STATUS "Parsing ${shadertoy_json_path}")
     file(READ "${shadertoy_json_path}" shadertoy_json)
@@ -390,7 +390,7 @@ macro(shadertoyQuery api_key sort_type query max_count out_list)
     set(shadertoy_json_path "${CMAKE_CURRENT_BINARY_DIR}/sort_${sort_type}.json")
     set(shadertoy_query "https://www.shadertoy.com/api/v1/shaders/query/${query}?sort=${sort_type}&key=${api_key}&from=0&num=${max_count}")
 
-    #_shadertoyDownloadFile(${shadertoy_query} ${shadertoy_json_path} "(Shadertoy JSON shader list)")
+    _shadertoyDownloadFile(${shadertoy_query} ${shadertoy_json_path} "(Shadertoy JSON shader list)")
 
     message(STATUS "Parsing ${shadertoy_json_path}")
     file(READ "${shadertoy_json_path}" shadertoy_json)

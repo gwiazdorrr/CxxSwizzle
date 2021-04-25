@@ -23,8 +23,8 @@ const float STATE_GAME_OVER		= 3.;
 
 const vec2  REF_RES	            = vec2( 200. );
 
-#define ENEMY_NUM 3
-#define LOG_NUM 4
+CXX_CONST int   ENEMY_NUM			= 3;
+CXX_CONST int   LOG_NUM				= 4;
 
 struct GameState
 {

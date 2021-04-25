@@ -11,6 +11,7 @@
 
 #define AA 1   // make this 2 or even 3 if you have a really powerful GPU
 
+#define USE_SMOOTH_NOISE 0   // enable to prevent discontinuities
 
 #define SC (250.0)
 
@@ -18,7 +19,13 @@
 vec3 noised( in vec2 x )
 {
     vec2 f = fract(x);
+    #if USE_SMOOTH_NOISE==0
     vec2 u = f*f*(3.0-2.0*f);
+    vec2 du = 6.0*f*(1.0-f);
+    #else
+    vec2 u = f*f*f*(f*(f*6.0-15.0)+10.0);
+    vec2 du = 30.0*f*f*(f*(f-2.0)+1.0);
+    #endif
 
 #if 1
     // texel fetch version
@@ -37,7 +44,7 @@ vec3 noised( in vec2 x )
 #endif
     
 	return vec3(a+(b-a)*u.x+(c-a)*u.y+(a-b-c+d)*u.x*u.y,
-				6.0*f*(1.0-f)*(vec2(b-a,c-a)+(a-b-c+d)*u.yx));
+				du*(vec2(b-a,c-a)+(a-b-c+d)*u.yx));
 }
 
 const mat2 m2 = mat2(0.8,-0.6,0.6,0.8);
@@ -58,6 +65,9 @@ float terrainH( in vec2 x )
         p = m2*p*2.0;
     }
 
+    #if USE_SMOOTH_NOISE==1
+    a *= 0.9;
+    #endif
 	return SC*120.0*a;
 }
 
@@ -75,6 +85,9 @@ float terrainM( in vec2 x )
 		b *= 0.5;
         p = m2*p*2.0;
     }
+    #if USE_SMOOTH_NOISE==1
+    a *= 0.9;
+    #endif
 	return SC*120.0*a;
 }
 
@@ -92,7 +105,9 @@ float terrainL( in vec2 x )
 		b *= 0.5;
         p = m2*p*2.0;
     }
-
+    #if USE_SMOOTH_NOISE==1
+    a *= 0.9;
+    #endif
 	return SC*120.0*a;
 }
 
@@ -152,7 +167,7 @@ vec4 render( in vec3 ro, in vec3 rd )
     float tmin = 1.0;
     float tmax = kMaxT;
 #if 1
-    float maxh = 300.0*SC;
+    float maxh = 250.0*SC;
     float tp = (maxh-ro.y)/rd.y;
     if( tp>0.0 )
     {

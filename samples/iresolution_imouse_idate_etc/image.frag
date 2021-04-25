@@ -32,10 +32,10 @@ vec4 char(vec2 p, int c) {
 
 int char_id = -1; vec2 char_pos, dfdx, dfdy; 
 vec4 char(vec2 p, int c) {
-    vec2 dFdx_ = dFdx(p/16.), dFdy_ = dFdy(p/16.);
+    vec2 dFdx = dFdx(p/16.), dFdy = dFdy(p/16.);
  // if ( p.x>.25&& p.x<.75 && p.y>.0&& p.y<1. )  // normal char box
     if ( p.x>.25&& p.x<.75 && p.y>.1&& p.y<.85 ) // thighly y-clamped to allow dense text
-        char_id = c, char_pos = p, dfdx = dFdx_, dfdy = dFdy_;
+        char_id = c, char_pos = p, dfdx = dFdx, dfdy = dFdy;
     return vec4(0);
 }
 vec4 draw_char() {

@@ -1,8 +1,8 @@
 // Created by inigo quilez - iq/2013
 // I share this piece (art and code) here in Shadertoy and through its Public API, only for educational purposes. 
-// You cannot use, share or host this piece or modifications of it as part of your own commercial or non-commercial product, website or project.
+// You cannot use, sell, share or host this piece or modifications of it as part of your own commercial or non-commercial product, website or project.
 // You can share a link to it or an unmodified screenshot of it provided you attribute "by Inigo Quilez, @iquilezles and iquilezles.org". 
-// If you are a techer, lecturer, educator or similar and these conditions are too restrictive for your needs, please contact me and we'll work it out.
+// If you are a teacher, lecturer, educator or similar and these conditions are too restrictive for your needs, please contact me and we'll work it out.
 
 // on the derivatives based noise: http://iquilezles.org/www/articles/morenoise/morenoise.htm
 // on the soft shadow technique: http://iquilezles.org/www/articles/rmshadows/rmshadows.htm

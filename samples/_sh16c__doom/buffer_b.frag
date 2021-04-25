@@ -226,10 +226,8 @@ SceneResult Scene_Intersection( const in SceneResult a, const in SceneResult b )
     }
     return b;
 }
-
-#ifndef CXXSWIZZLE
-SceneResult Scene_GetDistance( const vec3 vPos );    
-#endif
+    
+CXX_IGNORE(SceneResult Scene_GetDistance( const vec3 vPos );)
 
 vec3 Scene_GetNormal(const in vec3 vPos)
 {
@@ -1663,7 +1661,7 @@ vec4 TexFloorLamp( vec2 vTexCoord, float fRandom, float fHRandom )
     float y = floor( vTexCoord.y );
     float xMirror = floor( abs(vTexCoord.x - 11.) );
 
-    float fWidth = 6.0;
+    float fWidth = 6.0;;
     float fSpread = 1.0 / 4.0;
     float fLightPos = 10.0;
     

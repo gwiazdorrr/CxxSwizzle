@@ -111,26 +111,26 @@ float saturate(float a) { return clamp(a, 0.0, 1.0); }
 
 vec3 RotateX(vec3 v, float rad)
 {
-  float cs = cos(rad);
-  float sn = sin(rad);
+  float cos = cos(rad);
+  float sin = sin(rad);
   //if (RIGHT_HANDED_COORD)
-  return vec3(v.x, cs * v.y + sn * v.z, -sn * v.y + cs * v.z);
+  return vec3(v.x, cos * v.y + sin * v.z, -sin * v.y + cos * v.z);
   //else return new float3(x, cos * y - sin * z, sin * y + cos * z);
 }
 vec3 RotateY(vec3 v, float rad)
 {
-  float cs = cos(rad);
-  float sn = sin(rad);
+  float cos = cos(rad);
+  float sin = sin(rad);
   //if (RIGHT_HANDED_COORD)
-  return vec3(cs * v.x - sn * v.z, v.y, sn * v.x + cs * v.z);
+  return vec3(cos * v.x - sin * v.z, v.y, sin * v.x + cos * v.z);
   //else return new float3(cos * x + sin * z, y, -sin * x + cos * z);
 }
 vec3 RotateZ(vec3 v, float rad)
 {
-  float cs = cos(rad);
-  float sn = sin(rad);
+  float cos = cos(rad);
+  float sin = sin(rad);
   //if (RIGHT_HANDED_COORD)
-  return vec3(cs * v.x + sn * v.y, -sn * v.x + cs * v.y, v.z);
+  return vec3(cos * v.x + sin * v.y, -sin * v.x + cos * v.y, v.z);
 }
 
 vec3 GetStarColor(vec3 rayDir, vec3 sunDir)

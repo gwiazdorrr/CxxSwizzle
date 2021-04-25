@@ -12,7 +12,8 @@ const float MENU_DISTR = 8.;
 const float MENU_FRESNEL = 9.;
 const float MENU_GEOMETRY = 10.;
 
-CXXSWIZZLE_ARRAY(vec3, BASE_COLORS,
+const CXX_ARRAY_N(vec3, 6) BASE_COLORS = CXX_MAKE_ARRAY(vec3)
+(
 	vec3(0.74),
 	vec3(0.51, 0.72, 0.81),
 	vec3(0.66, .85, .42),

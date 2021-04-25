@@ -1,6 +1,6 @@
 // Created by inigo quilez - iq/2015
 // I share this piece (art and code) here in Shadertoy and through its Public API, only for educational purposes. 
-// You cannot use, share or host this piece or modifications of it as part of your own commercial or non-commercial product, website or project.
+// You cannot use, sell, share or host this piece or modifications of it as part of your own commercial or non-commercial product, website or project.
 // You can share a link to it or an unmodified screenshot of it provided you attribute "by Inigo Quilez, @iquilezles and iquilezles.org". 
 // If you are a techer, lecturer, educator or similar and these conditions are too restrictive for your needs, please contact me and we'll work it out.
 
@@ -11,6 +11,8 @@
 // antialiasing - make AA 2, meaning 4x AA, if you have a fast machine
 #define AA 1
 
+
+#define ZERO (min(iFrame,0))
 
 // http://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
 float sdSphere( in vec3 p, in vec4 s )
@@ -116,11 +118,6 @@ float hash1( float n )
     return fract(sin(n)*43758.5453123);
 }
 
-vec3 hash3( float n )
-{
-    return fract(sin(n+vec3(0.0,13.1,31.3))*158.5453123);
-}
-
 vec3 forwardSF( float i, float n) 
 {
     const float PI  = 3.141592653589793238;
@@ -132,8 +129,6 @@ vec3 forwardSF( float i, float n)
 }
 
 //---------------------------------------------------------------------------
-
-#define ZERO (min(iFrame,0))
 
 const float pi = 3.1415927;
 
@@ -196,7 +191,6 @@ vec2 mapSnail( vec3 p, out vec4 matInfo )
     vec3 q = p - head;
 
     // body
-#if 1
     vec4 b1 = sdBezier( vec3(-0.13,-0.65,0.0), vec3(0.24,0.9+0.1,0.0), head+vec3(0.04,0.01,0.0), p );
     float d1 = b1.x;
     d1 -= smoothstep(0.0,0.2,b1.y)*(0.16 - 0.07*smoothstep(0.5,1.0,b1.y));
@@ -205,13 +199,7 @@ vec2 mapSnail( vec3 p, out vec4 matInfo )
     d2 -= 0.1 - 0.06*b1.y;
     d1 = smin( d1, d2, 0.03 );
     matInfo.xyz = b1.yzw;
-#else
-    vec4 b1 = sdBezier( vec3(-0.13,-0.65,0.0), vec3(0.24,0.9+0.11,0.0), head+vec3(0.05,0.01-0.02,0.0), p );
-    float d1 = b1.x;
-    d1 -= smoothstep(0.0,0.2,b1.y)*(0.16 - 0.75*0.07*smoothstep(0.5,1.0,b1.y));
-    matInfo.xyz = b1.yzw;
-    float d2;
-#endif
+
     d2 = sdSphere( q, vec4(0.0,-0.06,0.0,0.085) );
     d1 = smin( d1, d2, 0.03 );
     d1 = smin( d1, sdSphere(p,vec4(0.05,0.52,0.0,0.13)), 0.07 );
@@ -300,21 +288,16 @@ vec2 mapOpaque( vec3 p, out vec4 matInfo )
     
    	//--------------
     vec2 res = mapSnail( p, matInfo );
-    
     //---------------
     vec4 tmpMatInfo;
     float d4 = mapShell( p, tmpMatInfo );    
     if( d4<res.x  ) { res = vec2(d4,2.0); matInfo = tmpMatInfo; }
-
     //---------------
-
     vec4 b3 = sdBezier( vec3(-0.15,-1.5,0.0), vec3(-0.1,0.5,0.0), vec3(-0.6,1.5,0.0), p );
     d4 = b3.x;
     d4 -= 0.04 - 0.02*b3.y;
     if( d4<res.x  ) { res = vec2(d4,3.0); }
-	
-	//----------------------------
-    
+    //----------------------------
     float d5 = mapLeaf( p );
     if( d5<res.x ) res = vec2(d5,4.0);
         
@@ -334,7 +317,7 @@ vec3 calcNormalOpaque( in vec3 pos, in float eps )
 #else
     // inspired by tdhooper and klems - a way to prevent the compiler from inlining map() 4 times
     vec3 n = vec3(0.0);
-    for( CXXSWIZZLE_SCALAR int i=0; CXXSWIZZLE_FOR_CONDITION(i<4); i++ )
+    for( int i=ZERO; i<4; i++ )
     {
         vec3 e = 0.5773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);
         n += e*mapOpaque(pos+eps*e,kk).x;
@@ -401,7 +384,7 @@ float calcAO( in vec3 pos, in vec3 nor )
 {
     vec4 kk;
 	float ao = 0.0;
-    for( CXXSWIZZLE_SCALAR int i=0; CXXSWIZZLE_FOR_CONDITION(i<32); i++ )
+    for( int i=ZERO; i<32; i++ )
     {
         vec3 ap = forwardSF( float(i), 32.0 );
         float h = hash1(float(i));
@@ -417,7 +400,7 @@ float calcSSS( in vec3 pos, in vec3 nor )
 {
     vec4 kk;
 	float occ = 0.0;
-    for( CXXSWIZZLE_SCALAR int i=0; i<8; i++ )
+    for( int i=ZERO; i<8; i++ )
     {
         float h = 0.002 + 0.11*float(i)/7.0;
         vec3 dir = normalize( sin( float(i)*13.0 + vec3(0.0,2.1,4.2) ) );
@@ -434,7 +417,7 @@ float calcSoftShadow( in vec3 ro, in vec3 rd, float k )
     vec4 kk;    
     float res = 1.0;
     float t = 0.01;
-    for( CXXSWIZZLE_SCALAR int i=0; CXXSWIZZLE_FOR_CONDITION(i<32); i++ )
+    for( int i=ZERO; i<32; i++ )
     {
         float h = mapOpaque(ro + rd*t, kk ).x;
         res = min( res, smoothstep(0.0,1.0,k*h/t) );
@@ -491,7 +474,7 @@ vec3 shadeOpaque( in vec3 ro, in vec3 rd, in float t, in float m, in vec4 matInf
         float b = 1.0-smoothstep( 0.25,0.55,abs(pos.y));
         focc = 0.2 + 0.8*smoothstep( 0.0, 0.15, sdSphere(pos,vec4(0.05,0.52,0.0,0.13)) );
     }
-	else_if( m<2.5 ) // shell
+	else if( m<2.5 ) // shell
     {
         mateK = vec2(0.0);
         
@@ -511,7 +494,7 @@ vec3 shadeOpaque( in vec3 ro, in vec3 rd, in float t, in float m, in vec4 matInf
         mateK = vec2( 64.0, 0.2 );
         mateS = 1.5*vec3(1.0,0.65,0.6) * (1.0-tip);//*0.5;
     }
-    else_if( m<3.5 ) // plant
+    else if( m<3.5 ) // plant
     {
         mateD = vec3(0.05,0.1,0.0)*0.2;
         mateS = vec3(0.1,0.2,0.02)*25.0;
@@ -578,7 +561,6 @@ vec3 shadeOpaque( in vec3 ro, in vec3 rd, in float t, in float m, in vec4 matInf
         fsha += (1.0-smoothstep(0.0,0.10,d1))*1.5;
         fsha += (1.0-smoothstep(0.0,0.05,d2))*1.5;    
     }
-    
   
     vec3 hal = normalize( sunDir-rd );
     float fre = clamp(1.0+dot(nor,rd), 0.0, 1.0 );
@@ -594,7 +576,6 @@ vec3 shadeOpaque( in vec3 ro, in vec3 rd, in float t, in float m, in vec4 matInf
     float bou = clamp( 0.3-0.7*nor.y, 0.0, 1.0 );
 
     // illumination
-    
     vec3 col = vec3(0.0);
     col += 7.0*vec3(1.7,1.2,0.6)*dif1*2.0;           // sun
     col += 4.0*vec3(0.2,1.2,1.6)*occ*(0.5+0.5*nor.y);    // sky
@@ -628,7 +609,6 @@ vec3 shadeTransparent( in vec3 ro, in vec3 rd, in float t, in float m, in vec4 m
     float spe1 = clamp( dot(nor,hal), 0.0, 1.0 );
     float spe2 = clamp( dot(ref,sunDir), 0.0, 1.0 );
 
-
     float ds = 1.6 - col.y;
     
     col *= mix( vec3(0.0,0.0,0.0), vec3(0.4,0.6,0.4), ao );
@@ -651,7 +631,7 @@ vec2 intersectOpaque( in vec3 ro, in vec3 rd, const float mindist, const float m
     vec2 res = vec2(-1.0);
     
     float t = mindist;
-    for(CXXSWIZZLE_SCALAR int i=0; CXXSWIZZLE_FOR_CONDITION(i<64); i++ )
+    for( int i=ZERO; i<64; i++ )
     {
         vec3 p = ro + t*rd;
         vec2 h = mapOpaque( p, matInfo );
@@ -669,7 +649,7 @@ vec2 intersectTransparent( in vec3 ro, in vec3 rd, const float mindist, const fl
     vec2 res = vec2(-1.0);
     
     float t = mindist;
-    for(CXXSWIZZLE_SCALAR int i = 0; CXXSWIZZLE_FOR_CONDITION(i<64); i++ )
+    for( int i=ZERO; i<64; i++ )
     {
         vec3 p = ro + t*rd;
         vec2 h = mapTransparent( p, matInfo );
@@ -689,10 +669,9 @@ vec3 background( in vec3 d )
     vec2 uv = (n.x>n.y && n.x>n.z) ? d.yz/d.x: 
               (n.y>n.x && n.y>n.z) ? d.zx/d.y:
                                      d.xy/d.z;
-    
     // fancy blur
     vec3  col = vec3( 0.0 );
-    for(CXXSWIZZLE_SCALAR int i = 0; CXXSWIZZLE_FOR_CONDITION(i<200); i++ )
+    for( int i=ZERO; i<200; i++ )
     {
         float h = float(i)/200.0;
         float an = 31.0*6.2831*h;
@@ -760,7 +739,6 @@ mat3 setCamera( in vec3 ro, in vec3 rt )
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {	
-
     #if AA<2
         vec2  p = (2.0*fragCoord-iResolution.xy)/iResolution.y;
         vec2  q = fragCoord/iResolution.xy;

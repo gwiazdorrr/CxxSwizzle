@@ -28,8 +28,8 @@ const float KEY_UP    			= 38.5f / 256.0f;
 const float KEY_RIGHT 			= 39.5f / 256.0f;
 const float KEY_DOWN  			= 40.5f / 256.0f;
 
-#define ENEMY_NUM 3
-#define LOG_NUM 4
+CXX_CONST int   ENEMY_NUM			= 3;
+CXX_CONST int   LOG_NUM				= 4;
 
 struct GameState
 {

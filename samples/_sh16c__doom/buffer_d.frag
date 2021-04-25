@@ -212,9 +212,7 @@ float PrintValue(const in vec2 vStringUV, const in float fValue, const in float 
 const float kDepthFadeScale = (1.0 / 3500.0);
 const float kExtraLight = 0.0;
 
-#ifndef CXXSWIZZLE
-vec3 SampleTexture( uint iTexture, const in vec2 vUV );
-#endif
+CXX_IGNORE(vec3 SampleTexture( uint iTexture, const in vec2 vUV );)
 
 vec3 GetCameraRayDir( const in vec2 vWindow, const in vec3 vCameraPos, const in vec3 vCameraTarget )
 {

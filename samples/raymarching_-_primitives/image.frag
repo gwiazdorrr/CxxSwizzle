@@ -7,10 +7,11 @@
 // euclidean distance, meaning they produce a better SDF than
 // what you'd get if you were constructing them from boolean
 // operations.
+
+// List of other 3D SDFs: https://www.shadertoy.com/playlist/43cXRl
 //
-// More info here:
-//
-// https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
+// and http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
+
 
 #if HW_PERFORMANCE==0
 #define AA 1
@@ -272,7 +273,7 @@ float sdPyramid( in vec3 p, in float h )
     
     // symmetry
     p.xz = abs(p.xz);
-    p.xz = (p.z>p.x) ? (vec2)p.zx : p.xz;
+    p.xz = (p.z>p.x) ? p.zx : p.xz;
     p.xz -= 0.5;
 	
     // project into face plane (2D)
@@ -287,7 +288,7 @@ float sdPyramid( in vec3 p, in float h )
     float d2 = min(q.y,-q.x*m2-q.y*0.5) > 0.0 ? 0.0 : min(a,b);
     
     // recover 3D and scale, and add sign
-    return sqrt( (d2+q.z*q.z)/m2 ) * sign(max(q.z,-p.y));
+    return sqrt( (d2+q.z*q.z)/m2 ) * sign(max(q.z,-p.y));;
 }
 
 // la,lb=semi axis, h=height, ra=corner

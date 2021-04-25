@@ -554,9 +554,7 @@ SceneResult Scene_Intersection( const in SceneResult a, const in SceneResult b )
     return b;
 }
     
-#ifndef CXXSWIZZLE
-SceneResult Scene_GetDistance( const vec3 vPos );    
-#endif
+CXX_IGNORE(SceneResult Scene_GetDistance( const vec3 vPos );    )
 
 vec3 Scene_GetNormal(const in vec3 vPos)
 {
@@ -1149,7 +1147,7 @@ void PrintHudMessage( vec2 vTexCoord, int iMessage, inout vec3 vResult )
     vec4 vSample = texture(iChannel0, vUV);
 	if( vSample.a > 0.0)
 	{
-        vResult = (vec3)vSample.rgb;
+        vResult = vSample.rgb;
 	}
                     
     
@@ -1458,7 +1456,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 vAspect = vec2( 4, 3 );
     
     vec2 vWindowUV = vUV;
-    float fXScale = (iResolution.x / iResolution.y) * (vAspect.y / vAspect.x);
+    float fXScale = (iResolution.x / iResolution.y) * (vAspect.y / vAspect.x);;
     
     vWindowUV.x = vWindowUV.x * fXScale + (1.0 - fXScale) * 0.5;
     
