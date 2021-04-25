@@ -426,6 +426,10 @@ namespace swizzle
         {
             return this_type(mod(x.at(TIndices), y)...);
         }
+        static this_type call_mod(float_vector_arg x, double y)
+        {
+            return this_type(mod(x.at(TIndices), y)...);
+        }
         static this_type call_mod(float_vector_arg x, float_vector_arg y)
         {
             return this_type(mod(x.at(TIndices), y.at(TIndices))...);
@@ -488,6 +492,12 @@ namespace swizzle
         }
 
         static this_type call_step(float_scalar_arg edge, float_vector_arg x)
+        {
+            // we'll delegate step to "outside" because there can't be branches here
+            return this_type(step(edge, x.at(TIndices))...);
+        }
+
+        static this_type call_step(double edge, float_vector_arg x)
         {
             // we'll delegate step to "outside" because there can't be branches here
             return this_type(step(edge, x.at(TIndices))...);

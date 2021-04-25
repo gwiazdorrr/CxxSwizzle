@@ -91,7 +91,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             float samp4 = zone_plate(fragCoord + vec2(0.0, -1.0));
            	col = (samp1 + samp2 + samp3 + samp4) / 4.0;
     	}
-    } else if (halfres) {
+    } else_if (halfres) {
         vec2 resampling_factor = vec2(0.5, 1.0);
         vec2 resampled_coord = fragCoord * resampling_factor;
         vec2 interp = fract(resampled_coord);
@@ -99,7 +99,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         vec2 ceil_coord = ceil(resampled_coord) / resampling_factor;
         col = zone_plate(floor_coord) * (1.0 - interp.x)
             + zone_plate(ceil_coord) * (interp.x);
-    } else if (resample) {
+    } else_if (resample) {
         float resampling_factor = 1.0 / sqrt(2.0);
         vec2 resampled_coord = fragCoord * resampling_factor;
         vec2 interp = fract(resampled_coord);
