@@ -541,27 +541,6 @@ namespace swizzle
             return { bit_cast<float_type>(value.at(TIndices))... };
         }
 
-        //static uint_vector_type call_floatBitsToUint(float_vector_arg value)
-        //{
-        //    uint_vector_type result;
-        //    ((bitcast(value.data[TIndices], &result.data[TIndices])), ...);
-        //    return result;
-        //}
-
-        //static this_type call_intBitsToFloat(detail::only_if<build_info::scalar_is_floating_point, int_vector_type> value)
-        //{
-        //    this_type result;
-        //    ((bitcast(value.data[TIndices], &result.data[TIndices])), ...);
-        //    return result;
-        //}
-
-        //static uint_vector_type call_uintBitsToFloat(detail::only_if<build_info::scalar_is_floating_point, uint_vector_type> value)
-        //{
-        //    this_type result;
-        //    ((bitcast(value.data[TIndices], &result.data[TIndices])), ...);
-        //    return result;
-        //}
-
         // 8.4
 
         static scalar_type call_length(float_vector_arg x)

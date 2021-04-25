@@ -130,6 +130,8 @@ namespace
 
     #ifdef CXXSWIZZLE_INTERNAL_BATCH_WRITE_MASK_TYPE
 
+    #define return(x)   _cxxswizzle_result = x; batch_write_mask::multiply_to(_cxxswizzle_return_scope);
+
     #define if(x)       switch(batch_write_mask _cxxswizzle_if_scope      = { static_cast<batch_write_mask::mask_type>(x), batch_write_mask::if_tag{} })       case true:
     #define else_if(x)  switch(batch_write_mask _cxxswizzle_else_if_scope = { static_cast<batch_write_mask::mask_type>(x), batch_write_mask::else_if_tag{} })  case true:
     #define else        switch(batch_write_mask _cxxswizzle_else_scope    = batch_write_mask::else_tag{})                                                      case true: 
@@ -144,9 +146,14 @@ namespace
         CXXSWIZZLE_CAT(NOT_BREAK, __LINE__): (void)0; \
     }
 
+    #define CXX_RESULT(t) { batch_write_mask _cxxswizzle_return_scope = batch_write_mask::loop_tag{}; t _cxxswizzle_result;
+    #define CXX_RETURN  return _cxxswizzle_result; }
+
     #define CXX_FOR_CONDITION(x) (_cxxswizzle_loop_scope &= static_cast<batch_write_mask::mask_type>(x))
     #else 
     #define CXX_FOR_CONDITION(x) x
+    #define CXX_RESULT(t)
+    #define CXX_RETURN
     #define else_if else if
     #endif
   

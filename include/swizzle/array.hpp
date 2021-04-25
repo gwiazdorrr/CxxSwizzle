@@ -89,7 +89,7 @@ namespace swizzle
     static constexpr auto make_array(Arg&& ...arg)
     {
         if constexpr (std::is_same<void, Dest>::value)
-            return array<std::common_type_t<std::decay_t<Arg>...>, sizeof...(Arg)>{ { detail::narrowing_cast(forward<Arg>(arg))... }};
+            return array<std::common_type_t<std::decay_t<Arg>...>, sizeof...(Arg)>{ { detail::narrowing_cast(std::forward<Arg>(arg))... }};
         else
             return array<Dest, sizeof...(Arg)>{{ detail::narrowing_cast(std::forward<Arg>(arg))... }};
     }

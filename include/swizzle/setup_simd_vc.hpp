@@ -14,6 +14,12 @@ namespace swizzle
     {
         return value.isNotEmpty();
     }
+
+    template <typename U, typename T>
+    inline U bit_cast(T src)
+    {
+        return ::Vc::reinterpret_components_cast<U>(src);
+    }
 }
 
 #include <swizzle/detail/batch_write_mask.hpp>
@@ -31,19 +37,29 @@ namespace swizzle
         target(simd_cast<typename ::Vc::Vector<T>::MaskType>(write_mask::storage.masks[write_mask::storage.mask_index])) = src;
     }
 
+    template <typename T>
+    inline void batch_masked_assign(::Vc::Mask<T>& target, const ::Vc::Mask<T>& src) noexcept
+    {
+        using write_mask = detail::batch_write_mask<::Vc::float_m, 16, false>;
+        auto m = simd_cast<typename ::Vc::Vector<T>::MaskType>(write_mask::storage.masks[write_mask::storage.mask_index]);
+        target = (target & (!m)) | (src & m);
+    }
+
 #else
     template <typename T>
     inline void batch_masked_assign(::Vc::Vector<T>& target, const ::Vc::Vector<T>& src) noexcept
     {
         target = src;
     }
-#endif
 
     template <typename T>
     inline void batch_masked_assign(::Vc::Mask<T>& target, const ::Vc::Mask<T>& src) noexcept
     {
         target = src;
     }
+#endif
+
+
 
     template <typename T>
     inline ::Vc::Vector<T> batch_cast(const ::Vc::float_m& value) noexcept

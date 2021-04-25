@@ -34,19 +34,20 @@ bool intersectSegment(const vec3 ro, const vec3 rd, const vec2 a, const vec2 b, 
 	vec2 p = ro.xz;	vec2 r = rd.xz;
 	vec2 q = a-p;	vec2 s = b-a;
 	float rCrossS = crossp(r, s);
-	
+	bool result;
 	if( rCrossS == 0.){
-		return false;
+		result = false;
     } else {
 		dist = crossp(q, s) / rCrossS;
 		u = crossp(q, r) / rCrossS;
 	
 		if(0. <= dist && 0. <= u && u <= 1.){
-			return true;
+			result = true;
         } else {
-			return false;
+			result = false;
         }
     }
+	return result;
 }
 
 //----------------------------------------------------------------------
@@ -129,7 +130,7 @@ void getMaterialColor( const int material, in vec2 uv, const float decorationHas
 		}
 	}
 // wooden wall
-	else if( material == 2 ) {
+	else_if( material == 2 ) {
 		float mx = mod( uv.x, 64./5. ); 
 		float h1 = hash( floor(uv.x/(64./5.)) );
 		float h2 = hash( 1.+1431.16*floor(uv.x/(64./5.)) );
@@ -151,7 +152,7 @@ void getMaterialColor( const int material, in vec2 uv, const float decorationHas
 		col *= 1.-0.3*stepeq(uv.y,3.);
 	}
 // door
-	else if( material == MATERIAL_DOOR ) {
+	else_if( material == MATERIAL_DOOR ) {
 		fgcol = COL(44., 176., 175.)*(0.95+0.15*sin(-0.25+ 4.*((-0.9-uvs.y)/(1.3-0.8*uvs.x)) ) );
 		fgcol = addBevel( uv, vec2(-1.,1.), vec2(62.,66.), 2., 0.4, -1., -1., fgcol);
 		fgcol = addBevel( uv, vec2( 6.,6.), vec2(57.,57.), 2.25, 0.5, -1., -1., fgcol);	
@@ -174,7 +175,7 @@ void getMaterialColor( const int material, in vec2 uv, const float decorationHas
 		col = mix( basecol, fgcol, onRect( uv, vec2(1.,1.), vec2(62.,62.) ) );	
 	}
 // doorway
-	else if( material == MATERIAL_DOORWAY ) {
+	else_if( material == MATERIAL_DOORWAY ) {
 		fgcol = COL(44., 176., 175.)*(0.95+0.15*sin(-0.25+ 4.*((-0.9-uvs.y)/(1.3-0.8*uvs.x)) ) );
 		vec2 uvhx = vec2( 32.-abs(uv.x-32.), uv.y );
 		fgcol = addBevel( uvhx, vec2(-1.,1.), vec2(28.,66.), 2., 0.4, -1., -1., fgcol);
@@ -216,7 +217,7 @@ void getMaterialColor( const int material, in vec2 uv, const float decorationHas
 		col = mix( col, fgcol, onRect( uv, prisoncoords.xy, prisoncoords.zw ) );
 	}
 // flag
-	else if( decorationHash > 0.63 && material < (NUM_MATERIALS+1) ) {		
+	else_if( decorationHash > 0.63 && material < (NUM_MATERIALS+1) ) {		
 		vec2 uvc = uv-vec2(32.,30.);
 	
 	// shadow	
@@ -327,21 +328,30 @@ bool map( const vec2 vos ) {
 //----------------------------------------------------------------------
 // Render MAP functions
 
+
+
 bool intersectSprite( const vec3 ro, const vec3 rd, const vec3 vos, const vec3 nor, out vec2 uv ) {
 	float dist, u;
+
+	bool result;
+
 	vec2 a = vos.xz + nor.zx*vec2(-0.5,0.5) + vec2(0.5, 0.5);
 	vec2 b = vos.xz - nor.zx*vec2(-0.5,0.5) + vec2(0.5, 0.5);
 	if( intersectSegment( ro, rd, a, b, dist, u) ) {
 		uv.x = u; uv.y = 1.-(ro+dist*rd).y;
 		if( sign(nor.x)<0. ) uv.x = 1.-uv.x;
-		return uv.y>0.&&uv.y<1.;
+		result = (uv.y>0.&&uv.y<1.);
 	}
-	return false;
+	else
+	{
+		result = false;
+	}
+	return result;
 }
 int getMaterialId( const vec2 vos ) {
 	return int( mod( 521.21 * hash( floor((vos-vec2(0.5))/ROOM_SIZE )  ), float(NUM_MATERIALS)) );
 }
-bool getColorForPosition( const vec3 ro, const vec3 rd, const vec3 vos, const vec3 pos, const vec3 nor, inout vec3 col ) {	
+bool getColorForPosition( const vec3 ro, const vec3 rd, const vec3 vos, const vec3 pos, const vec3 nor, inout vec3 col ) CXX_RESULT(bool) {
 	vec2 uv;
 
 	if( isWall( vos.xz ) ) {
@@ -351,28 +361,33 @@ bool getColorForPosition( const vec3 ro, const vec3 rd, const vec3 vos, const ve
 				uv.x -= clamp( 2.-0.75*distance( ro.xz, vos.xz+vec2(0.5) ), 0., 1.);
 				if( uv.x > 0. ) {
 					getMaterialColor( MATERIAL_DOOR, uv*64., 0., col );
-					return true;
+					return(true);
 				}	
 			}	
-			return false;
+			return(false);
 		}
 		// a wall is hit
 		if( pos.y <= 1. && pos.y >= 0. ) {
 			vec2 mpos = vec2( dot(vec3(-nor.z,0.0,nor.x),pos), -pos.y );
     		float sha = 0.6 + 0.4*abs(nor.z);		
-			getMaterialColor( isDoor( vos.xz+nor.xz )?MATERIAL_DOORWAY:getMaterialId(vos.xz), mpos*64., hash( vos.xz ), col );
+			if (isDoor(vos.xz + nor.xz)) {
+				getMaterialColor(MATERIAL_DOORWAY, mpos * 64., hash(vos.xz), col);
+			}
+			else {
+				getMaterialColor(getMaterialId(vos.xz), mpos * 64., hash(vos.xz), col);
+			}
 			col *= sha;
-			return true;
+			return(true);
 		}
-		return true;
+		return(true);
 	}
 	if( isObject( vos.xz ) && !isWall( vos.xz+vec2(1.,0.) ) && !isWall( vos.xz+vec2(-1.,0.) )
 	    && !isWall( vos.xz+vec2(0.,-1.) ) && !isWall( vos.xz+vec2(0.,1.) ) &&
 	    intersectSprite( ro, rd, vos, rdcenter, uv ) ) {
-		return getObjectColor( 0, uv*64., col );
+		return (getObjectColor( 0, uv*64., col ));
 	}
-	return false;
-}
+	return (false);
+} CXX_RETURN
 
 bool castRay( const vec3 ro, const vec3 rd, inout vec3 col ) {
 	vec3 pos = floor(ro);
@@ -384,17 +399,22 @@ bool castRay( const vec3 ro, const vec3 rd, inout vec3 col ) {
 	vec3 mm = vec3(0.0);
 	bool hit = false;
 	
-	for( int i=0; i<MAXSTEPS; i++ )	{
-		if( hit ) continue;
-		
-		mm = step(dis.xyz, dis.zyx);
-		dis += mm * rs * ri;
-        pos += mm * rs;
-		
-		if( map(pos.xz) ) { 
-			vec3 mini = (pos-ro + 0.5 - 0.5*vec3(rs))*ri;
-			float t = max ( mini.x, mini.z );			
-			hit = getColorForPosition( ro, rd, pos, ro+rd*t, -mm*sign(rd), col );
+	for( CXX_SCALAR int i=0; CXX_FOR_CONDITION(i<MAXSTEPS); i++ )	{
+		if (hit)
+		{
+
+		}
+		else
+		{
+			mm = step(dis.xyz, dis.zyx);
+			dis += mm * rs * ri;
+			pos += mm * rs;
+
+			if (map(pos.xz)) {
+				vec3 mini = (pos - ro + 0.5 - 0.5 * vec3(rs)) * ri;
+				float t = max(mini.x, mini.z);
+				hit = getColorForPosition(ro, rd, pos, ro + rd * t, -mm * sign(rd), col);
+			}
 		}
 	}
 	return hit;

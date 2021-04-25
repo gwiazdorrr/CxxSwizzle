@@ -78,6 +78,12 @@ namespace swizzle
         *reinterpret_cast<uint32_t*>(ptr) = rgba;
         return ptr + 4;
     }
+
+    template <typename U, typename T, typename = std::enable_if_t<sizeof(T) == sizeof(U)>>
+    inline U bit_cast(T src)
+    {
+        return *reinterpret_cast<U*>(&src);
+    }
 }
 
 #include <type_traits>

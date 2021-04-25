@@ -6,7 +6,7 @@ macro(_cxxswizzles_find_structs path result_var)
     file(READ ${path} contents)
     string(REGEX MATCHALL "struct[ \t\r\r\n]+[a-zA-Z0-9_]*" structs "${contents}")
 
-    set(result)
+    set(result "")
     foreach (struct ${structs})
         string(REGEX REPLACE "^struct[ \t\r\n]+" "" struct ${struct})
         list(APPEND result ${struct})

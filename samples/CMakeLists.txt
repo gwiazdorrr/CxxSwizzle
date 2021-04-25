@@ -39,4 +39,8 @@ create_sample_scalar("_sh16c__doom")
 
 create_sample_simd_naive("isoline_triangle")
 create_sample_simd_vc("isoline_triangle")
+create_sample_simd_vc("wolfenstein_3d")
+create_sample_simd_vc("flame")
 create_sample_simd_vc_masked("zone_plate_checkerboard")
+create_sample_simd_vc_masked("wolfenstein_3d")
+create_sample_simd_vc_masked("flame")
