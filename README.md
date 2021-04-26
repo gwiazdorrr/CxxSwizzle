@@ -1,8 +1,12 @@
+
 # CxxSwizzle
 
 ![Samples](https://github.com/gwiazdorrr/CxxSwizzle/workflows/CI/badge.svg?branch=modernisation)
 
-This project provides dependency-free headers that replicate GLSL language syntax and built-in functions in C++17, as completely as possible. Basically, you can do this in C++ now:
+This project lets you download and run GLSL [Shadertoys](https://www.shadertoy.com/) as C++17 code. Most of the time no modifications are needed, automated trivial fixes push that certainty to 95%.
+
+The code is split into three main parts:
+- Headers that replicate GLSL syntax, types and built-in functions in C++, as completely as humanely possible. This is C++ now:
 ```glsl
 vec4 foo(0);                        // 0,0,0,0
 foo.yx = vec2(2, 1);                // 1,2,0,0
@@ -12,12 +16,54 @@ bar = clamp(foo.xw, 0, 2);          // 1,2
 mat2 m(foo.xyz, 1);                 // 1,2,2,1
 bar *= m;                           // 5,2
 ```
+- Some very painfully concieved CMake macros that download shaders using Shadertoy API and apply tivial code fixes, if enabled. Uses [json-cmake](https://github.com/sbellus/json-cmake).
+- Template project using `SDL2`, `SDL2-image`, `nlohmann_json` and optionally `OpenMP` and [Vc](https://github.com/VcDevel/Vc) (not to be confused with VC++/MSVC) to bring it all together. `vcpkg` is used to resolve all the dependencies.
 
-Sample project provides Shadertoy integration and is able to download and compile a complete Shadertoy (shaders & textures), provided its visibility is set to `public+api`. Out of 100 most popular shaders:
+There are a handful of shadertoys already included, in the sample directory. 
+
+Projects provide Shadertoy integration and is able to download and compile a complete Shadertoy (shaders & textures), provided its visibility is set to `public+api`. Out of 1000 most popular shaders:
 
 - XX% compiled without any alterations
 - XX% needed minor tweaks
 - XX% were impossible to port
+
+
+## Setup
+
+1. Clone the repository
+```
+git clone https://github.com/gwiazdorrr/CxxSwizzle.git
+```
+2. Init vcpkg submodule
+```
+git submodule update --init
+```
+3. Configure with CMake toolchain file and a generator of your choice:
+```
+cmake -G Ninja -B build -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
+```
+
+If you already have `vcpkg` globally installed, you can skip step 2, provided you pass the proper path to `vcpkg.cmake` in the step 3.
+
+## Download a shadertoy
+
+Downloading shadertoys takes place in CMake's configure step (not great, not terrible). `SHADERTOY_DOWNLOAD` gets forcefully set to `none` after each configure.
+
+`SHADERTOY_FIX_COMMON_PROBLEMS` can be cheched to avoid headaches with most common GLSL to C++ problems.
+
+### Download specific shadertoys
+
+1. Set `SHADERTOY_DOWNLOAD` to `id`
+2. Set `SHADERTOY_DOWNLOAD_PARAM` to an id of any shadertoy with `public+api` visiblity (e.g. [WtVfRc](https://www.shadertoy.com/view/WtVfRc)). If you want to download a batch, separate ids with a semicolon.
+3. Click Configure in CMake gui or run ...
+
+### Query and download shadertoys
+
+1. Set `SHADERTOY_DOWNLOAD` to `top_love`, `top_popular`, `top_newest` or `top_hot`. 
+2. Leave `SHADERTOY_DOWNLOAD_PARAM` empty or set it to a search term. 
+3. Set `SHADERTOY_DOWNLOAD_MAX_COUNT` to limit how many shaders you want to download.
+4. Click Configure in CMake gui or run ...
+
 
 ## GLSL support status
 
@@ -63,7 +109,7 @@ Parts of [GLSL Lang Spec 4.60](https://www.khronos.org/registry/OpenGL/specs/gl/
   - [ ] Scalar `x` compoment
 - [x] Matrix Components [5.6]
 - [x] Structure and Array Operations [5.7]
-  - [ ] Array length method
+  - [x] Array length method *(see Workarounds)*
   - [ ] Equality operator
   - [x] Other operators
 - [x] Vector and Matrix Operations [5.10] *needs more tests*
@@ -80,8 +126,6 @@ Parts of [GLSL Lang Spec 4.60](https://www.khronos.org/registry/OpenGL/specs/gl/
   - [x] Angle and Trigonometry Functions [8.1]
   - [x] Exponential Functions [8.2]
   - [ ] Common Functions [8.3]
-    - [ ] `floatBitsToInt`, `floatBitsToUInt`, 
-    - [ ] `intBitsToFloat`, `uintBitsToFloat`
     - [ ] `fma`
     - [ ] `frexp`, `ldexp`
     - [x] Other functions

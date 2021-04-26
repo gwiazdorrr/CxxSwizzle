@@ -61,7 +61,7 @@ endmacro()
 
 macro(_shadertoyPatchSourceCode path)
 
-	message(STATUS "PATCHING ${path}")
+	message(VERBOSE "Patching ${path}")
 	set(lines)
 	file(STRINGS ${path} lines)
 
@@ -113,11 +113,6 @@ macro(_shadertoyPatchSourceCode path)
 			string(REGEX REPLACE "^const " "CXX_CONST " line "${line}")
 		endif()
 
-		if (line MATCHES "^precision ")
-            message(VERBOSE "Ignoring a line with precision: ${line}")
-			set(line "CXX_IGNORE(${line})")
-		endif()
-
 		# matches xxxxx xxxxxx(xxxxx);
 		if (line MATCHES "^([A-Za-z0-9_]+)[ \t]+[A-Za-z0-9_]+[ \t]*\\([^\\)]*\\)[ \t]*;[ \t]*$")
             if (NOT "${CMAKE_MATCH_1}" STREQUAL "return")
@@ -136,26 +131,40 @@ macro(_shadertoyPatchSourceCode path)
             
         elseif (NOT line MATCHES "^#define.*")
 
-			if (line MATCHES "${glsl_style_array}([; \t=,\)]|$)")
-            #if (line MATCHES "${glsl_style_array}")
+			while (line MATCHES "${glsl_style_array}[ \t]*([;=,\)]|$)")
                 message(VERBOSE "Array found ${line}")
                 if (NOT "${CMAKE_MATCH_2}" STREQUAL "")
                     set(replacement "CXX_ARRAY_N(\\1, \\2) \\3") 
                 else (line MATCHES "^[ \t]")
                     set(replacement "CXX_ARRAY(\\1) \\3")
                 endif()
-                string(REGEX REPLACE "${glsl_style_array}" "${replacement}" line "${line}")
-            elseif (line MATCHES "${c_style_array}([; \t=,\)]|$)")
-                if (NOT "${CMAKE_MATCH_1}" STREQUAL "return" AND NOT "${CMAKE_MATCH_1}" STREQUAL "in" AND NOT "${CMAKE_MATCH_1}" STREQUAL "inout" )
-                    message(VERBOSE "Array found ${line}")
-                    if (NOT "${CMAKE_MATCH_3}" STREQUAL "")
-                        set(replacement "CXX_ARRAY_N(\\1, \\3) \\2")
-                    else()
-                        set(replacement "CXX_ARRAY(\\1) \\2")
-                    endif()
+
+                if ("${CMAKE_MATCH_4}" STREQUAL "," AND NOT line MATCHES "\\)[ \t]*({|$)")
+                    # is this a fuction argument or multiple declarations per line?
+                    string(REGEX REPLACE "${glsl_style_array}[ \t]*," "${replacement}; \\1 " line "${line}")
+                else()
+                    string(REGEX REPLACE "${glsl_style_array}" "${replacement}" line "${line}")
+                endif()
+            endwhile()
+
+            while (line MATCHES "${c_style_array}[ \t]*([;=,\)]|$)")
+                if ("${CMAKE_MATCH_1}" STREQUAL "return" OR "${CMAKE_MATCH_1}" STREQUAL "in" OR "${CMAKE_MATCH_1}" STREQUAL "inout")
+                    break()
+                endif()
+
+                message(VERBOSE "Array found ${line}")
+                if (NOT "${CMAKE_MATCH_3}" STREQUAL "")
+                    set(replacement "CXX_ARRAY_N(\\1, \\3) \\2")
+                else()
+                    set(replacement "CXX_ARRAY(\\1) \\2")
+                endif()
+
+                if ("${CMAKE_MATCH_4}" STREQUAL "," AND NOT line MATCHES "\\)[ \t]*({|$)")
+                    string(REGEX REPLACE "${c_style_array}[ \t]*," "${replacement}; \\1 " line "${line}")
+                else()
                     string(REGEX REPLACE "${c_style_array}" "${replacement}" line "${line}")
                 endif()
-            endif()
+            endwhile()
 
             if (line MATCHES "${glsl_array_initializer}")
                 if ("${CMAKE_MATCH_2}" STREQUAL "(")

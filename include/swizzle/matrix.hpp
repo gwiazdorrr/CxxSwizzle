@@ -333,12 +333,47 @@ namespace swizzle
     {
         using m2f = matrix_<float_type, 2, 0, 1>;
         using m3f = matrix_<float_type, 3, 0, 1, 2>;
-        using m4f = matrix_<float_type, 2, 0, 1, 2, 3>;
+        using m4f = matrix_<float_type, 4, 0, 1, 2, 3>;
     }
 
     inline float_type determinant(const detail::m2f& m)
     {
         return m.cell(0, 0) * m.cell(1, 1) - m.cell(0, 1) * m.cell(1, 0);
+    }
+
+    inline float_type determinant(const detail::m3f& m)
+    {
+        return m.cell(0, 0) * (m.cell(1, 1) * m.cell(2, 2) - m.cell(2, 1) * m.cell(1, 2)) -
+               m.cell(0, 1) * (m.cell(1, 0) * m.cell(2, 2) - m.cell(1, 2) * m.cell(2, 0)) +
+               m.cell(0, 2) * (m.cell(1, 0) * m.cell(2, 1) - m.cell(1, 1) * m.cell(2, 0));
+    }
+
+    inline float_type determinant(const detail::m4f& m)
+    {
+        // https://stackoverflow.com/a/44446912/461632
+        auto A2323 = m.cell(2, 2) * m.cell(3, 3) - m.cell(2, 3) * m.cell(3, 2);
+        auto A1323 = m.cell(2, 1) * m.cell(3, 3) - m.cell(2, 3) * m.cell(3, 1);
+        auto A1223 = m.cell(2, 1) * m.cell(3, 2) - m.cell(2, 2) * m.cell(3, 1);
+        auto A0323 = m.cell(2, 0) * m.cell(3, 3) - m.cell(2, 3) * m.cell(3, 0);
+        auto A0223 = m.cell(2, 0) * m.cell(3, 2) - m.cell(2, 2) * m.cell(3, 0);
+        auto A0123 = m.cell(2, 0) * m.cell(3, 1) - m.cell(2, 1) * m.cell(3, 0);
+        auto A2313 = m.cell(1, 2) * m.cell(3, 3) - m.cell(1, 3) * m.cell(3, 2);
+        auto A1313 = m.cell(1, 1) * m.cell(3, 3) - m.cell(1, 3) * m.cell(3, 1);
+        auto A1213 = m.cell(1, 1) * m.cell(3, 2) - m.cell(1, 2) * m.cell(3, 1);
+        auto A2312 = m.cell(1, 2) * m.cell(2, 3) - m.cell(1, 3) * m.cell(2, 2);
+        auto A1312 = m.cell(1, 1) * m.cell(2, 3) - m.cell(1, 3) * m.cell(2, 1);
+        auto A1212 = m.cell(1, 1) * m.cell(2, 2) - m.cell(1, 2) * m.cell(2, 1);
+        auto A0313 = m.cell(1, 0) * m.cell(3, 3) - m.cell(1, 3) * m.cell(3, 0);
+        auto A0213 = m.cell(1, 0) * m.cell(3, 2) - m.cell(1, 2) * m.cell(3, 0);
+        auto A0312 = m.cell(1, 0) * m.cell(2, 3) - m.cell(1, 3) * m.cell(2, 0);
+        auto A0212 = m.cell(1, 0) * m.cell(2, 2) - m.cell(1, 2) * m.cell(2, 0);
+        auto A0113 = m.cell(1, 0) * m.cell(3, 1) - m.cell(1, 1) * m.cell(3, 0);
+        auto A0112 = m.cell(1, 0) * m.cell(2, 1) - m.cell(1, 1) * m.cell(2, 0);
+
+        return m.cell(0, 0) * (m.cell(1, 1) * A2323 - m.cell(1, 2) * A1323 + m.cell(1, 3) * A1223)
+             - m.cell(0, 1) * (m.cell(1, 0) * A2323 - m.cell(1, 2) * A0323 + m.cell(1, 3) * A0223)
+             + m.cell(0, 2) * (m.cell(1, 0) * A1323 - m.cell(1, 1) * A0323 + m.cell(1, 3) * A0123)
+             - m.cell(0, 3) * (m.cell(1, 0) * A1223 - m.cell(1, 1) * A0223 + m.cell(1, 2) * A0123);
     }
 
     //template <typename TScalar 
@@ -352,10 +387,68 @@ namespace swizzle
         return detail::m2f(m.cell(1, 1), -m.cell(1, 0), -m.cell(0, 1), m.cell(0, 0)) / determinant(m);
     }
 
+    inline detail::m3f inverse(const detail::m3f& m)
+    {
+        auto invdet = 1 / determinant(m);
+        detail::m3f result;
+        result.cell(0, 0) = (m.cell(1, 1) * m.cell(2, 2) - m.cell(2, 1) * m.cell(1, 2)) * invdet;
+        result.cell(0, 1) = (m.cell(0, 2) * m.cell(2, 1) - m.cell(0, 1) * m.cell(2, 2)) * invdet;
+        result.cell(0, 2) = (m.cell(0, 1) * m.cell(1, 2) - m.cell(0, 2) * m.cell(1, 1)) * invdet;
+        result.cell(1, 0) = (m.cell(1, 2) * m.cell(2, 0) - m.cell(1, 0) * m.cell(2, 2)) * invdet;
+        result.cell(1, 1) = (m.cell(0, 0) * m.cell(2, 2) - m.cell(0, 2) * m.cell(2, 0)) * invdet;
+        result.cell(1, 2) = (m.cell(1, 0) * m.cell(0, 2) - m.cell(0, 0) * m.cell(1, 2)) * invdet;
+        result.cell(2, 0) = (m.cell(1, 0) * m.cell(2, 1) - m.cell(2, 0) * m.cell(1, 1)) * invdet;
+        result.cell(2, 1) = (m.cell(2, 0) * m.cell(0, 1) - m.cell(0, 0) * m.cell(2, 1)) * invdet;
+        result.cell(2, 2) = (m.cell(0, 0) * m.cell(1, 1) - m.cell(1, 0) * m.cell(0, 1)) * invdet;
+        return result;
+    }
 
-    //template <class TScalar, size_t M, size_t TNumRows, size_t OtherNumColumns>
-    //matrix<TVector, TScalar, TNumRows, OtherNumColumns> operator*(const matrix<TVector, TScalar, N, M>& m1, const matrix<TVector, TScalar, M, OtherNumColumns>& m2 )
-    //{
-    //    return m1.mul(m1, m2);
-    //}
+    inline detail::m4f inverse(const detail::m4f& m)
+    {
+        auto A2323 = m.cell(2, 2) * m.cell(3, 3) - m.cell(2, 3) * m.cell(3, 2) ;
+        auto A1323 = m.cell(2, 1) * m.cell(3, 3) - m.cell(2, 3) * m.cell(3, 1) ;
+        auto A1223 = m.cell(2, 1) * m.cell(3, 2) - m.cell(2, 2) * m.cell(3, 1) ;
+        auto A0323 = m.cell(2, 0) * m.cell(3, 3) - m.cell(2, 3) * m.cell(3, 0) ;
+        auto A0223 = m.cell(2, 0) * m.cell(3, 2) - m.cell(2, 2) * m.cell(3, 0) ;
+        auto A0123 = m.cell(2, 0) * m.cell(3, 1) - m.cell(2, 1) * m.cell(3, 0) ;
+        auto A2313 = m.cell(1, 2) * m.cell(3, 3) - m.cell(1, 3) * m.cell(3, 2) ;
+        auto A1313 = m.cell(1, 1) * m.cell(3, 3) - m.cell(1, 3) * m.cell(3, 1) ;
+        auto A1213 = m.cell(1, 1) * m.cell(3, 2) - m.cell(1, 2) * m.cell(3, 1) ;
+        auto A2312 = m.cell(1, 2) * m.cell(2, 3) - m.cell(1, 3) * m.cell(2, 2) ;
+        auto A1312 = m.cell(1, 1) * m.cell(2, 3) - m.cell(1, 3) * m.cell(2, 1) ;
+        auto A1212 = m.cell(1, 1) * m.cell(2, 2) - m.cell(1, 2) * m.cell(2, 1) ;
+        auto A0313 = m.cell(1, 0) * m.cell(3, 3) - m.cell(1, 3) * m.cell(3, 0) ;
+        auto A0213 = m.cell(1, 0) * m.cell(3, 2) - m.cell(1, 2) * m.cell(3, 0) ;
+        auto A0312 = m.cell(1, 0) * m.cell(2, 3) - m.cell(1, 3) * m.cell(2, 0) ;
+        auto A0212 = m.cell(1, 0) * m.cell(2, 2) - m.cell(1, 2) * m.cell(2, 0) ;
+        auto A0113 = m.cell(1, 0) * m.cell(3, 1) - m.cell(1, 1) * m.cell(3, 0) ;
+        auto A0112 = m.cell(1, 0) * m.cell(2, 1) - m.cell(1, 1) * m.cell(2, 0) ;
+         
+        auto det = 
+              m.cell(0, 0) * ( m.cell(1, 1) * A2323 - m.cell(1, 2) * A1323 + m.cell(1, 3) * A1223 ) 
+            - m.cell(0, 1) * ( m.cell(1, 0) * A2323 - m.cell(1, 2) * A0323 + m.cell(1, 3) * A0223 ) 
+            + m.cell(0, 2) * ( m.cell(1, 0) * A1323 - m.cell(1, 1) * A0323 + m.cell(1, 3) * A0123 ) 
+            - m.cell(0, 3) * ( m.cell(1, 0) * A1223 - m.cell(1, 1) * A0223 + m.cell(1, 2) * A0123 ) ;
+
+        det = 1 / det;
+
+        detail::m4f r;
+        r.cell(0, 0) = det *   ( m.cell(1, 1) * A2323 - m.cell(1, 2) * A1323 + m.cell(1, 3) * A1223 );
+        r.cell(0, 1) = det * - ( m.cell(0, 1) * A2323 - m.cell(0, 2) * A1323 + m.cell(0, 3) * A1223 );
+        r.cell(0, 2) = det *   ( m.cell(0, 1) * A2313 - m.cell(0, 2) * A1313 + m.cell(0, 3) * A1213 );
+        r.cell(0, 3) = det * - ( m.cell(0, 1) * A2312 - m.cell(0, 2) * A1312 + m.cell(0, 3) * A1212 );
+        r.cell(1, 0) = det * - ( m.cell(1, 0) * A2323 - m.cell(1, 2) * A0323 + m.cell(1, 3) * A0223 );
+        r.cell(1, 1) = det *   ( m.cell(0, 0) * A2323 - m.cell(0, 2) * A0323 + m.cell(0, 3) * A0223 );
+        r.cell(1, 2) = det * - ( m.cell(0, 0) * A2313 - m.cell(0, 2) * A0313 + m.cell(0, 3) * A0213 );
+        r.cell(1, 3) = det *   ( m.cell(0, 0) * A2312 - m.cell(0, 2) * A0312 + m.cell(0, 3) * A0212 );
+        r.cell(2, 0) = det *   ( m.cell(1, 0) * A1323 - m.cell(1, 1) * A0323 + m.cell(1, 3) * A0123 );
+        r.cell(2, 1) = det * - ( m.cell(0, 0) * A1323 - m.cell(0, 1) * A0323 + m.cell(0, 3) * A0123 );
+        r.cell(2, 2) = det *   ( m.cell(0, 0) * A1313 - m.cell(0, 1) * A0313 + m.cell(0, 3) * A0113 );
+        r.cell(2, 3) = det * - ( m.cell(0, 0) * A1312 - m.cell(0, 1) * A0312 + m.cell(0, 3) * A0112 );
+        r.cell(3, 0) = det * - ( m.cell(1, 0) * A1223 - m.cell(1, 1) * A0223 + m.cell(1, 2) * A0123 );
+        r.cell(3, 1) = det *   ( m.cell(0, 0) * A1223 - m.cell(0, 1) * A0223 + m.cell(0, 2) * A0123 );
+        r.cell(3, 2) = det * - ( m.cell(0, 0) * A1213 - m.cell(0, 1) * A0213 + m.cell(0, 2) * A0113 );
+        r.cell(3, 3) = det *   ( m.cell(0, 0) * A1212 - m.cell(0, 1) * A0212 + m.cell(0, 2) * A0112 );
+        return r;
+    }
 }

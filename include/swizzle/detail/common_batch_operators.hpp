@@ -82,9 +82,9 @@ CXXSWIZZLE_FORCE_INLINE friend this_type operator&(this_arg a, this_arg b) { ret
 CXXSWIZZLE_FORCE_INLINE friend this_type operator>>(this_arg a, this_arg b) { return this_type(construct_tag{}, a.at<TIndices>() >> b.at<TIndices>()...); }
 CXXSWIZZLE_FORCE_INLINE friend this_type operator<<(this_arg a, this_arg b) { return this_type(construct_tag{}, a.at<TIndices>() << b.at<TIndices>()...); }
 
-CXXSWIZZLE_FORCE_INLINE friend bool_type operator>(this_arg a, this_arg b) { return bool_type(construct_tag{}, static_cast<typename bool_type::data_type>(a.at<TIndices>() > b.at<TIndices>())...); }
-CXXSWIZZLE_FORCE_INLINE friend bool_type operator>=(this_arg a, this_arg b) { return bool_type(construct_tag{}, static_cast<typename bool_type::data_type>(a.at<TIndices>() >= b.at<TIndices>())...); }
-CXXSWIZZLE_FORCE_INLINE friend bool_type operator<(this_arg a, this_arg b) { return bool_type(construct_tag{}, static_cast<typename bool_type::data_type>(a.at<TIndices>() < b.at<TIndices>())...); }
-CXXSWIZZLE_FORCE_INLINE friend bool_type operator<=(this_arg a, this_arg b) { return bool_type(construct_tag{}, static_cast<typename bool_type::data_type>(a.at<TIndices>() <= b.at<TIndices>())...); }
-CXXSWIZZLE_FORCE_INLINE friend bool_type operator==(this_arg a, this_arg b) { return bool_type(construct_tag{}, static_cast<typename bool_type::data_type>(a.at<TIndices>() == b.at<TIndices>())...); }
-CXXSWIZZLE_FORCE_INLINE friend bool_type operator!=(this_arg a, this_arg b) { return bool_type(construct_tag{}, static_cast<typename bool_type::data_type>(a.at<TIndices>() != b.at<TIndices>())...); }
+CXXSWIZZLE_FORCE_INLINE friend bool_type operator> (this_arg a, this_arg b) { return bool_type(construct_tag{}, batch_cast<bool>(a.at<TIndices>() >  b.at<TIndices>())...); }
+CXXSWIZZLE_FORCE_INLINE friend bool_type operator>=(this_arg a, this_arg b) { return bool_type(construct_tag{}, batch_cast<bool>(a.at<TIndices>() >= b.at<TIndices>())...); }
+CXXSWIZZLE_FORCE_INLINE friend bool_type operator< (this_arg a, this_arg b) { return bool_type(construct_tag{}, batch_cast<bool>(a.at<TIndices>() <  b.at<TIndices>())...); }
+CXXSWIZZLE_FORCE_INLINE friend bool_type operator<=(this_arg a, this_arg b) { return bool_type(construct_tag{}, batch_cast<bool>(a.at<TIndices>() <= b.at<TIndices>())...); }
+CXXSWIZZLE_FORCE_INLINE friend bool_type operator==(this_arg a, this_arg b) { return bool_type(construct_tag{}, batch_cast<bool>(a.at<TIndices>() == b.at<TIndices>())...); }
+CXXSWIZZLE_FORCE_INLINE friend bool_type operator!=(this_arg a, this_arg b) { return bool_type(construct_tag{}, batch_cast<bool>(a.at<TIndices>() != b.at<TIndices>())...); }

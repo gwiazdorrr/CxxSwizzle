@@ -68,7 +68,6 @@ namespace
     #define lowp
     #define highp
     #define mediump
-    #define precision
     #define final final_
     #define discard switch(0) case 0: _cxxswizzle_discarded = true;
     // char is not a type in glsl so can be used freely
@@ -125,8 +124,16 @@ namespace
     #undef _ALPHA
     #endif
 
+    #ifdef __VERSION__
+    #undef __VERSION__
+    #endif 
+    #define __VERSION__ 460
+
     #define CXXSWIZZLE_CAT(a,b)         CXXSWIZZLE_CAT_INNER(a,b) 
     #define CXXSWIZZLE_CAT_INNER(a,b)   a ## b
+
+    // e.g. precission mediump float;
+    #define precision using CXXSWIZZLE_CAT(__cxxswizzle_precision_, __LINE__) =
 
     #ifdef CXXSWIZZLE_INTERNAL_BATCH_WRITE_MASK_TYPE
 

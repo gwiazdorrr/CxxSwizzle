@@ -2,9 +2,15 @@
 // Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 #pragma once
 
+// turn of some annoying VC warnings
+#pragma warning(push)
+#pragma warning(disable: 4244)
+#pragma warning(disable: 4146)
 // VC needs to come first or else it's going to complain (damn I hate these)
 #include <Vc/vector.h>
 #include <Vc/global.h>
+#pragma warning(pop)
+
 #include <type_traits>
 
 namespace swizzle
@@ -61,13 +67,21 @@ namespace swizzle
 
 
 
-    template <typename T>
-    inline ::Vc::Vector<T> batch_cast(const ::Vc::float_m& value) noexcept
+    template <typename To, typename From>
+    inline auto batch_cast(const ::Vc::Mask<From>& value) noexcept
     {
-        ::Vc::Vector<T> result(::Vc::Zero);
-        result(value) = 1.0f;
-        return result;
+        if constexpr (std::is_same_v<To, bool>)
+        {
+            return ::Vc::simd_cast<::Vc::float_m>(value);
+        }
+        else
+        {
+            ::Vc::Vector<To> result(::Vc::Zero);
+            result(::Vc::simd_cast<result.mask_type>(value)) = ::Vc::One;
+            return result;
+        }
     }
+
 
     template <typename To, typename From>
     inline ::Vc::Vector<To> batch_cast(const ::Vc::Vector<From>& value) noexcept
