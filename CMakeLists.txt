@@ -8,7 +8,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/Modules")
 
 set_property(GLOBAL PROPERTY USE_FOLDERS On)
 
-set(CXXSWIZZLE_SANDBOX_STRUCTS Ray;ray CACHE STRING "Custom structs that need function-style init or out/inout modifier")
 set(CXXSWIZZLE_SANDBOX_TRACY_PROFILER_ROOT "" CACHE PATH "Path to the Tracy Profiler root. Leave empty if you don't want to use it.")
 set(CXXSWIZZLE_SANDBOX_TEXTURES_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/textures" CACHE PATH "Path to the Tracy Profiler root. Leave empty if you don't want to use it.")
 
@@ -37,5 +36,5 @@ source_group("swizzle" FILES ${root})
 source_group("swizzle\\detail" FILES ${detail})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${Vc_INCLUDE_DIR})
-add_library(headers STATIC ${root} ${detail} ${glsl} ${glsl_detail} dummy.cpp README.md)
+add_library(headers STATIC ${root} ${detail} ${glsl} ${glsl_detail} README.md)
 set_target_properties(headers PROPERTIES LINKER_LANGUAGE CXX)

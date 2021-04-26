@@ -55,18 +55,13 @@ macro(cxxswizzle_prepare_setup setup)
 
 endmacro()
 
-macro(cxxswizzle_create_runner target_name shadertoy_dir setup custom_structs_override textures_root_override)
+macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root_override)
 
-    set(template_dir "${CMAKE_SOURCE_DIR}/sandbox")
+    set(template_dir "${CMAKE_SOURCE_DIR}/sandbox_template")
 
     file(GLOB shader_file_list "${shadertoy_dir}/*.frag")
     
     set(gen_include_dir "${CMAKE_CURRENT_BINARY_DIR}/${target_name}_gen")
-
-    set(custom_structs ${CXXSWIZZLE_SANDBOX_STRUCTS})
-    if (NOT "${custom_structs_override}" STREQUAL "")
-        set(custom_structs ${custom_structs_override})
-    endif()
 
     set(textures_root ${CXXSWIZZLE_SANDBOX_TEXTURES_ROOT})
     if (NOT "${textures_root_override}" STREQUAL "")

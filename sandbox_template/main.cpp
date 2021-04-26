@@ -215,11 +215,11 @@ struct render_target_float : aligned_render_target_base
 
 };
 
-using image_map = std::unordered_map<std::string, sdl_ptr<SDL_Surface>>;
+using texture_map = std::unordered_map<std::string, sdl_ptr<SDL_Surface>>;
 
 using buffer_render_target_list = std::array<render_target_float, shadertoy::num_buffers>;
 
-void ensure_texture_loaded(image_map& textures, const std::string& path, const std::filesystem::path& textures_root)
+void ensure_texture_loaded(texture_map& textures, const std::string& path, const std::filesystem::path& textures_root)
 {
     if (textures.find(path) == textures.end())
     {
@@ -251,7 +251,7 @@ void ensure_texture_loaded(image_map& textures, const std::string& path, const s
     }
 }
 
-const SDL_Surface* get_image_or_throw(const image_map& textures, const std::string& path)
+const SDL_Surface* get_image_or_throw(const texture_map& textures, const std::string& path)
 {
     auto found = textures.find(path);
     if (found == textures.end())
@@ -427,21 +427,20 @@ static render_stats render(TPixelFunc func, shader_inputs uniforms, TRenderTarge
     return render_stats { std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - render_begin), num_pixels, num_threads };
 }
 
-struct textures_context
+struct texture_context
 {
-    const image_map& images;
-    const buffer_render_target_list& buffers;
+    const texture_map& textures;
     const SDL_Surface* keyboard;
-
-    textures_context(const image_map& images, const buffer_render_target_list& buffers, const SDL_Surface* keyboard) 
-    : images(images),
-      buffers(buffers),
-      keyboard(keyboard)
-    {}
+    std::array<const render_target_float*, shadertoy::num_buffers> buffers;
+    
+    texture_context(const texture_map& textures, const SDL_Surface* keyboard, const buffer_render_target_list& buffers) : textures(textures), keyboard(keyboard)
+    {
+        std::transform(buffers.begin(), buffers.end(), this->buffers.begin(), [](const render_target_float& f) -> const render_target_float* { return &f; });
+    }
 };
 
 
-void bind_textures(shader_inputs& inputs, sampler_generic_data* data_buffer, const pass_config& pass, const textures_context& context)
+void bind_textures(shader_inputs& inputs, sampler_generic_data* data_buffer, const pass_config& pass, const texture_context& context)
 {
     std::array<sampler2D*, shadertoy::num_samplers> samplers = 
     {
@@ -463,7 +462,7 @@ void bind_textures(shader_inputs& inputs, sampler_generic_data* data_buffer, con
 
         if (data.type == sampler_type::buffer)
         {
-            *data_buffer++ = make_sampler_data(context.buffers[data.source_buffer_index]);
+            *data_buffer++ = make_sampler_data(*context.buffers[data.source_buffer_index]);
         }
         else if (data.type == sampler_type::keyboard)
         {
@@ -474,7 +473,7 @@ void bind_textures(shader_inputs& inputs, sampler_generic_data* data_buffer, con
             samplers[sampler_no]->face_count = data.paths.size();
             for (auto& path: data.paths)
             {
-                *data_buffer++ = make_sampler_data(get_image_or_throw(context.images, path));
+                *data_buffer++ = make_sampler_data(get_image_or_throw(context.textures, path));
             }
         }
 
@@ -610,7 +609,7 @@ int SDL_Keysym_to_Ascii(SDL_Keysym keysym) {
     }
 }
 
-shadertoy_config apply_config(std::filesystem::path path, image_map& textures, std::filesystem::path textures_root)
+shadertoy_config apply_config(std::filesystem::path path, texture_map& textures, std::filesystem::path textures_root)
 {
     using json = nlohmann::json;
 
@@ -788,7 +787,7 @@ int __cdecl main(int argc, char* argv[])
 
     static_assert(::shadertoy::num_samplers >= 4);
     
-    image_map images;
+    texture_map textures;
     shadertoy_config config;
 
     try
@@ -888,7 +887,7 @@ int __cdecl main(int argc, char* argv[])
                 }
             }
 
-            config = apply_config(config_path, images, textures_root);
+            config = apply_config(config_path, textures, textures_root);
         }
     
         if (resolution.x <= 0 || resolution.y < 0 )
@@ -921,7 +920,7 @@ int __cdecl main(int argc, char* argv[])
 #endif
         std::atomic<pass_type> current_pass;
 
-        auto render_all = [&config, &current_pass](shader_inputs inputs, render_target_rgba32& target, buffer_render_target_list& buffers, const textures_context& context, const std::atomic_bool& cancel) -> auto
+        auto render_all = [&config, &current_pass](shader_inputs inputs, render_target_rgba32& target, buffer_render_target_list& buffers, texture_context& context, const std::atomic_bool& cancel) -> auto
         {
             std::chrono::microseconds duration(0);   
             sampler_generic_data data_buffer[6 * num_samplers];
@@ -930,21 +929,25 @@ int __cdecl main(int argc, char* argv[])
             bind_textures(inputs, data_buffer, config.get_pass(pass_type::buffer_a), context);
             current_pass = pass_type::buffer_a;
             duration += render(shadertoy::buffer_a, inputs, buffers[0], cancel).duration;
+            context.buffers[0] = &buffers[0];
 #endif
 #ifdef CONFIG_SAMPLE_HAS_BUFFER_B
             bind_textures(inputs, data_buffer, config.get_pass(pass_type::buffer_b), context);
             current_pass = pass_type::buffer_b;
             duration += render(shadertoy::buffer_b, inputs, buffers[1], cancel).duration;
+            context.buffers[1] = &buffers[1];
 #endif
 #ifdef CONFIG_SAMPLE_HAS_BUFFER_C
             bind_textures(inputs, data_buffer, config.get_pass(pass_type::buffer_c), context);
             current_pass = pass_type::buffer_c;
             duration += render(shadertoy::buffer_c, inputs, buffers[2], cancel).duration;
+            context.buffers[2] = &buffers[2];
 #endif
 #ifdef CONFIG_SAMPLE_HAS_BUFFER_D
             bind_textures(inputs, data_buffer, config.get_pass(pass_type::buffer_d), context);
             current_pass = pass_type::buffer_d;
             duration += render(shadertoy::buffer_d, inputs, buffers[3], cancel).duration;
+            context.buffers[3] = &buffers[3];
 #endif
             bind_textures(inputs, data_buffer, config.get_pass(pass_type::image), context);
             current_pass = pass_type::image;
@@ -971,7 +974,7 @@ int __cdecl main(int argc, char* argv[])
                 nonmasked(inputs.iMouse) = vec4(0);
                 nonmasked(inputs.iDate) = make_shadertoy_date();
 
-                textures_context context(images, render_targets.buffers[1 - i & 1], keyboard_surface.get());
+                texture_context context(textures, keyboard_surface.get(), render_targets.buffers[1 - i & 1]);
                 last_render_stats = render_all(inputs, render_targets.target, render_targets.buffers[i & 1], context, abort);
                 
                 std::string output = replace_all(output_path, "%n", std::to_string(i));
@@ -998,6 +1001,7 @@ int __cdecl main(int argc, char* argv[])
             bool pending_resize = false;
             bool mouse_pressed = false;
             bool mouse_clicked = false;
+            bool had_mouse_click = false;
 
             std::atomic_bool abort_render_token = false;
 
@@ -1018,7 +1022,7 @@ int __cdecl main(int argc, char* argv[])
                     static_cast<float>(mouse_x),
                     static_cast<float>(render_targets.height - 1 - mouse_y),
                     (mouse_pressed ? 1.0f : -1.0f) * mouse_press_x,
-                    (mouse_clicked ? 1.0f : -1.0f) * (render_targets.height - 1 - mouse_press_y)
+                    had_mouse_click ? (mouse_clicked ? 1.0f : -1.0f) * (render_targets.height - 1 - mouse_press_y) : 0
                 );
 
                 mouse_clicked = false;
@@ -1032,7 +1036,7 @@ int __cdecl main(int argc, char* argv[])
                 nonmasked(inputs.iMouse) = mouse;
                 nonmasked(inputs.iDate) = make_shadertoy_date();
 
-                textures_context context(images, render_targets.buffers[1 - num_frames & 1], keyboard_surface.get());
+                texture_context context(textures, keyboard_surface.get(), render_targets.buffers[1 - num_frames & 1]);
                 return std::async(render_all, inputs, std::ref(render_targets.target), std::ref(render_targets.buffers[num_frames & 1]), context, std::ref(abort_render_token));
             };
 
@@ -1172,7 +1176,7 @@ int __cdecl main(int argc, char* argv[])
                         }
                         break;
                     case SDL_MOUSEBUTTONDOWN:
-                        mouse_clicked = mouse_pressed = true;
+                        had_mouse_click = mouse_clicked = mouse_pressed = true;
                         mouse_press_x = mouse_x = event.button.x;
                         mouse_press_y = mouse_y = event.button.y;
                         break;

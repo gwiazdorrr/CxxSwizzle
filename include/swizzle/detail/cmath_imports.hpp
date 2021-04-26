@@ -54,12 +54,12 @@ namespace swizzle
         return std::isinf(x);
     }
 
-    inline float radians(float x)
+    inline float degrees(float x)
     {
         return 180.0f * x / 3.14159265358979323846f;
     }
 
-    inline float degrees(float x)
+    inline float radians(float x)
     {
         return x * 3.14159265358979323846f / 180.0f;
     }

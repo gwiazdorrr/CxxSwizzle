@@ -359,12 +359,15 @@ macro(shadertoy_download api_key shader_id root_dir textures_root download_error
                     message(WARNING "Channel type ${${input}.ctype} not supported (channel ${input_index})")
                 endif()
 
-                string(CONCAT entry "${entry}"
-                                    "${spacing}  \"vflip\": \"${${input}.sampler.vflip}\",\n"
-                                    "${spacing}  \"filter\": \"${${input}.sampler.filter}\",\n"
-                                    "${spacing}  \"wrap\": \"${${input}.sampler.wrap}\"")
+                if (NOT "${${input}.channel}" STREQUAL "")
 
-                list(APPEND renderpass_info "${spacing}\"iChannel${${input}.channel}\": {\n${entry}\n${spacing}}")
+                    string(CONCAT entry "${entry}"
+                                        "${spacing}  \"vflip\": \"${${input}.sampler.vflip}\",\n"
+                                        "${spacing}  \"filter\": \"${${input}.sampler.filter}\",\n"
+                                        "${spacing}  \"wrap\": \"${${input}.sampler.wrap}\"")
+
+                    list(APPEND renderpass_info "${spacing}\"iChannel${${input}.channel}\": {\n${entry}\n${spacing}}")
+                endif()
 
             endforeach()
 

@@ -173,7 +173,7 @@ Parts of [GLSL Lang Spec 4.60](https://www.khronos.org/registry/OpenGL/specs/gl/
   - [ ] Texture Functions [8.9] *(sampler ignores lod and partial derivatives)*
     - [x] `textureSize`
     - [x] `texture`
-    - [x] `texelFetch` 
+    - [x] `texelFetch`  *(robust buffer access needs implementing)*
     - [x] `textureLod`
     - [x] `textureGrad`
     - [ ] Other  functions

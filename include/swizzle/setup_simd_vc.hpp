@@ -286,13 +286,13 @@ namespace Vc_VERSIONED_NAMESPACE
 
 
     template <typename T>
-    inline Vector<T> radians(const Vector<T>& x) noexcept
+    inline Vector<T> degrees(const Vector<T>& x) noexcept
     {
         return  x * (180.0f / 3.14159265358979323846f);
     }
 
     template <typename T>
-    inline Vector<T> degrees(const Vector<T>& x) noexcept
+    inline Vector<T> radians(const Vector<T>& x) noexcept
     {
         return x * (3.14159265358979323846f / 180.0f);
     }
