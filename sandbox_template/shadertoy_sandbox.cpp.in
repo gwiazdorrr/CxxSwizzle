@@ -184,14 +184,8 @@ namespace
     #define CXX_ARRAY(type)             array
     #define CXX_ARRAY_N(type, size)     array<type, size>
 
-#if _MSC_VER
-    // VC's __LINE__ behaviour is different gcc/clang; for macros it seems to be expanded
-    // to the last line the macro's in. 
     #include <swizzle/detail/preprocessor_sub.hpp>
     #define CXXSWIZZLE_LINE_ID(x) CXXSWIZZLE_SUB(__COUNTER__, x)
-#else
-    #define CXXSWIZZLE_LINE_ID(x) __LINE__
-#endif
 
     // C++ rules do not allow any useful deduction (eg. CTAD) for fields and this is impossible to marry
     // with GLSL implicit array size syntax and type narrowing rules. To make array field macro compatible

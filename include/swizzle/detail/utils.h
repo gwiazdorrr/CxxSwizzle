@@ -221,5 +221,27 @@ namespace swizzle
 
         template <typename T, size_t TSize>
         using conditional_array_t = std::conditional_t<(TSize > 1), std::array<T, TSize>, T>;
+
+        template <size_t THeadA, size_t... TTail0, size_t THeadB, size_t... TTail1>
+        constexpr int compare_sequence(std::index_sequence<THeadA, TTail0...> a, std::index_sequence<THeadB, TTail1...> b) 
+        {
+            if constexpr (THeadA != THeadB) 
+            {
+                return THeadA > THeadB ? 1 : -1;
+            }
+
+            if constexpr (sizeof...(TTail0) > 0 && sizeof...(TTail1) > 0) 
+            {
+                return compare_sequence(std::index_sequence<TTail0...>{}, std::index_sequence<TTail1...>{});
+            }
+            else if constexpr (sizeof...(TTail0) == 0 && sizeof...(TTail1) == 0) 
+            {
+                return 0;
+            }
+            else 
+            {
+                return sizeof...(TTail0) > sizeof...(TTail1) ? 1 : -1;
+            }
+        }
     }
 }

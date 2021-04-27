@@ -53,8 +53,10 @@ namespace swizzle
 
             indexed_proxy() = default;
 
+            //! Allow only conversion to lexically preceeding proxy; this is to avoid ambiguity in ternary operators (g++/clang)
             template <size_t... OtherTIndices>
-            indexed_proxy(const indexed_proxy_storage<TData, TScalar, sizeof...(TIndices), OtherTIndices...>& other) {
+            indexed_proxy(const indexed_proxy_storage<TData, TScalar, sizeof...(TIndices), OtherTIndices...>& other,
+                std::enable_if_t<(compare_sequence(std::index_sequence<TIndices...>{}, std::index_sequence<OtherTIndices...>{})<0) > * = nullptr) {
                 assign_impl(other.data, std::index_sequence<OtherTIndices...>{});
             }
 
