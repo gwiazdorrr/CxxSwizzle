@@ -379,8 +379,8 @@ namespace swizzle
         CXXSWIZZLE_FORCE_INLINE friend this_type step(this_arg edge, this_arg x) { return this_type(construct_tag{}, step(edge.at<TIndices>(), x.at<TIndices>())...); }
         CXXSWIZZLE_FORCE_INLINE friend this_type smoothstep(this_arg edge0, this_arg edge1, this_arg x) { return smoothstep_helper(edge0, edge1, x); }
 
-        CXXSWIZZLE_FORCE_INLINE friend bool_type isnan(this_arg x) { return this_type(construct_tag{}, isnan(x.at<TIndices>())...); }
-        CXXSWIZZLE_FORCE_INLINE friend bool_type isinf(this_arg x) { return this_type(construct_tag{}, isinf(x.at<TIndices>())...); }
+        CXXSWIZZLE_FORCE_INLINE friend bool_type isnan(this_arg x) { return bool_type(construct_tag{}, isnan(x.at<TIndices>())...); }
+        CXXSWIZZLE_FORCE_INLINE friend bool_type isinf(this_arg x) { return bool_type(construct_tag{}, isinf(x.at<TIndices>())...); }
 
         //genIType floatBitsToInt(genType value)
         //genUType floatBitsToUint(genType value)

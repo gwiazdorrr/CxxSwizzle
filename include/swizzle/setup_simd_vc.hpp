@@ -198,21 +198,28 @@ namespace Vc_VERSIONED_NAMESPACE
         return result;
     }
 
+    template <typename T, typename F> Vc_INTRINSIC Vector<T> apply(const Vector<T>& x, const Vector<T>& y, F&& f)
+    {
+        Vector<T> r;
+        ::Vc::Common::for_all_vector_entries<x.Size>(
+            [&](size_t i) {
+                r[i] = f(x[i], y[i]);
+            }
+        );
+        return r;
+    }
+
+
     template <typename T>
     inline Vector<T> pow(const Vector<T>& x, const Vector<T>& n) noexcept
     {
-        //! Vc doesn't come with pow function, so we're gonna go
-        //! with the poor man's version of it.
-        Vector<T> result = exp(n * log(x));
-        return max(result, Vector<T>::Zero());
+        return apply(x, n, [](float _x, float _n) { return std::pow(_x, _n); });
     }
 
     template <typename T>
     inline Vector<T> exp2(const Vector<T>& x) noexcept
     {
-        //! Vc doesn't come with pow function, so we're gonna go
-        //! with the poor man's version of it.
-        return exp(2 * log(x));
+        return x.apply([](float _x) { return std::exp2(_x); });
     }
 
     template <typename T>
@@ -224,7 +231,7 @@ namespace Vc_VERSIONED_NAMESPACE
     template <typename T>
     inline Vector<T> inversesqrt(const Vector<T>& x) noexcept
     {
-        return 1 / sqrt(x);
+        return rsqrt(x);
     }
 
     template <typename T>
@@ -253,7 +260,9 @@ namespace Vc_VERSIONED_NAMESPACE
     template <typename T>
     inline Vector<T> tan(const Vector<T>& x) noexcept
     {
-        return sin(x) / cos(x);
+        Vector<T> sn, cs;
+        ::Vc::sincos(x, &sn, &cs);
+        return sn / cs;
     }
 
     //! https://developer.download.nvidia.com/cg/acos.html
