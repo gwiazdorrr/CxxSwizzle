@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.3)
 include(CxxSwizzleSandbox)
 
 macro(create_sample name simd_type)
-	cxxswizzle_create_sandbox("${CMAKE_CURRENT_SOURCE_DIR}/../sandbox_template" "sample_${simd_type}_${name}" "${CMAKE_CURRENT_SOURCE_DIR}/${name}" "${simd_type}" "" "" )
+	cxxswizzle_create_sandbox("${CMAKE_CURRENT_SOURCE_DIR}/../shadertoy-template" "sample_${simd_type}_${name}" "${CMAKE_CURRENT_SOURCE_DIR}/${name}" "${simd_type}" "" "" )
 endmacro()
 
 macro(create_sample_scalar name)
