@@ -2,7 +2,15 @@
 # Copyright (c) 2013-2021, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
 cmake_minimum_required(VERSION 3.3)
 
-macro(_cxxswizzles_find_structs path result_var)
+if (DEFINED CxxSwizzleSandbox)
+    return()
+endif()
+
+set(CxxSwizzleSandbox yes)
+
+set(CXXSWIZZLE_SETUPS "scalar;simd_naive;simd_vc;simd_vc_masked")
+
+macro(_cxxswizzle_find_structs path result_var)
     file(READ ${path} contents)
     string(REGEX MATCHALL "struct[ \t\r\r\n]+[a-zA-Z0-9_]*" structs "${contents}")
 
@@ -33,13 +41,23 @@ macro(_cxxswizzle_emit_structs structs result_var)
     set(${result_var} ${result})
 endmacro()
 
-macro(cxxswizzle_create_sandbox template_dir target_name shadertoy_dir sandbox_type_override custom_structs_override textures_root_override)
+macro(cxxswizzle_prepare_setup setup)
 
     # basic requirements
     find_package(SDL2 CONFIG REQUIRED)
     find_package(SDL2-image CONFIG REQUIRED)
     find_package(nlohmann_json CONFIG REQUIRED)
     find_package(OpenMP)
+
+    if (${setup} STREQUAL "simd_vc" OR ${setup} STREQUAL "simd_vc_with_masking")
+        find_package(Vc CONFIG REQUIRED)
+    endif()
+
+endmacro()
+
+macro(cxxswizzle_create_runner target_name shadertoy_dir setup custom_structs_override textures_root_override)
+
+    set(template_dir "${CMAKE_SOURCE_DIR}/sandbox")
 
     file(GLOB shader_file_list "${shadertoy_dir}/*.frag")
     
@@ -50,32 +68,10 @@ macro(cxxswizzle_create_sandbox template_dir target_name shadertoy_dir sandbox_t
         set(custom_structs ${custom_structs_override})
     endif()
 
-
-    set(sandbox_type ${CXXSWIZZLE_SANDBOX_TYPE})
-    if (NOT "${sandbox_type_override}" STREQUAL "")
-        set(sandbox_type ${sandbox_type_override})
-    endif()
-
     set(textures_root ${CXXSWIZZLE_SANDBOX_TEXTURES_ROOT})
     if (NOT "${textures_root_override}" STREQUAL "")
         set(textures_root ${textures_root_override})
     endif()
-
-
-    # codegen for custom strcuts
-    # set(CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT "")
-    # foreach(STRUCT ${custom_structs})
-    #     set(CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT "${CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT}        struct ${STRUCT};\n")
-    # endforeach()
-    # set(CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT     "${CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT}        struct inout_proxy : builtin_inout_proxy\n")
-    # set(CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT     "${CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT}        {\n")
-    # foreach(STRUCT ${custom_structs})
-    #     set(CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT "${CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT}            using ${STRUCT} = _cxxswizzle_fragment_shader::${STRUCT}&;\n")
-    # endforeach()
-    # set(CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT     "${CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT}        };\n")
-    # foreach(STRUCT ${custom_structs})
-    #     set(CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT "${CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT}        #define ${STRUCT}(...) ${STRUCT} { __VA_ARGS__ } \n")
-    # endforeach()
 
     # find common
     unset(CONFIG_FRAG_COMMON_INCLUDE)
@@ -103,7 +99,7 @@ macro(cxxswizzle_create_sandbox template_dir target_name shadertoy_dir sandbox_t
         get_filename_component(shader_name ${shader_file} NAME_WE)
         string(TOLOWER ${shader_name} shader_name)
         if (shader_name STREQUAL "common")
-            _cxxswizzles_find_structs(${shader_file} common_structs)
+            _cxxswizzle_find_structs(${shader_file} common_structs)
         endif()
     endforeach()
 
@@ -114,7 +110,7 @@ macro(cxxswizzle_create_sandbox template_dir target_name shadertoy_dir sandbox_t
             
         elseif(shader_name IN_LIST valid_shader_names)
 
-            _cxxswizzles_find_structs(${shader_file} structs)
+            _cxxswizzle_find_structs(${shader_file} structs)
             list(APPEND structs ${common_structs})
 
             _cxxswizzle_emit_structs("${structs}" CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT)
@@ -145,7 +141,7 @@ macro(cxxswizzle_create_sandbox template_dir target_name shadertoy_dir sandbox_t
         set(CONFIG_SAMPLE_TEXTURES_ROOT "${textures_root}")
     endif()
 
-    set(CONFIG_SAMPLE_SETUP_INCLUDE "swizzle/setup_${sandbox_type}.hpp")
+    set(CONFIG_SAMPLE_SETUP_INCLUDE "swizzle/setup_${setup}.hpp")
     set(codegen_config_path "${gen_include_dir}/config.hpp")
     configure_file("${template_dir}/config.hpp.in" "${codegen_config_path}")
 
@@ -169,9 +165,7 @@ macro(cxxswizzle_create_sandbox template_dir target_name shadertoy_dir sandbox_t
     set_target_properties(${target_name} PROPERTIES CXX_STANDARD 17)
     set_target_properties(${target_name} PROPERTIES CXX_STANDARD_REQUIRED ON)
 
-    if (${sandbox_type} STREQUAL "simd_vc" OR ${sandbox_type} STREQUAL "simd_vc_with_masking")
-        find_package(Vc CONFIG REQUIRED)
-        # find_package(Vc CONFIG REQUIRED) seems to disable this policy somehow, hence it is enabled here
+    if (${setup} STREQUAL "simd_vc" OR ${setup} STREQUAL "simd_vc_with_masking")
         cmake_policy(SET CMP0057 NEW)
         target_link_libraries(${target_name} PRIVATE Vc::Vc)
     endif()

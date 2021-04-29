@@ -1,0 +1,28 @@
+{
+  "url": "https://www.shadertoy.com/view/WtVfRc",
+  "image": {
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_a",
+      "vflip": "true",
+      "filter": "nearest",
+      "wrap": "repeat"
+    }
+  },
+  "buffer_a": {
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_a",
+      "vflip": "true",
+      "filter": "linear",
+      "wrap": "clamp"
+    }
+  },
+  "common": {
+    "iChannel": {
+      "vflip": "",
+      "filter": "",
+      "wrap": ""
+    }
+  }
+}

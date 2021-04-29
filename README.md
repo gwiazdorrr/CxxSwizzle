@@ -1,12 +1,14 @@
 
+
 # CxxSwizzle
 
 ![Samples](https://github.com/gwiazdorrr/CxxSwizzle/workflows/CI/badge.svg?branch=modernisation)
 
-This project lets you download and run GLSL [Shadertoys](https://www.shadertoy.com/) as C++17 code. Most of the time no modifications are needed, automated trivial fixes push that certainty to 95%.
+This project lets you download and run GLSL [shadertoys](https://www.shadertoy.com/) as C++17 code. Most of the time no code alterations are needed, automated trivial fixes push the odds to over 96%, based on the top 1000 most popular shadertoys.
 
-The code is split into three main parts:
-- Headers that replicate GLSL syntax, types and built-in functions in C++, as completely as humanely possible. This is C++ now:
+![Sample](https://github.com/adam-p/markdown-here/raw/master/src/common/images/icon48.png "CxxSwizzle in Visual Studio 2019")
+The repo is structured in the following way:
+- `include`:  header-only, dependency free headers that replicate GLSL syntax, types and built-in functions in C++, as completely as humanely possible. This is C++ now:
 ```glsl
 vec4 foo(0);                        // 0,0,0,0
 foo.yx = vec2(2, 1);                // 1,2,0,0
@@ -16,6 +18,9 @@ bar = clamp(foo.xw, 0, 2);          // 1,2
 mat2 m(foo.xyz, 1);                 // 1,2,2,1
 bar *= m;                           // 5,2
 ```
+- `shadertoys`:  
+- `samples` :
+- `textures`: texture cache
 - Some very painfully concieved CMake macros that download shaders using Shadertoy API and apply tivial code fixes, if enabled. Uses [json-cmake](https://github.com/sbellus/json-cmake).
 - Template project using `SDL2`, `SDL2-image`, `nlohmann_json` and optionally `OpenMP` and [Vc](https://github.com/VcDevel/Vc) (not to be confused with VC++/MSVC) to bring it all together. `vcpkg` is used to resolve all the dependencies.
 
@@ -24,8 +29,7 @@ There are a handful of shadertoys already included, in the sample directory.
 Projects provide Shadertoy integration and is able to download and compile a complete Shadertoy (shaders & textures), provided its visibility is set to `public+api`. Out of 1000 most popular shaders:
 
 - XX% compiled without any alterations
-- XX% needed minor tweaks
-- XX% were impossible to port
+- 965 compiled and linked successfully after trivial automated changes
 
 
 ## Setup
@@ -64,6 +68,31 @@ Downloading shadertoys takes place in CMake's configure step (not great, not ter
 3. Set `SHADERTOY_DOWNLOAD_MAX_COUNT` to limit how many shaders you want to download.
 4. Click Configure in CMake gui or run ...
 
+## Auto-fixes
+
+If `SHADERTOY_FIX_COMMON_PROBLEMS` is enabled, shaders of a shadertoy are patched according to these rules:
+
+- Replaces `^^` operator with `!=`. Could be replaced with C++'s `^`, but that's not compatible with GLSL.
+- Any global const is replaced with `CXX_CONST` (defined as `static inline constexpr`). 
+- Function forward declaration are wrapped with `CXX_IGNORE`. This is not a C++ issue, but rather a consequence of how shaders get included (in a `struct` scope)
+- Arrays: the biggest headache. There are two alternative ways declaring an array. Initialization syntax is not compatible with C++.  Arrays have `length()` method, which is used surprisingly often. Sadly there seems there's no silver bullet here, if you want the replacement macros to be compatible with the limited preprocessor GLSL uses.
+  - `int [size] foo` -> `CXX_ARRAY_N(int, size) foo`
+  - `int foo[size]` -> `CXX_ARRAY_N(int, size) foo`
+  - global `int [] foo = int[](0, 1, 2, 3)` -> `CXX_ARRAY_FIELD(int, foo)(0, 1, 2, 3)`
+  - global `int foo [] = int[](0, 1, 2, 3)` -> `CXX_ARRAY_FIELD(int, foo)(0, 1, 2, 3)`
+  - `int [] foo` -> `CXX_ARRAY(int) foo`
+  - `int foo[]` -> `CXX_ARRAY(int) foo`
+  - `int[](0, 1, 2, 3)` -> `CXX_MAKE_ARRAY(int)(0, 1, 2, 3)`
+
+Note that all these macros are easily GLSL compatible:
+```glsl
+#define CXX_CONST const
+#define CXX_IGNORE(x) x
+#define CXX_ARRAY_FIELD(type, name) type[] name
+#define CXX_ARRAY(type) type[]
+#define CXX_ARRAY_N(type, size) type[size]
+#define CXX_MAKE_ARRAY(type) type[]
+```
 
 ## GLSL support status
 
