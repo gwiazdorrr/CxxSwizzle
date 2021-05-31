@@ -154,7 +154,7 @@ namespace swizzle
         template <class TProxyData, class TProxyScalar, size_t... TProxyIndices>
         inline explicit vector_(const detail::indexed_proxy_storage<TProxyData, TProxyScalar, num_components, TProxyIndices...>& proxy)
         {
-            ((at_rvalue(TIndices) = proxy.data[TProxyIndices]), ...);
+            ((at_rvalue(TIndices) = scalar_type(proxy.data[TProxyIndices])), ...);
         }
 
         // Block of generic proxy-constructors calling construct member function. Compiler
