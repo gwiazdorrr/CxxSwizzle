@@ -1,4 +1,3 @@
-
 #define FAR_CLIP 1000000.0
 
 ///////////////////////////
@@ -38,48 +37,48 @@ float Hash(float p)
 // Keyboard
 ///////////////////////////
 
-const int KEY_SPACE = 32;
-const int KEY_LEFT  = 37;
-const int KEY_UP    = 38;
-const int KEY_RIGHT = 39;
-const int KEY_DOWN  = 40;
-const int KEY_A     = 65;
-const int KEY_B     = 66;
-const int KEY_C     = 67;
-const int KEY_D     = 68;
-const int KEY_E     = 69;
-const int KEY_F     = 70;
-const int KEY_G     = 71;
-const int KEY_H     = 72;
-const int KEY_I     = 73;
-const int KEY_J     = 74;
-const int KEY_K     = 75;
-const int KEY_L     = 76;
-const int KEY_M     = 77;
-const int KEY_N     = 78;
-const int KEY_O     = 79;
-const int KEY_P     = 80;
-const int KEY_Q     = 81;
-const int KEY_R     = 82;
-const int KEY_S     = 83;
-const int KEY_T     = 84;
-const int KEY_U     = 85;
-const int KEY_V     = 86;
-const int KEY_W     = 87;
-const int KEY_X     = 88;
-const int KEY_Y     = 89;
-const int KEY_Z     = 90;
-const int KEY_COMMA = 188;
-const int KEY_PER   = 190;
+CXX_CONST int KEY_SPACE = 32;
+CXX_CONST int KEY_LEFT  = 37;
+CXX_CONST int KEY_UP    = 38;
+CXX_CONST int KEY_RIGHT = 39;
+CXX_CONST int KEY_DOWN  = 40;
+CXX_CONST int KEY_A     = 65;
+CXX_CONST int KEY_B     = 66;
+CXX_CONST int KEY_C     = 67;
+CXX_CONST int KEY_D     = 68;
+CXX_CONST int KEY_E     = 69;
+CXX_CONST int KEY_F     = 70;
+CXX_CONST int KEY_G     = 71;
+CXX_CONST int KEY_H     = 72;
+CXX_CONST int KEY_I     = 73;
+CXX_CONST int KEY_J     = 74;
+CXX_CONST int KEY_K     = 75;
+CXX_CONST int KEY_L     = 76;
+CXX_CONST int KEY_M     = 77;
+CXX_CONST int KEY_N     = 78;
+CXX_CONST int KEY_O     = 79;
+CXX_CONST int KEY_P     = 80;
+CXX_CONST int KEY_Q     = 81;
+CXX_CONST int KEY_R     = 82;
+CXX_CONST int KEY_S     = 83;
+CXX_CONST int KEY_T     = 84;
+CXX_CONST int KEY_U     = 85;
+CXX_CONST int KEY_V     = 86;
+CXX_CONST int KEY_W     = 87;
+CXX_CONST int KEY_X     = 88;
+CXX_CONST int KEY_Y     = 89;
+CXX_CONST int KEY_Z     = 90;
+CXX_CONST int KEY_COMMA = 188;
+CXX_CONST int KEY_PER   = 190;
 
-const int KEY_1 = 	49;
-const int KEY_2 = 	50;
-const int KEY_3 = 	51;
-const int KEY_ENTER = 13;
-const int KEY_SHIFT = 16;
-const int KEY_CTRL  = 17;
-const int KEY_ALT   = 18;
-const int KEY_TAB	= 9;
+CXX_CONST int KEY_1 = 	49;
+CXX_CONST int KEY_2 = 	50;
+CXX_CONST int KEY_3 = 	51;
+CXX_CONST int KEY_ENTER = 13;
+CXX_CONST int KEY_SHIFT = 16;
+CXX_CONST int KEY_CTRL  = 17;
+CXX_CONST int KEY_ALT   = 18;
+CXX_CONST int KEY_TAB	= 9;
 
 bool Key_IsPressed( sampler2D samp, int key)
 {
@@ -794,4 +793,3 @@ WeaponDef Weapon_GetDef( float fWeaponType, bool bEnemy )
 #define MESSAGE_TIME			19
 #define MESSAGE_SELECT			20
 #define MESSAGE_COUNT			21
-

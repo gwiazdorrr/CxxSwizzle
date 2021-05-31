@@ -209,8 +209,8 @@ float PrintValue(const in vec2 vStringUV, const in float fValue, const in float 
 
 #define DISCARD_BACKGROUND
 
-const float kDepthFadeScale = (1.0 / 3500.0);
-const float kExtraLight = 0.0;
+CXX_CONST float kDepthFadeScale = (1.0 / 3500.0);
+CXX_CONST float kExtraLight = 0.0;
 
 CXX_IGNORE(vec3 SampleTexture( uint iTexture, const in vec2 vUV );)
 
@@ -320,37 +320,37 @@ void DebugValueSprite( vec3 vRayOrigin, vec3 vRayDir, vec3 vPos, vec2 vSpriteDir
 #define SPR_RIGHT(V) vec2((V.x + V.z), V.y)
 #define SPR_ABOVE(V) vec2(V.x, (V.y + V.w))
 
-const vec4 kSpriteNone				= vec4( 0 );
+CXX_CONST vec4 kSpriteNone				= vec4( 0 );
 
-const vec4 kSpriteBarrel			= vec4(	SPR_RIGHT(kSpriteNone),					23,32);
-const vec4 kSpriteBarrelExpl		= vec4(	SPR_RIGHT(kSpriteBarrel),				32,32);
+CXX_CONST vec4 kSpriteBarrel			= vec4(	SPR_RIGHT(kSpriteNone),					23,32);
+CXX_CONST vec4 kSpriteBarrelExpl		= vec4(	SPR_RIGHT(kSpriteBarrel),				32,32);
 
-const vec4 kSpriteFireball			= vec4(	SPR_RIGHT(kSpriteBarrelExpl),			20,20);
-const vec4 kSpriteFireball2			= vec4(	SPR_RIGHT(kSpriteFireball),				24,24);
+CXX_CONST vec4 kSpriteFireball			= vec4(	SPR_RIGHT(kSpriteBarrelExpl),			20,20);
+CXX_CONST vec4 kSpriteFireball2			= vec4(	SPR_RIGHT(kSpriteFireball),				24,24);
 
-const vec4 kSpriteHealthBonus		= vec4(	SPR_RIGHT(kSpriteFireball2),			16,16);
-const vec4 kSpriteArmorBonus		= vec4(	SPR_ABOVE(kSpriteHealthBonus),			16,15);
-const vec4 kSpriteMedikit			= vec4(	SPR_RIGHT(kSpriteHealthBonus),			28,19);
-const vec4 kSpriteStimpack			= vec4(	SPR_RIGHT(kSpriteMedikit),				16,19);
-const vec4 kSpriteBlueArmor			= vec4(	SPR_RIGHT(kSpriteStimpack),				32,24);
-const vec4 kSpriteGreenArmor		= vec4(	SPR_RIGHT(kSpriteBlueArmor),			32,24);
-const vec4 kSpriteShotgun			= vec4(	SPR_RIGHT(kSpriteGreenArmor),			32,16);
+CXX_CONST vec4 kSpriteHealthBonus		= vec4(	SPR_RIGHT(kSpriteFireball2),			16,16);
+CXX_CONST vec4 kSpriteArmorBonus		= vec4(	SPR_ABOVE(kSpriteHealthBonus),			16,15);
+CXX_CONST vec4 kSpriteMedikit			= vec4(	SPR_RIGHT(kSpriteHealthBonus),			28,19);
+CXX_CONST vec4 kSpriteStimpack			= vec4(	SPR_RIGHT(kSpriteMedikit),				16,19);
+CXX_CONST vec4 kSpriteBlueArmor			= vec4(	SPR_RIGHT(kSpriteStimpack),				32,24);
+CXX_CONST vec4 kSpriteGreenArmor		= vec4(	SPR_RIGHT(kSpriteBlueArmor),			32,24);
+CXX_CONST vec4 kSpriteShotgun			= vec4(	SPR_RIGHT(kSpriteGreenArmor),			32,16);
 
-const vec4 kSpriteWallImpact1		= vec4(	SPR_RIGHT(kSpriteShotgun),				6,6);
-const vec4 kSpriteWallSmokeImpact1	= vec4(	SPR_RIGHT(kSpriteWallImpact1),			8,16);
-const vec4 kSpriteFleshImpact1		= vec4(	SPR_RIGHT(kSpriteWallSmokeImpact1),		8,8);
+CXX_CONST vec4 kSpriteWallImpact1		= vec4(	SPR_RIGHT(kSpriteShotgun),				6,6);
+CXX_CONST vec4 kSpriteWallSmokeImpact1	= vec4(	SPR_RIGHT(kSpriteWallImpact1),			8,16);
+CXX_CONST vec4 kSpriteFleshImpact1		= vec4(	SPR_RIGHT(kSpriteWallSmokeImpact1),		8,8);
 
-const vec4 kSpriteBloodyMess		= vec4(	SPR_RIGHT(kSpriteFleshImpact1) + vec2(0,16),		42,16);
-const vec4 kSpriteDeadTrooper 		= vec4(	SPR_RIGHT(kSpriteBloodyMess),			42,16);
-const vec4 kSpriteDeadSergeant 		= vec4(	SPR_RIGHT(kSpriteDeadTrooper),			42,16);
-const vec4 kSpriteDeadImp 			= vec4(	SPR_RIGHT(kSpriteDeadSergeant),			42,16);
+CXX_CONST vec4 kSpriteBloodyMess		= vec4(	SPR_RIGHT(kSpriteFleshImpact1) + vec2(0,16),		42,16);
+CXX_CONST vec4 kSpriteDeadTrooper 		= vec4(	SPR_RIGHT(kSpriteBloodyMess),			42,16);
+CXX_CONST vec4 kSpriteDeadSergeant 		= vec4(	SPR_RIGHT(kSpriteDeadTrooper),			42,16);
+CXX_CONST vec4 kSpriteDeadImp 			= vec4(	SPR_RIGHT(kSpriteDeadSergeant),			42,16);
 
-const vec4 kSpriteBarrelExpl2		= vec4(	480,0,									38,48);
+CXX_CONST vec4 kSpriteBarrelExpl2		= vec4(	480,0,									38,48);
 
-const vec4 kSpriteFloorLamp			= vec4(	480,48,									23,48);
-const vec4 kSpriteTallTechnoPillar	= vec4(	SPR_ABOVE(kSpriteFloorLamp),			38,128);
+CXX_CONST vec4 kSpriteFloorLamp			= vec4(	480,48,									23,48);
+CXX_CONST vec4 kSpriteTallTechnoPillar	= vec4(	SPR_ABOVE(kSpriteFloorLamp),			38,128);
 
-const vec4 kSpriteEnemyBegin = vec4(0, 32., 32, 52);
+CXX_CONST vec4 kSpriteEnemyBegin = vec4(0, 32., 32, 52);
 
 
 #define SPRITE_ENEMY_ACTION_STAND 		0.
@@ -2379,4 +2379,3 @@ vec3 SampleTexture( uint iTexture, const in vec2 _vUV )
 
     return col;
 }
-

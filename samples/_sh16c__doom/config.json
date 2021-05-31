@@ -113,10 +113,6 @@
     }
   },
   "common": {
-    "iChannel": {
-      "vflip": "",
-      "filter": "",
-      "wrap": ""
-    }
+
   }
 }

@@ -489,70 +489,70 @@ vec4 NumFont_Char( vec2 vTexCoord, float fDigit )
 // ----------------- 8< -------------------------- 8< -------------------------- 8< --------------
 // Start of Font code
 
-const ivec3 _SPACE_ = ivec3(0,0,5);
-const ivec3 _EXCLAMATION_ = ivec3(49539,384,4);
-const ivec3 _QUOTE_ = ivec3(2331,0,7);
-const ivec3 _HASH_ = ivec3(167818,1311,7);
-const ivec3 _DOLLAR_ = ivec3(508575,69524,7);
-const ivec3 _PERCENT_ = ivec3(232984,4487,8);
-const ivec3 _AMPERSAND_ = ivec3(249630,8095,8);
-const ivec3 _APOSTROPHE_ = ivec3(259,0,4);
-const ivec3 _L_PAREN_ = ivec3(115614,3847,7);
-const ivec3 _R_PAREN_ = ivec3(462351,1948,7);
-const ivec3 _ASTERISK_ = ivec3(509700,526,7);
-const ivec3 _PLUS_ = ivec3(114944,2,5);
-const ivec3 _COMMA_ = ivec3(0,33152,4);
-const ivec3 _MINUS_ = ivec3(245760,0,6);
-const ivec3 _PERIOD_ = ivec3(0,384,4);
-const ivec3 _SLASH_ = ivec3(232984,391,7);
-const ivec3 _0_ = ivec3(843678,3903,8);
-const ivec3 _1_ = ivec3(99206,774,5);
-const ivec3 _2_ = ivec3(1039935,8067,8);
-const ivec3 _3_ = ivec3(1023007,4024,8);
-const ivec3 _4_ = ivec3(511387,3096,7);
-const ivec3 _5_ = ivec3(508319,3998,7);
-const ivec3 _6_ = ivec3(1033150,7987,8);
-const ivec3 _7_ = ivec3(793663,6192,8);
-const ivec3 _8_ = ivec3(498111,8115,8);
-const ivec3 _9_ = ivec3(1038751,4024,8);
-const ivec3 _COLON_ = ivec3(3,384,4);
-const ivec3 _SEMICOLON_ = ivec3(384,33152,4);
-const ivec3 _LESSTHAN_ = ivec3(98816,66307,5);
-const ivec3 _EQUALS_ = ivec3(114688,896,5);
-const ivec3 _GREATERTHAN_ = ivec3(49280,16774,5);
-const ivec3 _QUESTION_MARK_ = ivec3(925568,114751,8);
-const ivec3 _AT_ = ivec3(1532350,65237,9);
-const ivec3 _A_ = ivec3(1038782,6579,8);
-const ivec3 _B_ = ivec3(515135,8123,8);
-const ivec3 _C_ = ivec3(115646,7943,8);
-const ivec3 _D_ = ivec3(842783,4027,8);
-const ivec3 _E_ = ivec3(1034174,7951,8);
-const ivec3 _F_ = ivec3(508863,387,8);
-const ivec3 _G_ = ivec3(902078,7991,8);
-const ivec3 _H_ = ivec3(1038771,6579,8);
-const ivec3 _I_ = ivec3(49539,387,4);
-const ivec3 _J_ = ivec3(792624,8120,8);
-const ivec3 _K_ = ivec3(249267,6555,8);
-const ivec3 _L_ = ivec3(49539,8071,8);
-const ivec3 _M_ = ivec3(2096099,12779,9);
-const ivec3 _N_ = ivec3(1039287,7615,8);
-const ivec3 _O_ = ivec3(843678,3903,8);
-const ivec3 _P_ = ivec3(1039423,387,8);
-const ivec3 _Q_ = ivec3(843678,790335,8);
-const ivec3 _R_ = ivec3(515135,6587,8);
-const ivec3 _S_ = ivec3(508319,3992,7);
-const ivec3 _T_ = ivec3(198207,1548,8);
-const ivec3 _U_ = ivec3(842163,3903,8);
-const ivec3 _V_ = ivec3(232859,526,7);
-const ivec3 _W_ = ivec3(2094563,15359,9);
-const ivec3 _X_ = ivec3(466807,15294,9);
-const ivec3 _Y_ = ivec3(498099,1548,8);
-const ivec3 _Z_ = ivec3(232991,3975,7);
-const ivec3 _L_SQUARE_BRACKET_ = ivec3(49543,899,5);
-const ivec3 _BACKSLASH_ = ivec3(230275,3100,7);
-const ivec3 _R_SQUARE_BRACKET_ = ivec3(99079,902,5);
-const ivec3 _CARET_ = ivec3(444164,0,7);
-const ivec3 _UNDERSCORE_ = ivec3(0,1032192,8);
+CXX_CONST ivec3 _SPACE_ = ivec3(0,0,5);
+CXX_CONST ivec3 _EXCLAMATION_ = ivec3(49539,384,4);
+CXX_CONST ivec3 _QUOTE_ = ivec3(2331,0,7);
+CXX_CONST ivec3 _HASH_ = ivec3(167818,1311,7);
+CXX_CONST ivec3 _DOLLAR_ = ivec3(508575,69524,7);
+CXX_CONST ivec3 _PERCENT_ = ivec3(232984,4487,8);
+CXX_CONST ivec3 _AMPERSAND_ = ivec3(249630,8095,8);
+CXX_CONST ivec3 _APOSTROPHE_ = ivec3(259,0,4);
+CXX_CONST ivec3 _L_PAREN_ = ivec3(115614,3847,7);
+CXX_CONST ivec3 _R_PAREN_ = ivec3(462351,1948,7);
+CXX_CONST ivec3 _ASTERISK_ = ivec3(509700,526,7);
+CXX_CONST ivec3 _PLUS_ = ivec3(114944,2,5);
+CXX_CONST ivec3 _COMMA_ = ivec3(0,33152,4);
+CXX_CONST ivec3 _MINUS_ = ivec3(245760,0,6);
+CXX_CONST ivec3 _PERIOD_ = ivec3(0,384,4);
+CXX_CONST ivec3 _SLASH_ = ivec3(232984,391,7);
+CXX_CONST ivec3 _0_ = ivec3(843678,3903,8);
+CXX_CONST ivec3 _1_ = ivec3(99206,774,5);
+CXX_CONST ivec3 _2_ = ivec3(1039935,8067,8);
+CXX_CONST ivec3 _3_ = ivec3(1023007,4024,8);
+CXX_CONST ivec3 _4_ = ivec3(511387,3096,7);
+CXX_CONST ivec3 _5_ = ivec3(508319,3998,7);
+CXX_CONST ivec3 _6_ = ivec3(1033150,7987,8);
+CXX_CONST ivec3 _7_ = ivec3(793663,6192,8);
+CXX_CONST ivec3 _8_ = ivec3(498111,8115,8);
+CXX_CONST ivec3 _9_ = ivec3(1038751,4024,8);
+CXX_CONST ivec3 _COLON_ = ivec3(3,384,4);
+CXX_CONST ivec3 _SEMICOLON_ = ivec3(384,33152,4);
+CXX_CONST ivec3 _LESSTHAN_ = ivec3(98816,66307,5);
+CXX_CONST ivec3 _EQUALS_ = ivec3(114688,896,5);
+CXX_CONST ivec3 _GREATERTHAN_ = ivec3(49280,16774,5);
+CXX_CONST ivec3 _QUESTION_MARK_ = ivec3(925568,114751,8);
+CXX_CONST ivec3 _AT_ = ivec3(1532350,65237,9);
+CXX_CONST ivec3 _A_ = ivec3(1038782,6579,8);
+CXX_CONST ivec3 _B_ = ivec3(515135,8123,8);
+CXX_CONST ivec3 _C_ = ivec3(115646,7943,8);
+CXX_CONST ivec3 _D_ = ivec3(842783,4027,8);
+CXX_CONST ivec3 _E_ = ivec3(1034174,7951,8);
+CXX_CONST ivec3 _F_ = ivec3(508863,387,8);
+CXX_CONST ivec3 _G_ = ivec3(902078,7991,8);
+CXX_CONST ivec3 _H_ = ivec3(1038771,6579,8);
+CXX_CONST ivec3 _I_ = ivec3(49539,387,4);
+CXX_CONST ivec3 _J_ = ivec3(792624,8120,8);
+CXX_CONST ivec3 _K_ = ivec3(249267,6555,8);
+CXX_CONST ivec3 _L_ = ivec3(49539,8071,8);
+CXX_CONST ivec3 _M_ = ivec3(2096099,12779,9);
+CXX_CONST ivec3 _N_ = ivec3(1039287,7615,8);
+CXX_CONST ivec3 _O_ = ivec3(843678,3903,8);
+CXX_CONST ivec3 _P_ = ivec3(1039423,387,8);
+CXX_CONST ivec3 _Q_ = ivec3(843678,790335,8);
+CXX_CONST ivec3 _R_ = ivec3(515135,6587,8);
+CXX_CONST ivec3 _S_ = ivec3(508319,3992,7);
+CXX_CONST ivec3 _T_ = ivec3(198207,1548,8);
+CXX_CONST ivec3 _U_ = ivec3(842163,3903,8);
+CXX_CONST ivec3 _V_ = ivec3(232859,526,7);
+CXX_CONST ivec3 _W_ = ivec3(2094563,15359,9);
+CXX_CONST ivec3 _X_ = ivec3(466807,15294,9);
+CXX_CONST ivec3 _Y_ = ivec3(498099,1548,8);
+CXX_CONST ivec3 _Z_ = ivec3(232991,3975,7);
+CXX_CONST ivec3 _L_SQUARE_BRACKET_ = ivec3(49543,899,5);
+CXX_CONST ivec3 _BACKSLASH_ = ivec3(230275,3100,7);
+CXX_CONST ivec3 _R_SQUARE_BRACKET_ = ivec3(99079,902,5);
+CXX_CONST ivec3 _CARET_ = ivec3(444164,0,7);
+CXX_CONST ivec3 _UNDERSCORE_ = ivec3(0,1032192,8);
 
 float Font_DecodeBitmap( vec2 vCoord, ivec3 vCharacter )
 {
@@ -1072,7 +1072,7 @@ vec4 GetGridData( sampler2D mapSampler, vec2 vGridCellWorldMin, vec2 vGridCellWo
     MapInfo mapInfo = ReadMapInfo( mapSampler );
     
     int sectorCount = 0;
-    int gridSectors[8];
+    CXX_ARRAY_N(int, 8) gridSectors;
         
 	gridSectors[0] = -1;
     gridSectors[1] = -1;
@@ -1256,7 +1256,7 @@ vec4 GetGridData( sampler2D mapSampler, vec2 vGridCellWorldMin, vec2 vGridCellWo
 
 		const DataMap map = DataMap(
 			88,
-			CXX_MAKE_ARRAY(DataSector)(
+			CXX_MAKE_ARRAY(DataSector)( 
 				// Sector Data 0
 				DataSector( 1.000, -80, 216, TEX_NUKAGE3, TEX_F_SKY1, 0, 8 ),
 				// Sector Data 1
@@ -1434,7 +1434,7 @@ vec4 GetGridData( sampler2D mapSampler, vec2 vGridCellWorldMin, vec2 vGridCellWo
 				// Sector Data 87
 				DataSector( 0.502, 104, 184, TEX_FLOOR4_8, TEX_FLOOR6_2, 660, 6 )
 			),
-			CXX_MAKE_ARRAY(DataSideDefPacked) (
+			CXX_MAKE_ARRAY(DataSideDefPacked)( 
 				DATA_SIDE_DEF( 1520, -3168, 1672, -3104, 164, 1, 0.000, PACK_DATA(TEX_BROWN144, TEX_X, TEX_X, 1u) ),
 				DATA_SIDE_DEF( 1672, -3104, 1896, -3104, 224, 1, -0.063, PACK_DATA(TEX_BROWN144, TEX_X, TEX_X, 1u) ),
 				DATA_SIDE_DEF( 1896, -3104, 2040, -3144, 149, 1, 0.000, PACK_DATA(TEX_BROWN144, TEX_X, TEX_X, 1u) ),
@@ -2102,7 +2102,7 @@ vec4 GetGridData( sampler2D mapSampler, vec2 vGridCellWorldMin, vec2 vGridCellWo
 				DATA_SIDE_DEF( 3584, -3904, 3536, -3904, 48, -1, -0.063, PACK_DATA(TEX_X, TEX_BROWNGRN, TEX_X, 2u) ),
 				DATA_SIDE_DEF( 3536, -3904, 3520, -3904, 16, -1, -0.063, PACK_DATA(TEX_X, TEX_SUPPORT2, TEX_X, 2u) )
 			),
-			CXX_MAKE_ARRAY(DataEntity) (
+			CXX_MAKE_ARRAY(DataEntity)( 
 				DataEntity( ivec2( 1056, -3616 ), ENTITY_TYPE_PLAYER, 0, 90, 7, ivec2( 0, 0 ) ),
 				DataEntity( ivec2( 1545, -2483 ), ENTITY_TYPE_DOOR, 0, 0, 7, ivec2( 0, 0 ) ),
 				DataEntity( ivec2( 2926, -3830 ), ENTITY_TYPE_DOOR, 0, 0, 7, ivec2( 0, 0 ) ),

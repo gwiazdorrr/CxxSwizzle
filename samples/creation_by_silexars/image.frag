@@ -7,7 +7,7 @@
 void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 	vec3 c;
 	float l,z=t;
-	for(int i=0;i<3;i++) {
+	for(CXX_SCALAR int i=0;i<3;i++) {
 		vec2 uv,p=fragCoord.xy/r;
 		uv=p;
 		p-=.5;

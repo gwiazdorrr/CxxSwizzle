@@ -1,0 +1,65 @@
+{
+  "url": "https://www.shadertoy.com/view/WlVyRV",
+  "image": {
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_a",
+      "vflip": "true",
+      "filter": "linear",
+      "wrap": "clamp"
+    }
+  },
+  "buffer_a": {
+    "iChannel1": {
+      "type": "buffer",
+      "src":  "buffer_a",
+      "vflip": "true",
+      "filter": "linear",
+      "wrap": "clamp"
+    },
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_d",
+      "vflip": "true",
+      "filter": "linear",
+      "wrap": "clamp"
+    }
+  },
+  "buffer_b": {
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_a",
+      "vflip": "true",
+      "filter": "linear",
+      "wrap": "clamp"
+    }
+  },
+  "buffer_c": {
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_b",
+      "vflip": "true",
+      "filter": "linear",
+      "wrap": "clamp"
+    },
+    "iChannel1": {
+      "type": "buffer",
+      "src":  "buffer_d",
+      "vflip": "true",
+      "filter": "linear",
+      "wrap": "clamp"
+    }
+  },
+  "common": {
+
+  },
+  "buffer_d": {
+    "iChannel0": {
+      "type": "buffer",
+      "src":  "buffer_c",
+      "vflip": "true",
+      "filter": "linear",
+      "wrap": "clamp"
+    }
+  }
+}
