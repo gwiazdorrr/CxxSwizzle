@@ -144,13 +144,14 @@ namespace swizzle
 
         uint16_v srgba = srg.interleaveLow(sba);
         auto data = srgba.data();
-
-#if Vc_IMPL_AVX 
+#if Vc_IMPL_AVX2 
+        static_assert(uint16_v::Size == 16);
         SSE::uint_v(AVX::lo128(data)).store(reinterpret_cast<uint16_t*>(ptr));
         SSE::uint_v(AVX::hi128(data)).store(reinterpret_cast<uint16_t*>(ptr + pitch));
         return ptr + 16;
 #else
-        auto i1 = _mm_extract_epi64(data, 0);;
+        static_assert(uint16_v::Size == 8);
+        auto i1 = _mm_extract_epi64(data, 0);
         auto i2 = _mm_extract_epi64(data, 1);
         *reinterpret_cast<::int64_t*>(ptr) = i1;
         *reinterpret_cast<::int64_t*>(ptr + pitch) = i2;
@@ -350,6 +351,8 @@ namespace swizzle
         template <> struct scalar_type_align<uint_type>  : std::integral_constant<size_t, ::Vc::VectorAlignment> {};
         template <> struct scalar_type_align<bool_type>  : std::integral_constant<size_t, ::Vc::VectorAlignment> {};
 
+        static_assert(::Vc::float_v::Size == ::Vc::int_v::Size);
+        static_assert(::Vc::float_v::Size == ::Vc::uint_v::Size);
         struct scalar_types_info : scalar_types_info_builder<float_type, int_type, uint_type, bool_type, ::Vc::float_v::Size, float_type::size> {};
     }
 }
