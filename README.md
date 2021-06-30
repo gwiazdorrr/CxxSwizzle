@@ -3,7 +3,7 @@ CxxSwizzle
 
 2015.02.17 Update: The library now comes with SIMD support. More info soon.
 
-CxxSwizzle (a reality-friendly way of writing down "C++ Swizzle") is a header-only, dependency free extensible library bringing shader languages' (GLSL, HSLS) vector "swizzle" syntax into C++. Basically, you can do this in C++ now:
+CxxSwizzle (a reality-friendly way of writing down "C++ Swizzle") is a header-only, dependency free extensible library bringing shader languages' (GLSL, HLSL) vector "swizzle" syntax into C++. Basically, you can do this in C++ now:
 
     vec4 foo(0);                        // 0,0,0,0
     foo.yx = vec2(2, 1);                // 1,2,0,0
