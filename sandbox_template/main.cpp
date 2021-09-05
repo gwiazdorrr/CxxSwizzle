@@ -1161,6 +1161,7 @@ int main(int argc, char* argv[])
 
             std::future<shadertoy_renderer::stats> render_task = render_async();
 
+
             bool paused = false;
             SDL_SetWindowMinimumSize(window.get(), status_bar_height * 2, status_bar_height * 2);
             for (auto update_begin = chrono::steady_clock::now();;)
@@ -1207,13 +1208,22 @@ int main(int argc, char* argv[])
                     }
 
                     case SDL_MOUSEMOTION:
-                        mouse.motion(event.button.x, event.button.y);
+                        if (!io.WantCaptureMouse)
+                        {
+                            mouse.motion(event.button.x, event.button.y);
+                        }
                         break;
                     case SDL_MOUSEBUTTONDOWN:
-                        mouse.button_down(event.button.x, event.button.y);
+                        if (!io.WantCaptureMouse)
+                        {
+                            mouse.button_down(event.button.x, event.button.y);
+                        }
                         break;
                     case SDL_MOUSEBUTTONUP:
-                        mouse.button_up(event.button.x, event.button.y);
+                        if (!io.WantCaptureMouse)
+                        {
+                            mouse.button_up(event.button.x, event.button.y);
+                        }
                         break;
 
                     default:
@@ -1372,6 +1382,7 @@ int main(int argc, char* argv[])
                         ImGui::SameLine();
                         ImGui::ProgressBar(progress.num_pixels / static_cast<double>(render_targets.width * render_targets.height * render_targets.num_passes), ImVec2(30.0f, button_size.y), "");
                     }
+
                     ImGui::End();
                     ImGui::PopStyleColor();
                     ImGui::PopStyleVar(2);
