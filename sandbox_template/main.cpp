@@ -825,7 +825,7 @@ struct cmdline_options
 {
     int resolution_x = 512;
     int resolution_y = 288;
-    int output_frames = 0;
+    int output_frames = 1;
 
     float time = 0.0f;
     std::optional<float> time_delta = std::nullopt;
