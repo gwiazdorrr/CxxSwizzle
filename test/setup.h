@@ -47,6 +47,7 @@ typedef swizzle::matrix<double, 2, 4> dmat2x4;
 
 #include <array>
 #include <limits>
+#include <algorithm>
 
 inline bool are_close(float a, float b)
 {
