@@ -42,7 +42,6 @@ if (BUILD_SAMPLES_SIMD)
 	cxxswizzle_prepare_setup("simd_vc")
 	create_sample_simd_vc("creation_by_silexars")
 	create_sample_simd_vc("seascape")
-	create_sample_simd_vc("_sh16c__doom")
 	create_sample_simd_vc("dry_ice_2")
 
 	cxxswizzle_prepare_setup("simd_vc_masked")
