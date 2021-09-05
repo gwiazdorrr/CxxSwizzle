@@ -1,3 +1,4 @@
+// CxxSwizzle (c) 2013-2021 Piotr Gwiazdowski
 #include "config.hpp"
 
 #include <swizzle/vector.hpp>

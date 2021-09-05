@@ -1,3 +1,5 @@
+// CxxSwizzle (c) 2013-2021 Piotr Gwiazdowski
+
 // unary
 
 CXXSWIZZLE_FORCE_INLINE this_type& operator=(this_arg other)&

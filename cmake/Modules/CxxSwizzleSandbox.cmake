@@ -1,5 +1,4 @@
-# CxxSwizzle
-# Copyright (c) 2013-2021, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
+# CxxSwizzle (c) 2013-2021 Piotr Gwiazdowski
 cmake_minimum_required(VERSION 3.3)
 
 if (DEFINED CxxSwizzleSandbox)

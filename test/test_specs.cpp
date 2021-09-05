@@ -1,5 +1,4 @@
-// CxxSwizzle
-// Copyright (c) 2013, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
+// CxxSwizzle (c) 2013-2021 Piotr Gwiazdowski
 
 #include <gtest/gtest.h>
 

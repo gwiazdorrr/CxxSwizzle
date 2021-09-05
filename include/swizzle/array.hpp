@@ -1,5 +1,4 @@
-// CxxSwizzle
-// Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
+// CxxSwizzle (c) 2013-2021 Piotr Gwiazdowski
 #pragma once
 
 #include <cstdint>

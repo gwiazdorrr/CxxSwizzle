@@ -1,3 +1,4 @@
+// CxxSwizzle (c) 2013-2021 Piotr Gwiazdowski
 #cmakedefine CONFIG_SAMPLE_HAS_BUFFER_A
 #cmakedefine CONFIG_SAMPLE_HAS_BUFFER_B
 #cmakedefine CONFIG_SAMPLE_HAS_BUFFER_C

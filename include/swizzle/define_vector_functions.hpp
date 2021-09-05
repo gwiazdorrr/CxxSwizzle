@@ -1,5 +1,4 @@
-﻿// CxxSwizzle
-// Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
+﻿// CxxSwizzle (c) 2013-2021 Piotr Gwiazdowski
 //
 // This header contains functions that are proxies to vector static functions. Vector
 // type common for all the arguments is chosen based on ::swizzle::detail::get_vector_type,
