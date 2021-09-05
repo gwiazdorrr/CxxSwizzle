@@ -48,6 +48,7 @@ macro(cxxswizzle_prepare_setup setup)
     find_package(SDL2-image CONFIG REQUIRED)
     find_package(nlohmann_json CONFIG REQUIRED)
     find_package(OpenMP)
+    find_package(imgui CONFIG REQUIRED)
 
     if (${setup} STREQUAL "simd_vc" OR ${setup} STREQUAL "simd_vc_with_masking")
         find_package(Vc CONFIG REQUIRED)
@@ -138,6 +139,13 @@ macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root_ove
 
     set(CONFIG_SAMPLE_SETUP_INCLUDE "swizzle/setup_${setup}.hpp")
     set(codegen_config_path "${gen_include_dir}/config.hpp")
+
+    if(MSVC)
+        set(CONFIG_CALLING_CONVENTION __vectorcall)
+    else()
+        unset(CONFIG_CALLING_CONVENTION)
+    endif()
+
     configure_file("${template_dir}/config.hpp.in" "${codegen_config_path}")
 
     list(APPEND codegen_file_list ${codegen_config_path})
@@ -146,7 +154,8 @@ macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root_ove
                          "${template_dir}/shadertoy_sandbox.hpp"
                          "${template_dir}/shadertoy_sandbox.cpp.in" 
                          "${template_dir}/config.hpp.in"
-                         "${template_dir}/cxxswizzle.natvis")
+                         "${template_dir}/cxxswizzle.natvis"
+                         "${CMAKE_SOURCE_DIR}/imgui_sdl/imgui_sdl.cpp")
 
 
     source_group("" FILES ${shader_file_list} ${config_json_path})
@@ -155,8 +164,8 @@ macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root_ove
 
     add_executable(${target_name} ${shared_file_list} ${codegen_file_list} ${shader_file_list} ${config_json_path})
     
-    target_include_directories(${target_name} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include ${gen_include_dir} ${template_dir} ${shadertoy_dir})
-    target_link_libraries(${target_name} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image nlohmann_json::nlohmann_json)
+    target_include_directories(${target_name} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include ${gen_include_dir} ${template_dir} ${shadertoy_dir} "${CMAKE_SOURCE_DIR}/imgui_sdl")
+    target_link_libraries(${target_name} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image nlohmann_json::nlohmann_json imgui::imgui)
     set_target_properties(${target_name} PROPERTIES CXX_STANDARD 17)
     set_target_properties(${target_name} PROPERTIES CXX_STANDARD_REQUIRED ON)
 
@@ -183,9 +192,12 @@ macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root_ove
         # fast math, _vectorcall
         # the resons permissive can't be disabled in MSVC, because there's no way to disable mnemonics then
         target_compile_options(${target_name} PRIVATE "/fp:fast"
-                                                      "/Gv"
                                                       "-D_ENABLE_EXTENDED_ALIGNED_STORAGE"
-                                                      "-D_CRT_SECURE_NO_WARNINGS")
+                                                      "-D_CRT_SECURE_NO_WARNINGS"
+                                                      "-DCXXSWIZZLE_CDECL=__cdecl")
+
+        set_source_files_properties(${codegen_file_list} PROPERTIES COMPILE_FLAGS "/Gv")
+
     endif()
 
     if (NOT ${CXXSWIZZLE_SANDBOX_TRACY_PROFILER_ROOT} STREQUAL "")

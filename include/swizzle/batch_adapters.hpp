@@ -134,6 +134,24 @@ namespace swizzle
         {
             (batch_store_aligned(at<TIndices>(), ptr + TIndices * sizeof(data_type) / sizeof(primitive_type)), ...);
         }
+
+    public:
+        friend std::ostream& operator<<(std::ostream& os, const batch_base& other)
+        {
+            if constexpr (sizeof...(TIndices) == 1) 
+            {
+                os <<  other.at<0>();
+            }
+            else 
+            {
+                os << "{";
+                ((os << (TIndices == 0 ? "" : ", ") << other.at<TIndices>()), ...);
+                os << "}";
+            }
+            
+            return os;
+        }
+
     };
 
 

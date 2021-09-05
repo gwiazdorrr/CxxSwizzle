@@ -322,6 +322,25 @@ namespace Vc_VERSIONED_NAMESPACE
 #endif
         return high - low;
     }
+
+
+
+
+
+    template <typename T>
+    std::ostream& operator<<(std::ostream& os, const Vector<T>& v)
+    {
+        alignas(v.MemoryAlignment) typename Vector<T>::EntryType entries[v.Size];
+        v.store(entries);
+        os << "{";
+        os << entries[0];
+        for (int i = 1; i < v.Size; ++i)
+        {
+            os << ", " << entries[i];
+        }
+        os << "}";
+        return os;
+    }
 }
 
 

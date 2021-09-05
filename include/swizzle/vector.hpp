@@ -859,7 +859,7 @@ namespace swizzle
         //! As an inline friend function, because thanks to that all convertibles will use same function.
         friend std::ostream& operator<<(std::ostream& os, this_type_arg vec)
         {
-            vec.visit_index([&](size_t i) -> void { os << vec[i] << (i == num_components - 1 ? "" : ","); });
+            vec.visit_index([&](size_t i) -> void { os << vec[i] << (i == num_components - 1 ? "" : ", "); });
             return os;
         }
 
