@@ -3,18 +3,6 @@
 
 using namespace swizzle;
 
-/*
-namespace shadertoy
-{
-    vec4 @CONFIG_FRAG_NAME@_impl(const shader_inputs& uniforms, vec2 fragCoord, vec4 prevFragColor, bool_type* discarded);
-
-    static bool init = []() 
-    {
-        @CONFIG_FRAG_NAME@ = @CONFIG_FRAG_NAME@_impl;
-        return true;
-    }();
-}*/
-
 namespace
 { 
     #define CXXSWIZZLE_MASK_FUNCTION_NAMES
