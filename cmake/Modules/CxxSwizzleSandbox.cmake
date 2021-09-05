@@ -165,8 +165,7 @@ macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root_ove
     if (${setup} STREQUAL "simd_vc" OR ${setup} STREQUAL "simd_vc_masked")
         cmake_policy(SET CMP0057 NEW)
         target_link_libraries(${target_name} PRIVATE Vc::Vc)
-        # Vc needs an extra hint
-        target_compile_options(${target_name} PRIVATE "-DVc_IMPL=${Vc_IMPL}")
+        target_compile_options(${target_name} PRIVATE "${Vc_DEFINITIONS}")
     endif()
 
     if (OPENMP_FOUND)
