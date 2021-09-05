@@ -3,7 +3,7 @@
 #pragma once
 
 #include <array>
-#include <swizzle/detail/indexed_proxy.hpp>
+#include <swizzle/detail/indexed_swizzle.hpp>
 #include <swizzle/detail/vector_storage.hpp>
 #include <swizzle/detail/vector_traits.h>
 #include <swizzle/detail/fwd.hpp>
@@ -21,7 +21,7 @@ namespace swizzle
             template <size_t... TIndices>
             struct proxy_generator
             {
-                typedef swizzle::detail::indexed_proxy< vector<TScalar, sizeof...(TIndices)>, data_type, TScalar, TIndices...> type;
+                typedef swizzle::detail::indexed_swizzle< vector<TScalar, sizeof...(TIndices)>, data_type, TScalar, TIndices...> type;
             };
 
             template <size_t TIndex>

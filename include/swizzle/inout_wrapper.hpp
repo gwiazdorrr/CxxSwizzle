@@ -5,7 +5,7 @@
 #include <type_traits>
 #include <swizzle/detail/utils.h>
 #include <swizzle/detail/vector_traits.h>
-#include <swizzle/detail/indexed_proxy.hpp>
+#include <swizzle/detail/indexed_swizzle.hpp>
 
 namespace swizzle
 {
@@ -27,7 +27,7 @@ namespace swizzle
         }
 
         template <typename TSomeVector, typename TSomeData, typename TSomeScalar, size_t... TIndices>
-        inout_wrapper(detail::indexed_proxy<TSomeVector, TSomeData, TSomeScalar, TIndices...>& value,
+        inout_wrapper(detail::indexed_swizzle<TSomeVector, TSomeData, TSomeScalar, TIndices...>& value,
             std::enable_if_t<sizeof...(TIndices) == vector_type::num_components && std::is_same_v<TSomeScalar, typename vector_type::scalar_type>, bool> = false)
             : vector_type(value.decay())
         {
@@ -61,7 +61,7 @@ namespace swizzle
         }
 
         template <typename TSomeData, size_t... TIndices>
-        this_type& operator=(const detail::indexed_proxy_storage<TSomeData, typename vector_type::scalar_type, vector_type::num_components, TIndices...>& other)
+        this_type& operator=(const detail::indexed_swizzle_storage<TSomeData, typename vector_type::scalar_type, vector_type::num_components, TIndices...>& other)
         {
             vector_type::operator=(vector_type(other));
             return *this;

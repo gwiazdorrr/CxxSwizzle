@@ -1,5 +1,4 @@
-// CxxSwizzle
-// Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
+// CxxSwizzle (c) 2013-2021 Piotr Gwiazdowski
 #pragma once
 
 #include <type_traits>
@@ -13,11 +12,11 @@ namespace swizzle
         struct nested_swizzles_not_supported_t {};
 
         template <size_t TSize>
-        struct indexed_proxy_swizzles;
+        struct indexed_swizzle_swizzles;
 
 
         template <>
-        struct indexed_proxy_swizzles<1>
+        struct indexed_swizzle_swizzles<1>
         {
             using xx   = nested_swizzles_not_supported_t;
             using xxx  = nested_swizzles_not_supported_t;
@@ -25,7 +24,7 @@ namespace swizzle
         };
 
         template <>
-        struct indexed_proxy_swizzles<2>
+        struct indexed_swizzle_swizzles<2>
         {
             using xx   = nested_swizzles_not_supported_t;
             using xy   = nested_swizzles_not_supported_t;
@@ -58,7 +57,7 @@ namespace swizzle
         };
 
         template <>
-        struct indexed_proxy_swizzles<3>
+        struct indexed_swizzle_swizzles<3>
         {
             using xx   = nested_swizzles_not_supported_t;
             using xy   = nested_swizzles_not_supported_t;
@@ -180,7 +179,7 @@ namespace swizzle
         };
 
         template <>
-        struct indexed_proxy_swizzles<4>
+        struct indexed_swizzle_swizzles<4>
         {
             using xx   = nested_swizzles_not_supported_t;
             using xy   = nested_swizzles_not_supported_t;

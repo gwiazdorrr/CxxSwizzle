@@ -1,11 +1,10 @@
-// CxxSwizzle
-// Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
+// CxxSwizzle (c) 2013-2021 Piotr Gwiazdowski
 #pragma once
 
 #include <type_traits>
 #include <swizzle/detail/utils.h>
 #include <swizzle/detail/vector_traits.h>
-#include <swizzle/detail/indexed_proxy_swizzles.hpp>
+#include <swizzle/detail/indexed_swizzle_swizzles.hpp>
 
 
 #define CXXSWIZZLE_STORAGE_INDEXER_1 \
@@ -60,11 +59,12 @@ namespace swizzle
     namespace detail
     {
         template <typename TData, typename TScalar, size_t TSize, size_t... TIndices>
-        struct indexed_proxy_storage;
+        struct indexed_swizzle_storage;
 
+        // thanks C++ for not supporting zero-sized arrays...
 
         template< typename TData, typename TScalar>
-        struct indexed_proxy_storage<TData, TScalar, 1, 0> : indexed_proxy_swizzles<1>
+        struct indexed_swizzle_storage<TData, TScalar, 1, 0> : indexed_swizzle_swizzles<1>
         {
             union
             {
@@ -75,7 +75,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI0>
-        struct indexed_proxy_storage<TData, TScalar, 1, TI0> : indexed_proxy_swizzles<1>
+        struct indexed_swizzle_storage<TData, TScalar, 1, TI0> : indexed_swizzle_swizzles<1>
         {
             union
             {
@@ -86,7 +86,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar>
-        struct indexed_proxy_storage<TData, TScalar, 2, 0, 0> : indexed_proxy_swizzles<2>
+        struct indexed_swizzle_storage<TData, TScalar, 2, 0, 0> : indexed_swizzle_swizzles<2>
         {
             union
             {
@@ -98,7 +98,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI1>
-        struct indexed_proxy_storage<TData, TScalar, 2, 0, TI1> : indexed_proxy_swizzles<2>
+        struct indexed_swizzle_storage<TData, TScalar, 2, 0, TI1> : indexed_swizzle_swizzles<2>
         {
             union
             {
@@ -110,7 +110,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI0>
-        struct indexed_proxy_storage<TData, TScalar, 2, TI0, 0> : indexed_proxy_swizzles<2>
+        struct indexed_swizzle_storage<TData, TScalar, 2, TI0, 0> : indexed_swizzle_swizzles<2>
         {
             union
             {
@@ -122,7 +122,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI0, size_t TI1>
-        struct indexed_proxy_storage<TData, TScalar, 2, TI0, TI1> : indexed_proxy_swizzles<2>
+        struct indexed_swizzle_storage<TData, TScalar, 2, TI0, TI1> : indexed_swizzle_swizzles<2>
         {
             union
             {
@@ -134,7 +134,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar>
-        struct indexed_proxy_storage<TData, TScalar, 3, 0, 0, 0> : indexed_proxy_swizzles<3>
+        struct indexed_swizzle_storage<TData, TScalar, 3, 0, 0, 0> : indexed_swizzle_swizzles<3>
         {
             union
             {
@@ -147,7 +147,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI2>
-        struct indexed_proxy_storage<TData, TScalar, 3, 0, 0, TI2> : indexed_proxy_swizzles<3>
+        struct indexed_swizzle_storage<TData, TScalar, 3, 0, 0, TI2> : indexed_swizzle_swizzles<3>
         {
             union
             {
@@ -160,7 +160,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI1>
-        struct indexed_proxy_storage<TData, TScalar, 3, 0, TI1, 0> : indexed_proxy_swizzles<3>
+        struct indexed_swizzle_storage<TData, TScalar, 3, 0, TI1, 0> : indexed_swizzle_swizzles<3>
         {
             union
             {
@@ -173,7 +173,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI1, size_t TI2>
-        struct indexed_proxy_storage<TData, TScalar, 3, 0, TI1, TI2> : indexed_proxy_swizzles<3>
+        struct indexed_swizzle_storage<TData, TScalar, 3, 0, TI1, TI2> : indexed_swizzle_swizzles<3>
         {
             union
             {
@@ -186,7 +186,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI0>
-        struct indexed_proxy_storage<TData, TScalar, 3, TI0, 0, 0> : indexed_proxy_swizzles<3>
+        struct indexed_swizzle_storage<TData, TScalar, 3, TI0, 0, 0> : indexed_swizzle_swizzles<3>
         {
             union
             {
@@ -199,7 +199,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI0, size_t TI2>
-        struct indexed_proxy_storage<TData, TScalar, 3, TI0, 0, TI2> : indexed_proxy_swizzles<3>
+        struct indexed_swizzle_storage<TData, TScalar, 3, TI0, 0, TI2> : indexed_swizzle_swizzles<3>
         {
             union
             {
@@ -212,7 +212,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI0, size_t TI1>
-        struct indexed_proxy_storage<TData, TScalar, 3, TI0, TI1, 0> : indexed_proxy_swizzles<3>
+        struct indexed_swizzle_storage<TData, TScalar, 3, TI0, TI1, 0> : indexed_swizzle_swizzles<3>
         {
             union
             {
@@ -225,7 +225,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI0, size_t TI1, size_t TI2>
-        struct indexed_proxy_storage<TData, TScalar, 3, TI0, TI1, TI2> : indexed_proxy_swizzles<3>
+        struct indexed_swizzle_storage<TData, TScalar, 3, TI0, TI1, TI2> : indexed_swizzle_swizzles<3>
         {
             union
             {
@@ -238,7 +238,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar>
-        struct indexed_proxy_storage<TData, TScalar, 4, 0, 0, 0, 0> : indexed_proxy_swizzles<4>
+        struct indexed_swizzle_storage<TData, TScalar, 4, 0, 0, 0, 0> : indexed_swizzle_swizzles<4>
         {
             union
             {
@@ -252,7 +252,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI3>
-        struct indexed_proxy_storage<TData, TScalar, 4, 0, 0, 0, TI3> : indexed_proxy_swizzles<4>
+        struct indexed_swizzle_storage<TData, TScalar, 4, 0, 0, 0, TI3> : indexed_swizzle_swizzles<4>
         {
             union
             {
@@ -266,7 +266,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI2>
-        struct indexed_proxy_storage<TData, TScalar, 4, 0, 0, TI2, 0> : indexed_proxy_swizzles<4>
+        struct indexed_swizzle_storage<TData, TScalar, 4, 0, 0, TI2, 0> : indexed_swizzle_swizzles<4>
         {
             union
             {
@@ -280,7 +280,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI2, size_t TI3>
-        struct indexed_proxy_storage<TData, TScalar, 4, 0, 0, TI2, TI3> : indexed_proxy_swizzles<4>
+        struct indexed_swizzle_storage<TData, TScalar, 4, 0, 0, TI2, TI3> : indexed_swizzle_swizzles<4>
         {
             union
             {
@@ -294,7 +294,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI1>
-        struct indexed_proxy_storage<TData, TScalar, 4, 0, TI1, 0, 0> : indexed_proxy_swizzles<4>
+        struct indexed_swizzle_storage<TData, TScalar, 4, 0, TI1, 0, 0> : indexed_swizzle_swizzles<4>
         {
             union
             {
@@ -308,7 +308,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI1, size_t TI3>
-        struct indexed_proxy_storage<TData, TScalar, 4, 0, TI1, 0, TI3> : indexed_proxy_swizzles<4>
+        struct indexed_swizzle_storage<TData, TScalar, 4, 0, TI1, 0, TI3> : indexed_swizzle_swizzles<4>
         {
             union
             {
@@ -322,7 +322,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI1, size_t TI2>
-        struct indexed_proxy_storage<TData, TScalar, 4, 0, TI1, TI2, 0> : indexed_proxy_swizzles<4>
+        struct indexed_swizzle_storage<TData, TScalar, 4, 0, TI1, TI2, 0> : indexed_swizzle_swizzles<4>
         {
             union
             {
@@ -336,7 +336,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI1, size_t TI2, size_t TI3>
-        struct indexed_proxy_storage<TData, TScalar, 4, 0, TI1, TI2, TI3> : indexed_proxy_swizzles<4>
+        struct indexed_swizzle_storage<TData, TScalar, 4, 0, TI1, TI2, TI3> : indexed_swizzle_swizzles<4>
         {
             union
             {
@@ -350,7 +350,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI0>
-        struct indexed_proxy_storage<TData, TScalar, 4, TI0, 0, 0, 0> : indexed_proxy_swizzles<4>
+        struct indexed_swizzle_storage<TData, TScalar, 4, TI0, 0, 0, 0> : indexed_swizzle_swizzles<4>
         {
             union
             {
@@ -364,7 +364,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI0, size_t TI3>
-        struct indexed_proxy_storage<TData, TScalar, 4, TI0, 0, 0, TI3> : indexed_proxy_swizzles<4>
+        struct indexed_swizzle_storage<TData, TScalar, 4, TI0, 0, 0, TI3> : indexed_swizzle_swizzles<4>
         {
             union
             {
@@ -378,7 +378,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI0, size_t TI2>
-        struct indexed_proxy_storage<TData, TScalar, 4, TI0, 0, TI2, 0> : indexed_proxy_swizzles<4>
+        struct indexed_swizzle_storage<TData, TScalar, 4, TI0, 0, TI2, 0> : indexed_swizzle_swizzles<4>
         {
             union
             {
@@ -392,7 +392,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI0, size_t TI2, size_t TI3>
-        struct indexed_proxy_storage<TData, TScalar, 4, TI0, 0, TI2, TI3> : indexed_proxy_swizzles<4>
+        struct indexed_swizzle_storage<TData, TScalar, 4, TI0, 0, TI2, TI3> : indexed_swizzle_swizzles<4>
         {
             union
             {
@@ -406,7 +406,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI0, size_t TI1>
-        struct indexed_proxy_storage<TData, TScalar, 4, TI0, TI1, 0, 0> : indexed_proxy_swizzles<4>
+        struct indexed_swizzle_storage<TData, TScalar, 4, TI0, TI1, 0, 0> : indexed_swizzle_swizzles<4>
         {
             union
             {
@@ -420,7 +420,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI0, size_t TI1, size_t TI3>
-        struct indexed_proxy_storage<TData, TScalar, 4, TI0, TI1, 0, TI3> : indexed_proxy_swizzles<4>
+        struct indexed_swizzle_storage<TData, TScalar, 4, TI0, TI1, 0, TI3> : indexed_swizzle_swizzles<4>
         {
             union
             {
@@ -434,7 +434,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI0, size_t TI1, size_t TI2>
-        struct indexed_proxy_storage<TData, TScalar, 4, TI0, TI1, TI2, 0> : indexed_proxy_swizzles<4>
+        struct indexed_swizzle_storage<TData, TScalar, 4, TI0, TI1, TI2, 0> : indexed_swizzle_swizzles<4>
         {
             union
             {
@@ -448,7 +448,7 @@ namespace swizzle
         };
 
         template< typename TData, typename TScalar, size_t TI0, size_t TI1, size_t TI2, size_t TI3>
-        struct indexed_proxy_storage<TData, TScalar, 4, TI0, TI1, TI2, TI3> : indexed_proxy_swizzles<4>
+        struct indexed_swizzle_storage<TData, TScalar, 4, TI0, TI1, TI2, TI3> : indexed_swizzle_swizzles<4>
         {
             union
             {

@@ -152,7 +152,7 @@ namespace swizzle
         }
 
         template <class TProxyData, class TProxyScalar, size_t... TProxyIndices>
-        inline explicit vector_(const detail::indexed_proxy_storage<TProxyData, TProxyScalar, num_components, TProxyIndices...>& proxy)
+        inline explicit vector_(const detail::indexed_swizzle_storage<TProxyData, TProxyScalar, num_components, TProxyIndices...>& proxy)
         {
             ((at_rvalue(TIndices) = scalar_type(proxy[TIndices])), ...);
         }

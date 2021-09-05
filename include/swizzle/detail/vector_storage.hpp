@@ -12,11 +12,6 @@ namespace swizzle
         template <template <size_t...> class TProxyGenerator, typename TData>
         struct vector_storage<1, TProxyGenerator, TData>
         {
-            template <typename Func>
-            static void apply_index(Func && func)
-            {
-                func(0);
-            }
 
             vector_storage()
             {}
@@ -45,12 +40,6 @@ namespace swizzle
         template <template <size_t...> class TProxyGenerator, typename TData>
         struct vector_storage<2, TProxyGenerator, TData>
         {
-            template <typename Func>
-            static void apply_index(Func && func)
-            {
-                func(0, 1);
-            }
-
             vector_storage()
             {}
 
@@ -110,12 +99,6 @@ namespace swizzle
         template <template <size_t...> class TProxyGenerator, typename TData>
         struct vector_storage<3, TProxyGenerator, TData>
         {
-            template <typename Func>
-            static void apply_index(Func && func)
-            {
-                func(0, 1, 2);
-            }
-
             vector_storage()
             {}
 
@@ -267,12 +250,6 @@ namespace swizzle
         template <template <size_t...> class TProxyGenerator, typename TData>
         struct vector_storage<4, TProxyGenerator, TData>
         {
-            template <typename Func>
-            static void apply_index(Func && func)
-            {
-                func(0, 1, 2, 3);
-            }
-
             vector_storage() {}
 
             union

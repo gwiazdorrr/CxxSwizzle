@@ -1,11 +1,10 @@
-// CxxSwizzle
-// Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
+// CxxSwizzle (c) 2013-2021 Piotr Gwiazdowski
 #pragma once
 
 #include <type_traits>
 #include <swizzle/detail/utils.h>
 #include <swizzle/detail/vector_traits.h>
-#include <swizzle/detail/indexed_proxy_storage.hpp>
+#include <swizzle/detail/indexed_swizzle_storage.hpp>
 
 namespace swizzle
 {
@@ -18,7 +17,7 @@ namespace swizzle
         //! The type is convertible to the vector. It also forwards all unary arithmetic operators. Binary
         //! operations hopefully fallback to the vector ones.
         template <typename TVector, typename TData, typename TScalar, size_t... TIndices>
-        struct indexed_proxy : indexed_proxy_storage<TData, TScalar, sizeof...(TIndices), TIndices...>
+        struct indexed_swizzle : indexed_swizzle_storage<TData, TScalar, sizeof...(TIndices), TIndices...>
         {
             // Can easily count now since -1 must be continuous
             static constexpr size_t num_components = sizeof...(TIndices);
@@ -51,51 +50,51 @@ namespace swizzle
                 return decay();
             }
 
-            indexed_proxy() = default;
+            indexed_swizzle() = default;
 
             //! Allow only conversion to lexically preceeding proxy; this is to avoid ambiguity in ternary operators (g++/clang)
             template <size_t... OtherTIndices>
-            indexed_proxy(const indexed_proxy_storage<TData, TScalar, sizeof...(TIndices), OtherTIndices...>& other,
+            indexed_swizzle(const indexed_swizzle_storage<TData, TScalar, sizeof...(TIndices), OtherTIndices...>& other,
                 std::enable_if_t<(compare_sequence(std::index_sequence<TIndices...>{}, std::index_sequence<OtherTIndices...>{})<0) > * = nullptr) {
                 assign_impl(other.data, std::index_sequence<OtherTIndices...>{});
             }
 
             //! Assignment only enabled if proxy is writable -> has unique indexes
-            indexed_proxy& operator=(const vector_type& vec)
+            indexed_swizzle& operator=(const vector_type& vec)
             {
                 return assign_impl(vec, std::make_index_sequence<num_components>{});
             }
 
             //! Assignment only enabled if proxy is writable -> has unique indexes
             template <size_t... OtherTIndices>
-            indexed_proxy& operator=(const indexed_proxy_storage<TData, TScalar, sizeof...(TIndices), OtherTIndices...>& other) {
+            indexed_swizzle& operator=(const indexed_swizzle_storage<TData, TScalar, sizeof...(TIndices), OtherTIndices...>& other) {
                 return assign_impl(other.data, std::index_sequence<OtherTIndices...>{});
             }
 
             //! Forwarding operator. Global non-assignment operators depend on it.
             template <typename T>
-            indexed_proxy& operator+=(T && o)
+            indexed_swizzle& operator+=(T && o)
             {
                 return operator=(decay() + std::forward<T>(o));
             }
 
             //! Forwarding operator. Global non-assignment operators depend on it.
             template <typename T>
-            indexed_proxy& operator-=(T && o)
+            indexed_swizzle& operator-=(T && o)
             {
                 return operator=(decay() - std::forward<T>(o));
             }
 
             //! Forwarding operator. Global non-assignment operators depend on it.
             template <typename T>
-            indexed_proxy& operator*=(T && o)
+            indexed_swizzle& operator*=(T && o)
             {
                 return operator=(decay() * std::forward<T>(o));
             }
 
             //! Forwarding operator. Global non-assignment operators depend on it.
             template <typename T>
-            indexed_proxy& operator/=(T && o)
+            indexed_swizzle& operator/=(T && o)
             {
                 return operator=(decay() / std::forward<T>(o));
             }
@@ -107,13 +106,13 @@ namespace swizzle
 
         private:
             template <size_t... VectorTIndices>
-            indexed_proxy& assign_impl(const vector_type& vec, std::index_sequence<VectorTIndices...>)
+            indexed_swizzle& assign_impl(const vector_type& vec, std::index_sequence<VectorTIndices...>)
             {
                 return ((this->data[TIndices] = vec.data[VectorTIndices]), ..., *this);
             }
 
             template <size_t... VectorTIndices>
-            indexed_proxy& assign_impl(const TData& vec_data, std::index_sequence<VectorTIndices...>)
+            indexed_swizzle& assign_impl(const TData& vec_data, std::index_sequence<VectorTIndices...>)
             {
                 return ((this->data[TIndices] = vec_data[VectorTIndices]), ..., *this);
             }
@@ -127,9 +126,9 @@ namespace swizzle
 
 
         // TODO: incosnistent
-        //! A specialisation for the indexed_proxy, defines TVector as vector type.
+        //! A specialisation for the indexed_swizzle, defines TVector as vector type.
         template <class TVector, class TData, class TScalar, size_t... TIndices>
-        struct get_vector_type_impl< indexed_proxy<TVector, TData, TScalar, TIndices...> >
+        struct get_vector_type_impl< indexed_swizzle<TVector, TData, TScalar, TIndices...> >
         {
             typedef TVector type;
         };
