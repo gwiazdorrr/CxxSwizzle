@@ -17,13 +17,5 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 		uv+=p/l*(sin(z)+1.)*abs(sin(l*9.-z*2.));
 		c[i]=.01/length(abs(mod(uv,1.)-.5));
 	}
-
-#ifdef __cplusplus
-	if (any(isnan(c))) {
-		std::cout << "Got NaN at " << fragCoord << " for " << iTime;
-		__debugbreak();
-	}
-#endif
-
 	fragColor=vec4(c/l,t);
 }

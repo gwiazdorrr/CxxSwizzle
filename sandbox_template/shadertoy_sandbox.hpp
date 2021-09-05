@@ -53,16 +53,7 @@ namespace shadertoy
         swizzle::int_type iFrameRate;            // NOTE: undocummented
     };
 
-    using shader_fun = swizzle::vec4 (CONFIG_CALLING_CONVENTION *)(const shader_inputs& uniforms, swizzle::vec2 fragCoord, swizzle::vec4 prevFragColor, swizzle::bool_type* discarded);
-
-
-    //inline shader_fun image;
-    //inline shader_fun buffer_a;
-    //inline shader_fun buffer_b;
-    //inline shader_fun buffer_c;
-    //inline shader_fun buffer_d;
-
-
+    using shader_function = swizzle::vec4 (CONFIG_CALLING_CONVENTION *)(const shader_inputs& uniforms, swizzle::vec2 fragCoord, swizzle::vec4 prevFragColor, swizzle::bool_type* discarded);
     swizzle::vec4 CONFIG_CALLING_CONVENTION image(const shader_inputs& uniforms, swizzle::vec2 fragCoord, swizzle::vec4 prevFragColor, swizzle::bool_type* discarded);
     swizzle::vec4 CONFIG_CALLING_CONVENTION buffer_a(const shader_inputs& input, swizzle::vec2 fragCoord, swizzle::vec4 prevFragColor, swizzle::bool_type* discarded);
     swizzle::vec4 CONFIG_CALLING_CONVENTION buffer_b(const shader_inputs& input, swizzle::vec2 fragCoord, swizzle::vec4 prevFragColor, swizzle::bool_type* discarded);
@@ -72,13 +63,20 @@ namespace shadertoy
 
     inline const pass_type passes [] = 
     {
+#ifdef CONFIG_SAMPLE_HAS_BUFFER_A
         pass_type::buffer_a,
+#endif
+#ifdef CONFIG_SAMPLE_HAS_BUFFER_B
         pass_type::buffer_b,
+#endif
+#ifdef CONFIG_SAMPLE_HAS_BUFFER_C
         pass_type::buffer_c,
+#endif
+#ifdef CONFIG_SAMPLE_HAS_BUFFER_D
         pass_type::buffer_d,
+#endif
         pass_type::image
     };
-
 
     constexpr bool has_pass(pass_type pass)
     {
@@ -98,7 +96,7 @@ namespace shadertoy
         return false;
     }
 
-    constexpr shader_fun get_pass(pass_type pass)
+    constexpr shader_function get_pass_func(pass_type pass)
     {
         if (pass == pass_type::image)    return image;
 #ifdef CONFIG_SAMPLE_HAS_BUFFER_A

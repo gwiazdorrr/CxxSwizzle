@@ -422,9 +422,6 @@ struct sampler_config
         sampler_config result;
         result.label = label;
         result.type = type;
-        //result.wrap_mode = wrap_mode;
-        //result.filter_mode = filter_mode;
-        //result.vflip = vflip;
         return result;
     }
 
@@ -500,12 +497,12 @@ struct shadertoy_render_targets
         auto aligned_w = ((width + columns_per_batch - 1) / columns_per_batch) * columns_per_batch;
         auto aligned_h = ((height + rows_per_batch - 1) / rows_per_batch) * rows_per_batch;
 
-        for (int i = 0; i < shadertoy::num_buffers; ++i)
+        for (pass_type pass : shadertoy::passes)
         {
-            if (shadertoy::has_pass(static_cast<pass_type>(i)))
+            if (pass != pass_type::image)
             {
-                buffers[0][i] = render_target_float(aligned_w, aligned_h);
-                buffers[1][i] = render_target_float(aligned_w, aligned_h);
+                buffers[0][static_cast<int>(pass)] = render_target_float(aligned_w, aligned_h);
+                buffers[1][static_cast<int>(pass)] = render_target_float(aligned_w, aligned_h);
                 ++num_passes;
             }
         }
@@ -666,7 +663,7 @@ private:
     template <pass_type pass, typename TRenderTarget>
     static stats render_pass_if_enabled(const shadertoy_config& config, shader_inputs& inputs, TRenderTarget& render_target, shadertoy_input_textures& context, progress& progress)
     {
-        constexpr shader_fun fun = shadertoy::get_pass(pass);
+        constexpr shader_function fun = shadertoy::get_pass_func(pass);
         if constexpr (fun != nullptr)
         {
             sampler_generic_data data_buffer[6 * num_samplers];
@@ -748,7 +745,7 @@ private:
         }
     }
 
-    template <shader_fun func, typename TRenderTarget>
+    template <shader_function func, typename TRenderTarget>
     static stats render_inner(shader_inputs uniforms, TRenderTarget& rt, std::atomic_int& num_pixels, const std::atomic_bool& cancelled)
     {
         assert(rt.width % columns_per_batch == 0);
@@ -1162,6 +1159,7 @@ int main(int argc, char* argv[])
 
 
             bool paused = false;
+            pass_type selected_pass = pass_type::image;
             SDL_SetWindowMinimumSize(window.get(), status_bar_height * 2, status_bar_height * 2);
             for (auto update_begin = chrono::steady_clock::now();;)
             {
@@ -1308,29 +1306,71 @@ int main(int argc, char* argv[])
                             ImGui::OpenPopup("Details");
                         }
 
+                        
+
+                        auto pass_type_to_label = [](pass_type pass)
+                        {
+                            switch (pass)
+                            {
+                            case pass_type::buffer_a: return "buffer_a";
+                            case pass_type::buffer_b: return "buffer_b";
+                            case pass_type::buffer_c: return "buffer_c";
+                            case pass_type::buffer_d: return "buffer_d";
+                            case pass_type::image:    return "image";
+                            default:                  return "?";
+                            }
+                        };
+                        auto pass_type_to_label_short = [](pass_type pass)
+                        {
+                            switch (pass)
+                            {
+                            case pass_type::buffer_a: return "A";
+                            case pass_type::buffer_b: return "B";
+                            case pass_type::buffer_c: return "C";
+                            case pass_type::buffer_d: return "D";
+                            case pass_type::image:    return "I";
+                            default:                  return "?";
+                            }
+                        };
+
+
+                        if (render_targets.num_passes > 1)
+                        {
+                            ImGui::SameLine();
+                            ImGui::PushItemWidth(15.0f);
+
+                            if (ImGui::BeginCombo("##PassCombo", pass_type_to_label_short(selected_pass), ImGuiComboFlags_NoArrowButton))
+                            {
+                                for (pass_type pass : shadertoy::passes)
+                                {
+                                    const bool is_selected = (pass == selected_pass);
+                                    if (ImGui::Selectable(pass_type_to_label(pass), is_selected))
+                                    {
+                                        selected_pass = pass;
+                                    }
+
+                                    if (is_selected)
+                                    {
+                                        ImGui::SetItemDefaultFocus();
+                                    }
+                                }
+                                ImGui::EndCombo();
+                            }
+                        }
+
+                        // a low effort way of getting this aligned to the right, if there's a space
+                        ImGui::SameLine(io.DisplaySize.x - 85 > ImGui::GetItemRectMax().x ? io.DisplaySize.x - 80.0f : 0.0f);
+                        imgui_utils::imgui_text_centered(37.0f, false, "%.2f", current_frame_timestamp);
+                        ImGui::SameLine();
+                        ImGui::ProgressBar(progress.num_pixels / static_cast<double>(render_targets.width * render_targets.height * render_targets.num_passes), ImVec2(28.0f, button_size.y), "");
+
                         if (ImGui::BeginPopup("Details"))
                         {
                             if (ImGui::BeginTabBar("Passes"))
                             {
                                 for (pass_type pass : shadertoy::passes)
                                 {
-                                    if (!shadertoy::has_pass(pass))
-                                        continue;
-
-                                    auto pass_type_to_label = [](pass_type pass)
-                                    {
-                                        switch (pass)
-                                        {
-                                        case pass_type::buffer_a: return "buffer_a";
-                                        case pass_type::buffer_b: return "buffer_b";
-                                        case pass_type::buffer_c: return "buffer_c";
-                                        case pass_type::buffer_d: return "buffer_d";
-                                        case pass_type::image:    return "image";
-                                        default:                  return "?";
-                                        }
-                                    };
-
-                                    if (ImGui::BeginTabItem(pass_type_to_label(pass))) 
+                                    if (ImGui::BeginTabItem(pass_type_to_label(pass)))
                                     {
                                         int sampler_idx = 0;
                                         for (auto& sampler : config.get_pass(pass).samplers)
@@ -1344,8 +1384,8 @@ int main(int argc, char* argv[])
 
                                             ImGui::BeginGroup();
 
-                                            if (sampler.type == sampler_type::none) 
-                                            { 
+                                            if (sampler.type == sampler_type::none)
+                                            {
                                                 ImGui::Button("None", thumb_size);
                                             }
                                             else if (sampler.type == sampler_type::texture)
@@ -1375,11 +1415,6 @@ int main(int argc, char* argv[])
                             ImGui::EndPopup();
                         }
 
-                        ImGui::SameLine(io.DisplaySize.x - 85.0f);
-                        imgui_utils::imgui_text_centered(40.0f, false, "%.2f", current_frame_timestamp);
-
-                        ImGui::SameLine();
-                        ImGui::ProgressBar(progress.num_pixels / static_cast<double>(render_targets.width * render_targets.height * render_targets.num_passes), ImVec2(30.0f, button_size.y), "");
                     }
 
                     ImGui::End();
@@ -1408,9 +1443,9 @@ int main(int argc, char* argv[])
                     if (blit_now || frame_ready)
                     {
                         SDL_Rect rect{ 0, 0, render_targets.width, render_targets.height };
-                        if (progress.current_pass != pass_type::image)
+                        if (selected_pass != pass_type::image)
                         {
-                            int index = (int)progress.current_pass.load();
+                            int index = static_cast<int>(selected_pass);
                             render_targets.buffers[num_frames & 1][index].convert(render_targets.target_tmp);
                             SDL_UpdateTexture(target_texture.get(), &rect, render_targets.target_tmp.first_row, render_targets.target_tmp.pitch);
                         }
