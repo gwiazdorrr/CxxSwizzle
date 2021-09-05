@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <swizzle/detail/utils.h>
 #include <array>
+#include <iostream>
 
 #define CXXSWIZZLE_FORCE_INLINE
 
@@ -139,7 +140,7 @@ namespace swizzle
         {
             if constexpr (sizeof...(TIndices) == 1) 
             {
-                os <<  other.at<0>();
+                os << other.at<0>();
             }
             else 
             {
