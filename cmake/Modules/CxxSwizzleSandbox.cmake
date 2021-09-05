@@ -46,7 +46,6 @@ macro(cxxswizzle_prepare_setup setup)
     # basic requirements
     find_package(SDL2 CONFIG REQUIRED)
     find_package(SDL2-image CONFIG REQUIRED)
-    find_package(nlohmann_json CONFIG REQUIRED)
     find_package(OpenMP)
     find_package(imgui CONFIG REQUIRED)
 
@@ -124,13 +123,6 @@ macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root_ove
         endif()
     endforeach()
 
-    set(config_json_path "${shadertoy_dir}/config.json")
-    if (EXISTS ${config_json_path})
-        file(RELATIVE_PATH CONFIG_SAMPLE_CONFIG_PATH ${CMAKE_CURRENT_BINARY_DIR} ${config_json_path})
-    else()
-        set(CONFIG_SAMPLE_CONFIG_PATH "${config_json_path}")
-    endif()
-
     if (EXISTS ${textures_root})
         file(RELATIVE_PATH CONFIG_SAMPLE_TEXTURES_ROOT ${CMAKE_CURRENT_BINARY_DIR} ${textures_root})
     else()
@@ -139,6 +131,7 @@ macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root_ove
 
     set(CONFIG_SAMPLE_SETUP_INCLUDE "swizzle/setup_${setup}.hpp")
     set(codegen_config_path "${gen_include_dir}/config.hpp")
+    set(shadertoy_config_path "${shadertoy_dir}/shadertoy_config.hpp")
 
     if(MSVC)
         set(CONFIG_CALLING_CONVENTION __vectorcall)
@@ -158,14 +151,14 @@ macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root_ove
                          "${CMAKE_SOURCE_DIR}/imgui_sdl/imgui_sdl.cpp")
 
 
-    source_group("" FILES ${shader_file_list} ${config_json_path})
+    source_group("" FILES ${shader_file_list} "${shadertoy_config_path}")
     source_group("codegen" FILES ${codegen_file_list} )
     source_group("shared" FILES ${shared_file_list} "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt" REGULAR_EXPRESSION "\\.natvis")
 
-    add_executable(${target_name} ${shared_file_list} ${codegen_file_list} ${shader_file_list} ${config_json_path})
+    add_executable(${target_name} ${shared_file_list} ${codegen_file_list} ${shader_file_list} ${shadertoy_config_path})
     
     target_include_directories(${target_name} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include ${gen_include_dir} ${template_dir} ${shadertoy_dir} "${CMAKE_SOURCE_DIR}/imgui_sdl")
-    target_link_libraries(${target_name} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image nlohmann_json::nlohmann_json imgui::imgui)
+    target_link_libraries(${target_name} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image imgui::imgui)
     set_target_properties(${target_name} PROPERTIES CXX_STANDARD 17)
     set_target_properties(${target_name} PROPERTIES CXX_STANDARD_REQUIRED ON)
 

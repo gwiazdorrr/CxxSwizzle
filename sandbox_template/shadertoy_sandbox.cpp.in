@@ -87,6 +87,8 @@ namespace
     #define signed _cxxswizzle_keyword_mask_signed
     #define unsigned _cxxswizzle_keyword_mask_unsigned
     #define new _cxxswizzle_keyword_mask_new
+    #define try _cxxswizzle_keyword_mask_try
+    #define catch _cxxswizzle_keyword_mask_catch
 
     // cmath constants need to be undefined, as sometimes shaders define their own
     #undef M_E       

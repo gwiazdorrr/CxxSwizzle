@@ -66,21 +66,21 @@ macro(_shadertoy_patch_code path)
 	file(STRINGS ${path} lines)
 
 	set(out)
-	# list(APPEND out "#ifndef CXX_CONST" )
-	# list(APPEND out "#define CXX_CONST const")
-	# list(APPEND out "#define CXX_IGNORE(x) x")
-    # list(APPEND out "#define CXX_ARRAY_FIELD(type, name) type[] name")
-	# list(APPEND out "#define CXX_ARRAY(type) type[]")
-	# list(APPEND out "#define CXX_ARRAY_N(type, size) type[size]")
-	# list(APPEND out "#define CXX_MAKE_ARRAY(type) type[]")
-	# list(APPEND out "#endif")
-    # list(APPEND out "")
+	list(APPEND out "#ifndef CXX_CONST" )
+	list(APPEND out "#define CXX_CONST const")
+	list(APPEND out "#define CXX_IGNORE(x) x")
+    list(APPEND out "#define CXX_ARRAY_FIELD(type, name) type[] name")
+	list(APPEND out "#define CXX_ARRAY(type) type[]")
+	list(APPEND out "#define CXX_ARRAY_N(type, size) type[size]")
+	list(APPEND out "#define CXX_MAKE_ARRAY(type) type[]")
+	list(APPEND out "#endif")
+    list(APPEND out "")
 
 	# set(func_decl_regex "[A-Za-z0-9_]+[ \t]+[A-Za-z0-9_]+[ \t]*\\(.*\\);")
 
-    set(glsl_style_array "([A-Za-z0-9_]+)[ \t]*\\[([A-Za-z0-9_ \t]*)\\][ \t]*([A-Za-z0-9_]+)")
-    set(c_style_array    "([A-Za-z0-9_]+)[ \t]+([A-Za-z0-9_]+)[ \t]*\\[([A-Za-z0-9_ \t]*)\\]")
-    set(glsl_array_initializer "([A-Za-z0-9_]+)[ \t]*\\[[A-Za-z0-9_ \t]*\\][ \t]*(\\(|$)")
+    set(glsl_style_array "([A-Za-z0-9_]+)[ \t]*\\[([A-Za-z0-9_\t\\+\\-\\*/]*)\\][ \t]*([A-Za-z0-9_]+)")
+    set(c_style_array    "([A-Za-z0-9_]+)[ \t]+([A-Za-z0-9_]+)[ \t]*\\[([A-Za-z0-9_ \t\\+\\-\\*/]*)\\]")
+    set(glsl_array_initializer "([A-Za-z0-9_]+)[ \t]*\\[[A-Za-z0-9_ \t\\+\\-\\*/]*\\][ \t]*(\\(|$)")
 
 	unset(pending_array_line)
 
@@ -202,7 +202,7 @@ macro(shadertoy_download api_key shader_id root_dir textures_root download_error
     set(shadertoy_json_path "${CMAKE_CURRENT_BINARY_DIR}/${shader_id}.json")
     set(shadertoy_query "https://www.shadertoy.com/api/v1/shaders/${shader_id}?key=${api_key}")
         
-    #_shadertoy_download_file(${shadertoy_query} ${shadertoy_json_path} "(Shadertoy JSON shader description)")
+    _shadertoy_download_file(${shadertoy_query} ${shadertoy_json_path} "(Shadertoy JSON shader description)")
 
     message(STATUS "Parsing ${shadertoy_json_path}")
     file(READ "${shadertoy_json_path}" shadertoy_json)
@@ -246,12 +246,13 @@ macro(shadertoy_download api_key shader_id root_dir textures_root download_error
 
         file(MAKE_DIRECTORY ${shader_directory})
 
-        set(renderpass_info "")
+        set(shadertoy_config "")
 
-        list(APPEND renderpass_info "shadertoy_config make_default_config()")
-        list(APPEND renderpass_info "{")
-        list(APPEND renderpass_info "    // url: https://www.shadertoy.com/view/${shader_id}")
-        list(APPEND renderpass_info "    shadertoy_config config\;")
+        list(APPEND shadertoy_config "shadertoy_config shadertoy_config::make_default()")
+        list(APPEND shadertoy_config "{")
+        list(APPEND shadertoy_config "    // url: https://www.shadertoy.com/view/${shader_id}")
+        list(APPEND shadertoy_config "    shadertoy_config config\;")
+        list(APPEND shadertoy_config "")
         
         foreach(r ${SHADER.Shader.renderpass})
             set(renderpass SHADER.Shader.renderpass_${r})
@@ -289,6 +290,7 @@ macro(shadertoy_download api_key shader_id root_dir textures_root download_error
                 set(vflip "false")
                 set(filter "nearest")
                 set(wrap "clamp")
+                set(spacing "\n        ")
 
                 unset(make)
                 if (${input}.ctype STREQUAL "texture")
@@ -302,7 +304,7 @@ macro(shadertoy_download api_key shader_id root_dir textures_root download_error
                         _shadertoy_download_file(${source_url} ${target_file}  "")
                     endif()
 
-                    set(make "sampler_config::make_texture(\"${input_name}\")")
+                    set(make "sampler_config::make_texture(${spacing}\"${input_name}\")")
 
                 elseif (${input}.ctype STREQUAL "cubemap")
                     get_filename_component(input_ext    ${${input}.src} EXT)
@@ -334,8 +336,9 @@ macro(shadertoy_download api_key shader_id root_dir textures_root download_error
                         endforeach(index)
                     endif()
 
-                    list(JOIN faces ", " faces)
-                    set(make "sampler_config::make_cubemap({ ${faces} })")
+                    
+                    list(JOIN faces ",${spacing}" faces)
+                    set(make "sampler_config::make_cubemap({${spacing}${faces}})")
                     
                 elseif(${input}.ctype STREQUAL "buffer")
                     set(buffer_name "")
@@ -371,24 +374,21 @@ macro(shadertoy_download api_key shader_id root_dir textures_root download_error
                         set(wrap ${${input}.sampler.wrap})
                     endif()
 
-                    list(APPEND renderpass_info "    ${pass_accessor}.get_sampler(${${input}.channel}) = ${make}.init(texture_wrap_modes::${wrap}, texture_filter_modes::${filter}, ${vflip})\;")
+                    list(APPEND shadertoy_config "    ${pass_accessor}.get_sampler(${${input}.channel}) = ${make}${spacing}.init(texture_wrap_modes::${wrap}, texture_filter_modes::${filter}, ${vflip})\;")
+                    list(APPEND shadertoy_config "")
                 endif()
 
             endforeach()
 
-            list(APPEND renderpass_info "")
-
-            #list(JOIN renderpass_info "\n" renderpass_info)
-            #list(APPEND shader_info "  \"${renderpass_name}\": {\n${renderpass_info}\n  }")
-            
+            list(APPEND shadertoy_config "")
 
         endforeach()
 
-        list(APPEND renderpass_info "    return config\;")
-        list(APPEND renderpass_info "}")
-        list(JOIN renderpass_info "\n" renderpass_info)
+        list(APPEND shadertoy_config "    return config\;")
+        list(APPEND shadertoy_config "}")
+        list(JOIN shadertoy_config "\n" shadertoy_config)
         
-        _shadertoy_create_file("${shader_directory}/config.hpp" "{\n${renderpass_info}\n}" "")
+        _shadertoy_create_file("${shader_directory}/shadertoy_config.hpp" "${shadertoy_config}" "")
 
     endif()
 

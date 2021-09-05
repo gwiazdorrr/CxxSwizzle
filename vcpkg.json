@@ -12,7 +12,6 @@
             "features": [ "sdl2-binding" ]
         },
         "gtest",
-        "vc",
-        "nlohmann-json"
+        "vc"
     ]
 }

@@ -26,7 +26,9 @@ namespace shadertoy
         buffer_b,
         buffer_c,
         buffer_d,
-        image
+        image,
+        sound,
+        cube_a
     };
 
     const int num_samplers = 4;

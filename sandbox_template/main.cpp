@@ -23,8 +23,6 @@ static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 #include <unordered_map>
 #include <filesystem>
 #include <optional>
-
-#include <nlohmann/json.hpp>
  
 #ifdef _OPENMP
 #include <omp.h>
@@ -400,7 +398,10 @@ struct sampler_config
     static sampler_config make_cubemap(const std::array<std::string_view, 6>& faces)
     {
         sampler_config result = make_base(faces[0], sampler_type::cubemap);
-        std::copy(begin(faces), end(faces), begin(result.paths));
+        for (auto view : faces)
+        {
+            result.paths.push_back(static_cast<std::string>(view));
+        }
         return result;
     }
 
@@ -430,9 +431,10 @@ struct sampler_config
 
     sampler_config init(texture_wrap_modes wrap_mode = texture_wrap_modes::clamp, texture_filter_modes filter_mode = texture_filter_modes::linear, bool vflip = true)
     {
-        cfg.wrap_mode = wrap_mode;
-        cfg.filter_mode = filter_mode;
-        cfg.vflip = vflip;
+        this->wrap_mode = wrap_mode;
+        this->filter_mode = filter_mode;
+        this->vflip = vflip;
+        return *this;
     }
 
 };
@@ -459,164 +461,8 @@ struct shadertoy_config
         return passes[static_cast<int>(pass)];
     }
 
-    void dupa()
-    {
-        shadertoy_config cfg;
-        //cfg.get_pass(pass_type::image).get_sampler(0) = sampler_config::make_keyboard().init(0, 0, 0);
-    }
-
-    static shadertoy_config parse(std::filesystem::path path)
-    {
-        using json = nlohmann::json;
-
-        std::ifstream i(path.c_str());
-        json j;
-        i >> j;
-
-        std::unordered_map<std::string_view, pass_type> string_to_pass_type =
-        {
-            { "image",    pass_type::image },
-            { "buffer_a", pass_type::buffer_a },
-            { "buffer_b", pass_type::buffer_b },
-            { "buffer_c", pass_type::buffer_c },
-            { "buffer_d", pass_type::buffer_d },
-        };
-
-        std::unordered_map<std::string_view, sampler_type> string_to_sampler_type =
-        {
-            { "none",     sampler_type::none },
-            { "texture",  sampler_type::texture },
-            { "buffer",   sampler_type::buffer },
-            { "keyboard", sampler_type::keyboard },
-            { "cubemap",  sampler_type::cubemap },
-        };
-
-        std::array<std::string, shadertoy::num_samplers> channel_keys =
-        {
-            "iChannel0",
-            "iChannel1",
-            "iChannel2",
-            "iChannel3",
-        };
-
-
-        std::unordered_map<std::string, int> buffer_string_to_index =
-        {
-            { "buffer_a", 0 },
-            { "buffer_b", 1 },
-            { "buffer_c", 2 },
-            { "buffer_d", 3 },
-        };
-
-        std::unordered_map<std::string, texture_wrap_modes> string_to_wrap_mode =
-        {
-            { "clamp", texture_wrap_modes::clamp },
-            { "repeat", texture_wrap_modes::repeat },
-        };
-
-        std::unordered_map<std::string, texture_filter_modes> string_to_filter_mode =
-        {
-            { "nearest", texture_filter_modes::nearest },
-            { "linear", texture_filter_modes::linear },
-            { "mipmap", texture_filter_modes::linear }, // mimaps are not supported
-        };
-
-        // this is dumb, but works best in case of an empty property
-        std::unordered_map<std::string, bool> string_to_vflip =
-        {
-            { "true", true },
-            { "false", false },
-        };
-
-        shadertoy_config result;
-
-        for (json::iterator it_pass = j.begin(); it_pass != j.end(); ++it_pass)
-        {
-            pass_type pass_id = string_to_pass_type[it_pass.key()];
-            pass_config& pass = result.passes[static_cast<int>(pass_id)];
-
-            for (size_t channel_index = 0; channel_index < channel_keys.size(); ++channel_index)
-            {
-                auto it_channel = it_pass->find(channel_keys[channel_index]);
-                if (it_channel != it_pass->end())
-                {
-                    auto& channel_node = it_channel.value();
-
-                    sampler_config sampler;
-                    sampler.type = string_to_sampler_type[channel_node.value("type", "none")];
-                    sampler.filter_mode = string_to_filter_mode[channel_node.value("filter", "nearest")];
-                    sampler.wrap_mode = string_to_wrap_mode[channel_node.value("wrap", "clamp")];
-                    sampler.vflip = string_to_vflip[channel_node.value("vflip", "true")];
-
-                    if (sampler.type == sampler_type::texture)
-                    {
-                        std::string path = channel_node["src"];
-                        sampler.paths.push_back(path);
-
-                        sampler.label = path;
-                    }
-                    else if (sampler.type == sampler_type::cubemap)
-                    {
-                        auto& src = channel_node["src"];
-                        if (src.size() != 6)
-                        {
-                            throw std::runtime_error("Cubemap is expected to have 6 faces");
-                        }
-
-                        for (size_t i = 0; i < 6; ++i)
-                        {
-                            std::string path = src[i];
-                            sampler.paths.push_back(path);
-                        }
-
-                        sampler.label = sampler.paths[0];
-                    }
-                    else if (sampler.type == sampler_type::buffer)
-                    {
-                        sampler.label = channel_node["src"];
-                        sampler.source_buffer_index = buffer_string_to_index[sampler.label];
-                    }
-                    else if (sampler.type == sampler_type::keyboard)
-                    {
-                        sampler.label = "keyboard";
-                    }
-
-                    pass.samplers[channel_index] = std::move(sampler);
-                }
-            }
-        }
-
-        return result;
-    }
+    static shadertoy_config make_default();
 };
-
-shadertoy_config make_default_config()
-{
-    // url: https://www.shadertoy.com/view/lldGDr
-    shadertoy_config config;
-    config.get_pass(pass_type::image).get_sampler(0) = sampler_config::make_buffer(pass_type::buffer_a);
-    config.get_pass(pass_type::image).get_sampler(2) = sampler_config::make_buffer(pass_type::buffer_b).init(texture_wrap_modes::clamp, texture_filter_modes::nearest, true);
-    config.get_pass(pass_type::image).get_sampler(1) = sampler_config::make_buffer(pass_type::buffer_c).init(texture_wrap_modes::clamp, texture_filter_modes::nearest, true);
-    config.get_pass(pass_type::image).get_sampler(3) = sampler_config::make_buffer(pass_type::buffer_d).init(texture_wrap_modes::clamp, texture_filter_modes::nearest, true);
-
-    config.get_pass(pass_type::buffer_a).get_sampler(0) = sampler_config::make_buffer(pass_type::buffer_a).init(texture_wrap_modes::clamp, texture_filter_modes::nearest, true);
-    config.get_pass(pass_type::buffer_a).get_sampler(1) = sampler_config::make_buffer(pass_type::buffer_c).init(texture_wrap_modes::clamp, texture_filter_modes::nearest, true);
-
-    config.get_pass(pass_type::buffer_b).get_sampler(1) = sampler_config::make_buffer(pass_type::buffer_a).init(texture_wrap_modes::clamp, texture_filter_modes::nearest, true);
-    config.get_pass(pass_type::buffer_b).get_sampler(0) = sampler_config::make_buffer(pass_type::buffer_b).init(texture_wrap_modes::clamp, texture_filter_modes::nearest, true);
-
-    config.get_pass(pass_type::buffer_c).get_sampler(3) = sampler_config::make_keyboard().init(texture_wrap_modes::clamp, texture_filter_modes::nearest, true);
-    config.get_pass(pass_type::buffer_c).get_sampler(0) = sampler_config::make_buffer(pass_type::buffer_a).init(texture_wrap_modes::clamp, texture_filter_modes::nearest, true);
-    config.get_pass(pass_type::buffer_c).get_sampler(1) = sampler_config::make_buffer(pass_type::buffer_c).init(texture_wrap_modes::clamp, texture_filter_modes::nearest, true);
-
-    config.get_pass(pass_type::buffer_d).get_sampler(0) = sampler_config::make_buffer(pass_type::buffer_a).init(texture_wrap_modes::clamp, texture_filter_modes::nearest, true);
-    config.get_pass(pass_type::buffer_d).get_sampler(2) = sampler_config::make_buffer(pass_type::buffer_b).init(texture_wrap_modes::clamp, texture_filter_modes::nearest, true);
-    config.get_pass(pass_type::buffer_d).get_sampler(1) = sampler_config::make_buffer(pass_type::buffer_c).init(texture_wrap_modes::clamp, texture_filter_modes::nearest, true);
-
-
-    return config;
-}
-
 
 //-----------------------------------------------------------------------
 
@@ -993,7 +839,6 @@ struct cmdline_options
     bool multi_threaded = true;
 
     const char* output_path = nullptr;
-    std::filesystem::path config_path = CONFIG_SAMPLE_CONFIG_PATH;
     std::filesystem::path textures_root = CONFIG_SAMPLE_TEXTURES_ROOT;
 
     static cmdline_options parse(int argc, char* argv[])
@@ -1001,8 +846,7 @@ struct cmdline_options
         using namespace utils;
 
         cmdline_options result = {};
-        bool had_textures_root = true;
-
+        
         for (int i = 1; i < argc; ++i)
         {
             char* arg = argv[i];
@@ -1054,24 +898,11 @@ struct cmdline_options
                 result.multi_threaded = false;
                 continue;
             }
-            else if (!strcmp(arg, "-c"))
-            {
-                if (i + 1 < argc)
-                {
-                    result.config_path = argv[++i];
-                    if (!had_textures_root)
-                    {
-                        result.textures_root = result.config_path.parent_path();
-                    }
-                    continue;
-                }
-            }
             else if (!strcmp(arg, "--textures-root"))
             {
                 if (i + 1 < argc)
                 {
                     result.textures_root = argv[++i];
-                    had_textures_root = true;
                     continue;
                 }
             }
@@ -1088,18 +919,12 @@ struct cmdline_options
         printf("-h                          show this message\n");
         printf("-o <path>                   render one frame, save to <path> (PNG) and quit.\n");
         printf("-r <width> <height>         set initial resolution\n");
-        printf("-c <path>                   config path (default: %s)\n", CONFIG_SAMPLE_CONFIG_PATH);
         printf("--textures-root <path>      config path (default: %s)\n", CONFIG_SAMPLE_TEXTURES_ROOT);
         printf("-t <time>                   set initial time & pause\n");
     }
 };
 
 //-----------------------------------------------------------------------
-
-#ifndef _MSC_VER
-#define __cdecl
-#endif
-
 
 void set_multithreaded(bool enabled)
 {
@@ -1109,7 +934,7 @@ void set_multithreaded(bool enabled)
 #endif
 }
 
-int __cdecl main(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     using namespace std;
     using namespace stl_utils;
@@ -1135,7 +960,7 @@ int __cdecl main(int argc, char* argv[])
 
     try
     {
-        shadertoy_config config = shadertoy_config::parse(options.config_path);
+        shadertoy_config config = shadertoy_config::make_default();
         
         // load textures
         bool img_initialized = false;
@@ -1181,6 +1006,8 @@ int __cdecl main(int argc, char* argv[])
                             fprintf(stderr, "ERROR: texture does not exist: %s\n", u8str.c_str());
                             return 1;
                         }
+
+                        u8str = p.u8string();
                     }
 
                     ensure_img_initialized(IMG_INIT_JPG | IMG_INIT_PNG);
@@ -1649,6 +1476,8 @@ int __cdecl main(int argc, char* argv[])
     return 0; 
 }
 
+
+#include <shadertoy_config.hpp>
 
 #if WIN32
 #define VC_EXTRALEAN

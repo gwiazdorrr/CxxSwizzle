@@ -49,6 +49,7 @@ namespace swizzle
     enum class texture_filter_modes {
         nearest,
         linear,
+        mipmap
     };
 
     enum class texture_wrap_modes {
@@ -276,10 +277,10 @@ namespace swizzle
                     v = s * y / z;
                 }
 
-                u *= 0.5f;
-                v *= 0.5f;
-                u += 0.5f;
-                v += 0.5f;
+                u *=  0.5f;
+                v *= -0.5f;
+                u +=  0.5f;
+                v +=  0.5f;
 
                 auto face_data = data + face_index;
                 int ix, iy;
@@ -304,7 +305,8 @@ namespace swizzle
         {
             vec2 uv = apply_wrap_mode(coord);
 
-            if (filter_mode == texture_filter_modes::linear)
+            // mipmap not supported
+            if (filter_mode == texture_filter_modes::linear || filter_mode == texture_filter_modes::mipmap)
             {
                 vec2 perfect_coords = vec2(uv.x * static_cast<float>(data->width), uv.y * static_cast<float>(data->height));
                 vec2 error = vec2::call_fract(perfect_coords) - 0.5f;
