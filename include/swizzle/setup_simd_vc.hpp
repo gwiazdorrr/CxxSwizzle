@@ -6,8 +6,7 @@
 #pragma warning(disable: 4244)
 #pragma warning(disable: 4146)
 // VC needs to come first or else it's going to complain (damn I hate these)
-#include <Vc/vector.h>
-#include <Vc/global.h>
+#include <Vc/Vc>
 #pragma warning(pop)
 
 #include <type_traits>
