@@ -62,7 +62,7 @@ namespace swizzle
         template <size_t Begin, size_t End, class Func>
         inline void static_for(Func func)
         {
-            static_for_impl<Begin>(func, std::make_index_sequence<End - Begin>());
+            static_for_impl<Begin>(std::forward<Func>(func), std::make_index_sequence<End - Begin>());
         }
 
         //! Calls and returns a result of the decay memeber function (provided there's one).

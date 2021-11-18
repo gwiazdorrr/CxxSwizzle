@@ -201,7 +201,7 @@ namespace Vc_VERSIONED_NAMESPACE
     template <typename T, typename F> Vc_INTRINSIC Vector<T> apply(const Vector<T>& x, const Vector<T>& y, F&& f)
     {
         Vector<T> r;
-        ::Vc::Common::for_all_vector_entries<x.Size>(
+        ::swizzle::detail::static_for<0, x.Size>(
             [&](size_t i) {
                 r[i] = f(x[i], y[i]);
             }
