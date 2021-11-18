@@ -201,11 +201,12 @@ namespace Vc_VERSIONED_NAMESPACE
     template <typename T, typename F> Vc_INTRINSIC Vector<T> apply(const Vector<T>& x, const Vector<T>& y, F&& f)
     {
         Vector<T> r;
-        ::swizzle::detail::static_for<0, x.Size>(
-            [&](size_t i) {
-                r[i] = f(x[i], y[i]);
-            }
-        );
+
+        auto func = [&](size_t i) -> void {
+            r[i] = f(x[i], y[i]);
+        };
+        ::swizzle::detail::static_for<0, x.Size>(std::move(func));
+
         return r;
     }
 
