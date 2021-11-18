@@ -89,7 +89,7 @@ jobs:
           buildDirectory: '${{ runner.workspace }}/b/${{ matrix.name }}/'
           cmakeAppendedArgs: '-G "${{ matrix.generator }}" -DCMAKE_BUILD_TYPE=${{ matrix.buildType }} -DCMAKE_CXX_FLAGS="${{ matrix.cxxFlags }}"'
           
-      - name: Run CTest
-        run: |
-          cd ${{ runner.workspace }}/b/${{ matrix.name }}/test
-          ctest -V
+      # - name: Run CTest
+      #  run: |
+      #    cd ${{ runner.workspace }}/b/${{ matrix.name }}/test
+      #    ctest -V
