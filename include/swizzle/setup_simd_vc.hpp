@@ -11,6 +11,7 @@
 #pragma warning(pop)
 
 #include <type_traits>
+#include <iostream>
 
 namespace swizzle
 {
@@ -321,10 +322,6 @@ namespace Vc_VERSIONED_NAMESPACE
 #endif
         return high - low;
     }
-
-
-
-
 
     template <typename T>
     std::ostream& operator<<(std::ostream& os, const Vector<T>& v)
