@@ -23,13 +23,13 @@ jobs:
             cc: g++.exe
             triplet: x64-windows
             generator: Ninja
-          - name: ubuntu-gcc-8
-            os: ubuntu
-            cxx: g++-8
-            cc: gcc-8
-            triplet: x64-linux
-            generator: Ninja
-            cxxFlags: -march=native
+          #- name: ubuntu-gcc-8
+          #  os: ubuntu
+          #  cxx: g++-8
+          #  cc: gcc-8
+          #  triplet: x64-linux
+          #  generator: Ninja
+          #  cxxFlags: -march=native
           - name: ubuntu-gcc-9
             os: ubuntu
             cxx: g++-9
