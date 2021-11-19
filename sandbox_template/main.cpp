@@ -211,16 +211,16 @@ namespace imgui_utils
 
         if (enabled)
         {
-            ImGui::Text(timeBuffer);
+            ImGui::Text("%s", timeBuffer);
         }
         else
         {
-            ImGui::TextDisabled(timeBuffer);
+            ImGui::TextDisabled("%s", timeBuffer);
         }
 
         if (padding > 0)
         {
-            ImGui::SameLine(0, padding);;
+            ImGui::SameLine(0, padding);
             ImGui::Spacing();
         }
 
