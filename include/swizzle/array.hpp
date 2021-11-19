@@ -7,7 +7,7 @@
 #include <memory>
 
 #include <swizzle/detail/fwd.hpp>
-#include <swizzle/detail/utils.h>
+#include <swizzle/detail/utils.hpp>
 
 
 namespace swizzle 

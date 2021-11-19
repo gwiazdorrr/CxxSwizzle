@@ -2,7 +2,7 @@
 #pragma once
 
 #include <type_traits>
-#include <swizzle/detail/utils.h>
+#include <swizzle/detail/utils.hpp>
 #include <swizzle/detail/fwd.hpp>
 
 namespace swizzle

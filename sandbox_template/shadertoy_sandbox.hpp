@@ -5,7 +5,7 @@
 #include <swizzle/matrix.hpp>
 #include <swizzle/array.hpp>
 #include <swizzle/sampler_generic.hpp>
-#include <swizzle/detail/simd_mask.h>
+#include <swizzle/detail/simd_mask.hpp>
 #include <swizzle/inout_wrapper.hpp>
 #include <swizzle/detail/batch_write_mask.hpp>
 #include <type_traits>

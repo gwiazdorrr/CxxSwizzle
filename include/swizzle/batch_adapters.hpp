@@ -3,7 +3,7 @@
 
 #include <cmath>
 #include <cstdint>
-#include <swizzle/detail/utils.h>
+#include <swizzle/detail/utils.hpp>
 #include <array>
 #include <iostream>
 

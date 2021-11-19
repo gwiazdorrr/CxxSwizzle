@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <vector>
-#include <swizzle/detail/utils.h>
+#include <swizzle/detail/utils.hpp>
 #include <swizzle/vector.hpp>
 #include <type_traits>
 

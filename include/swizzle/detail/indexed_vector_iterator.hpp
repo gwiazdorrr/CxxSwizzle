@@ -4,7 +4,7 @@
 #include <cassert>
 #include <type_traits>
 #include <iterator>
-#include <swizzle/detail/utils.h>
+#include <swizzle/detail/utils.hpp>
 
 namespace swizzle
 {

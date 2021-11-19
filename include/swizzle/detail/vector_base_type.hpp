@@ -4,7 +4,7 @@
 #include <array>
 #include <swizzle/detail/indexed_swizzle.hpp>
 #include <swizzle/detail/vector_storage.hpp>
-#include <swizzle/detail/vector_traits.h>
+#include <swizzle/detail/vector_traits.hpp>
 #include <swizzle/detail/fwd.hpp>
 
 

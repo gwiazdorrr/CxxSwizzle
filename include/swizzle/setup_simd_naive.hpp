@@ -88,8 +88,8 @@ namespace swizzle
 #include <type_traits>
 #include <swizzle/batch_adapters.hpp>
 #include <swizzle/detail/fwd.hpp>
-#include <swizzle/detail/simd_mask.h>
-#include <swizzle/detail/vector_traits.h>
+#include <swizzle/detail/simd_mask.hpp>
+#include <swizzle/detail/vector_traits.hpp>
 
 namespace swizzle
 {

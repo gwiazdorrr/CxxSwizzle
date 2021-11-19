@@ -3,8 +3,8 @@
 
 #include <type_traits>
 #include <cstdint>
-#include <swizzle/detail/utils.h>
-#include <swizzle/detail/vector_traits.h>
+#include <swizzle/detail/utils.hpp>
+#include <swizzle/detail/vector_traits.hpp>
 #include <cmath>
 
 namespace swizzle

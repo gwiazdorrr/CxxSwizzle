@@ -341,8 +341,8 @@ namespace Vc_VERSIONED_NAMESPACE
 
 #include <swizzle/batch_adapters.hpp>
 #include <swizzle/detail/fwd.hpp>
-#include <swizzle/detail/simd_mask.h>
-#include <swizzle/detail/vector_traits.h>
+#include <swizzle/detail/simd_mask.hpp>
+#include <swizzle/detail/vector_traits.hpp>
 #include <swizzle/detail/batch_write_mask.hpp>
 
 namespace swizzle

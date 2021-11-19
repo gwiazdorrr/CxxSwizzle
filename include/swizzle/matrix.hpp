@@ -2,7 +2,7 @@
 #pragma once
 
 #include <array>
-#include <swizzle/detail/utils.h>
+#include <swizzle/detail/utils.hpp>
 #include <swizzle/detail/common_binary_operators.h> 
 #include <utility>
 #include <swizzle/vector.hpp>

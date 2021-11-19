@@ -6,9 +6,9 @@
 #include <iostream>
 
 #include <swizzle/detail/fwd.hpp>
-#include <swizzle/detail/utils.h>
+#include <swizzle/detail/utils.hpp>
 #include <swizzle/detail/vector_storage.hpp>
-#include <swizzle/detail/indexed_vector_iterator.h>
+#include <swizzle/detail/indexed_vector_iterator.hpp>
 #include <swizzle/detail/vector_base_type.hpp>
 
 namespace swizzle
