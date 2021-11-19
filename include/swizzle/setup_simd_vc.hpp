@@ -202,10 +202,9 @@ namespace Vc_VERSIONED_NAMESPACE
     {
         Vector<T> r;
 
-        auto func = [&](size_t i) -> void {
-            r[i] = f(x[i], y[i]);
-        };
-        ::swizzle::detail::static_for<0, x.Size>(std::move(func));
+        ::swizzle::detail::static_for<0, Vector<T>::Size>(
+            [&](size_t i) { r[i] = f(x[i], y[i]); } 
+        );
 
         return r;
     }
