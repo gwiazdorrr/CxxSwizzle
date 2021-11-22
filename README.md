@@ -6,7 +6,6 @@
 
 This project lets you download and run GLSL [shadertoys](https://www.shadertoy.com/) as C++17 code. Most of the time no code alterations are needed, automated trivial fixes push the odds to over 96%, based on the top 1000 most popular shadertoys.
 
-![Sample](https://github.com/adam-p/markdown-here/raw/master/src/common/images/icon48.png "CxxSwizzle in Visual Studio 2019")
 The repo is structured in the following way:
 - `include`:  header-only, dependency free headers that replicate GLSL syntax, types and built-in functions in C++, as completely as humanely possible. This is C++ now:
 ```glsl
