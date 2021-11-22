@@ -33,6 +33,8 @@ file(GLOB detail RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_
 source_group("swizzle" FILES ${root})
 source_group("swizzle\\detail" FILES ${detail})
 
+file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp" CONTENT "// a dummy source file for build systems complaining about no .cpp in a project\n")
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${Vc_INCLUDE_DIR})
-add_library(headers STATIC ${root} ${detail} ${glsl} ${glsl_detail} README.md)
+add_library(headers STATIC ${root} ${detail} ${glsl} ${glsl_detail} README.md "${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp")
 set_target_properties(headers PROPERTIES LINKER_LANGUAGE CXX)
