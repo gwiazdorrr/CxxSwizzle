@@ -23,9 +23,6 @@ macro(create_sample_simd_vc_masked name)
 	create_sample("${name}" "simd_vc_masked")
 endmacro()
 
-set(SAMPLE_TRACY_PROFILER_ROOT "" CACHE PATH "Path to the Tracy Profiler root. Leave empty if you don't want to use it.")
-
-
 if (BUILD_SAMPLES_SCALAR)
 	cxxswizzle_prepare_setup("scalar")
 	create_sample_scalar("_sh16c__doom")

@@ -1,12 +1,16 @@
-
-
 # CxxSwizzle
 
 ![Samples](https://github.com/gwiazdorrr/CxxSwizzle/workflows/CI/badge.svg?branch=modernisation)
 
-This project lets you download and run GLSL [shadertoys](https://www.shadertoy.com/) as C++17 code. Out of 1000 top shadertoys (on 26.11.2021), 840 compile without any code alterations and 953 compile if automatic trivial code patching is enabled, using Visual Studio 2019.
+This project lets you download and run GLSL [shadertoys](https://www.shadertoy.com/) as C++17 code. Out of 1000 top shadertoys (on 26.11.2021), 840 compile without any code alterations and 953 compile if code patching is enabled. Code after patching is still GLSL-compatible and can be pasted back to the Shadertoy.
 
-The repo is structured in the following way:
+Here is the brilliant ["DooM" shadertoy port by P_Malin](https://www.shadertoy.com/view/lldGDr), run as C++ code.
+!["Doom Shadertoy"](./README_Doom.gif)
+
+Another example, ["Creation" by Danilo Guanabara](https://www.shadertoy.com/view/XsXXDn), being debugged in Visual Studio:
+![Creation Debugging"](./README_Creation.png)
+
+The repository is structured in the following way:
 * `include`: header-only, dependency free headers that replicate GLSL syntax, types and built-in functions in C++, as completely as humanely possible. If you wish to use `CxxSwizzle` in your project, this directory is all you need.
 * `sandbox_template`: a cross-platform shadertoy sandbox project template, using `SDL2`, `Dear ImGui`, [imgui-sdl](https://github.com/Tyyppi77/imgui_sdl) and optionally `OpenMP` and [Vc](https://github.com/VcDevel/Vc) (not to be confused with `VC++`/`MSVC`). `vcpkg` is used to resolve the dependencies. Shared by the samples and downloaded shadertoys.
 * `samples`: a set of some of the best shadertoys, with a license permissive enough to have them included here.
@@ -25,43 +29,50 @@ git clone https://github.com/gwiazdorrr/CxxSwizzle.git
 ```
 git submodule update --init
 ```
-3. Configure with CMake toolchain file and a generator of your choice:
+3. Configure with CMake toolchain file and a generator of your choice. For example, using `ninja`:
 ```
 cmake -G Ninja -B build -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
 cd build
 ninja
 ```
-TODO: cmake gui
-
 If you already have `vcpkg` globally installed, you can skip step 2, provided you pass the proper path to `vcpkg.cmake` in the step 3.
 
-## Download a shadertoy
+## Downloading shadertoys
 
-Downloading shadertoys takes place in CMake's configure step (not great, not terrible). `SHADERTOY_DOWNLOAD` gets forcefully set to `none` after each configure.
+**TL;DR:** set `SHADERTOY_DOWNLOAD` to any of `top_*` options and run `cmake`.
 
-`SHADERTOY_FIX_COMMON_PROBLEMS` can be cheched to avoid headaches with most common GLSL to C++ problems.
+Downloading shadertoys takes place in CMake's configure step (not great, not terrible). Note that only shadertoys with `public+api` visibility can be downloaded this way. The process in controlled with following variables:
 
-### Download specific shadertoys
+* `SHADERTOY_DOWNLOAD` controls the download process. If set to `id`, `SHADERTOY_DOWNLOAD_PARAM` is interpreted as a list of shadertoy IDs (semicolon-separated). If set to `top_*`, `SHADERTOY_DOWNLOAD_PARAM` is interpreted as a search term. The parameter is forcefully set to `none` after the download is done, to avoid redownloading same shaders during next CMake's configure phase.
+* `SHADERTOY_DOWNLOAD_PARAM` either a semicolon-separated list of IDs or a search term
+* `SHADERTOY_DOWNLOAD_MAX_COUNT` specifies the upper limit of how many shadertoys to download.
+* `SHADERTOY_ROOT` a directory where shadertoys are downloaded to (`./shadertoys` by default)
+* `SHADERTOY_TEXTURES_ROOT` a directory where textures are downloaded to (`./textures` by default)
+* `SHADERTOY_APPLY_TRIVIAL_FIXES` can be cheched to avoid headaches with most common GLSL to C++ problems. 
+* `SHADERTOY_API_KEY` (advanced) is the API key used to access Shadertoy API. If the default key gets rate-limited, you will need to create your own [key](https://www.shadertoy.com/howto#q2) and set the parameter.
+* `SHADERTOY_SETUP` (advanced) specifies which sandbox setup to use. The default one (`scalar`) has no support for partial derivatives, but branches/loop work out of the box. If you are feeling adventurous check out `simd` variants.
+
+### Use case: download specific shadertoys
 
 1. Set `SHADERTOY_DOWNLOAD` to `id`
 2. Set `SHADERTOY_DOWNLOAD_PARAM` to an id of any shadertoy with `public+api` visiblity (e.g. [WtVfRc](https://www.shadertoy.com/view/WtVfRc)). If you want to download a batch, separate ids with a semicolon.
-3. Click Configure in CMake gui or run ...
+3. Click `Configure` in `cmake-gui` or run `cmake`
 
-### Query and download shadertoys
+### Use case: query and download shadertoys
 
 1. Set `SHADERTOY_DOWNLOAD` to `top_love`, `top_popular`, `top_newest` or `top_hot`. 
 2. Leave `SHADERTOY_DOWNLOAD_PARAM` empty or set it to a search term. 
 3. Set `SHADERTOY_DOWNLOAD_MAX_COUNT` to limit how many shaders you want to download.
-4. Click Configure in CMake gui or run ...
+3. Click `Configure` in `cmake-gui` or run `cmake`
 
-## Auto-fixes
+### Automatic trivial fixes
 
-If `SHADERTOY_FIX_COMMON_PROBLEMS` is enabled, shaders of a shadertoy are patched according to these rules:
+If `SHADERTOY_APPLY_TRIVIAL_FIXES` is enabled, shaders of a shadertoy are patched according to these rules:
 
 - Replaces `^^` operator with `!=`. Could be replaced with C++'s `^`, but that's not compatible with GLSL.
 - Any global const is replaced with `CXX_CONST` (defined as `static inline constexpr`). 
 - Function forward declaration are wrapped with `CXX_IGNORE`. This is not a C++ issue, but rather a consequence of how shaders get included (in a `struct` scope)
-- Arrays: the biggest headache. There are two alternative ways declaring an array. Initialization syntax is not compatible with C++.  Arrays have `length()` method, which is used surprisingly often. Sadly there seems there's no silver bullet here, if you want the replacement macros to be compatible with the limited preprocessor GLSL uses.
+- Arrays: the biggest headache. There are two alternative ways of declaring an array in GLSL. On top of that initialization syntax is not compatible with C++. Arrays have `length()` method, which is used surprisingly often. Sadly, seems there's no silver bullet here, if you want the replacement macros to be compatible with the limited preprocessor GLSL uses.
   - `int [size] foo` -> `CXX_ARRAY_N(int, size) foo`
   - `int foo[size]` -> `CXX_ARRAY_N(int, size) foo`
   - global `int [] foo = int[](0, 1, 2, 3)` -> `CXX_ARRAY_FIELD(int, foo)(0, 1, 2, 3)`
@@ -79,6 +90,61 @@ Note that all these macros are easily GLSL compatible:
 #define CXX_ARRAY_N(type, size) type[size]
 #define CXX_MAKE_ARRAY(type) type[]
 ```
+
+## Adding non public+api shadertoys
+
+If a shadertoy can't be downloaded there's always an option of downloading it manually.
+1. If the shadertoy uses textures, they will need to be downloaded somehow. The easiest way is to use browser's DevTools (F12), switch to `Network` tab and refresh the shadertoy webpage. Textures should be easily found in the list of requests. Save them in `SHADERTOY_TEXTURES_ROOT`.
+2. Create a directory in `SHADERTOY_ROOT`, say `SHADERTOY_ROOT/foo`. That's where passes and config need to be saved to.
+3. Copy passes and save them in following files:
+    - `Image` -> `image.frag`
+    - `Buffer A` -> `buffer_a.frag`
+    - `Buffer B` -> `buffer_b.frag`
+    - `Buffer C` -> `buffer_c.frag`
+    - `Buffer D` -> `buffer_d.frag`
+4. Create `shadertoy_config.hpp` file. This is where passes are configured. The most barebones contents are:
+```cpp
+shadertoy_config shadertoy_config::make_default()
+{
+    shadertoy_config config;
+    return config;
+}
+```
+If the shadertoy uses textures / buffers, `iChannels` settings need to be replicated. 
+* Input: Pass
+```cpp
+    config.get_pass(pass_type::image).get_sampler(0) = sampler_config::make_buffer(pass_type::buffer_a)
+        .init(texture_wrap_modes::clamp, texture_filter_modes::nearest, true);
+```
+* Input: Texture
+```cpp
+    config.get_pass(pass_type::buffer_a).get_sampler(1) = sampler_config::make_texture(
+        "foo.jpg")
+        .init(texture_wrap_modes::repeat, texture_filter_modes::mipmap, false);
+```
+* Input: Cubemap
+```cpp
+    config.get_pass(pass_type::image).get_sampler(3) = sampler_config::make_cubemap({
+        "face_0.png",
+        "face_1.png",
+        "face_2.png",
+        "face_3.png",
+        "face_4.png",
+        "face_5.png"})
+        .init(texture_wrap_modes::clamp, texture_filter_modes::linear, false);
+```
+* Input: Keyboard
+```cpp
+   config.get_pass(pass_type::buffer_c).get_sampler(3) = sampler_config::make_keyboard()
+       .init(texture_wrap_modes::clamp, texture_filter_modes::nearest, true);
+```
+
+After that's done, run `cmake`.
+
+## Other CMake options
+
+* `TRACY_PROFILER_ROOT`: setting to [Tracy Profiler](https://github.com/wolfpld/tracy) path will enable the profiler integration.
+* `Vc_IMPL`: enforces specific SIMD instruction set (AVX2, SSE3 etc.) if using one of `simd_vc` sandbox modes
 
 ## GLSL support status
 
@@ -224,192 +290,3 @@ Parts of [GLSL Lang Spec 4.60](https://www.khronos.org/registry/OpenGL/specs/gl/
     - [x] nearest
   - [x] Wrap
   - [x] VFlip
-
-
-## GLSL bits that do not work out of the box
-
-### Struct initialization
-```glsl
-struct Foo { float x; float y; }; 
-...
-Foo f(0.0, 1.0);`
-```
-```
-error C2440: 'initializing': cannot convert from 'initializer list' to '`anonymous-namespace'::_cxxswizzle_fragment_shader_image::Foo'
-```
-*Solution*: Add `Foo` to `CUSTOM_STRUCTS` CMake list.
-
-### `out/inout` argument modifiers for structs:
-```glsl
-void foo(out Foo f) {}
-```
-```
-error C2039: 'Foo': is not a member of '`anonymous-namespace'::_cxxswizzle_fragment_shader_image::inout_proxy'
-``` 
-*Solution*: Add `Foo` to `CUSTOM_STRUCTS` CMake list.
-
-### Variable being named like a function
-```glsl
-float cos = cos(x);
-```
-```
-error C2064: term does not evaluate to a function taking 1 arguments
-```
-*Solution*:  Rename the variable.
-  ```glsl
-  float cs = cos(x);
-  ```
-
-### Array intialization
-```glsl
-int a[2] = int[](0, 1);
-```
-```
-error C2059: syntax error: ']'
-```
-*Solution*: a macro needs to be used in place of the initialization.
-  ```glsl
-  CXXSWIZZLE_ARRAY(float, a, 0, 1);
-  ```
-  If you intend to move back and forth between CxxSwizzle and Shadertoy, add this to your shader too:
-  ```glsl
-  #ifndef CXXSWIZZLE_ARRAY
-  #define CXXSWIZZLE_ARRAY(type, name, ...) type name[] = type[] ( __VA_ARGS__ )
-  #endif
-  ```
-
-### Function prototypes
-```glsl
-void foo();
-...
-foo();
-```
-```
-error C2535: 'void `anonymous-namespace'::_cxxswizzle_fragment_shader_image::foo(void)': member function already defined or declared
-```
-*Solution*: remove prototypes or wrap with `#ifndef CXXSWIZZLE` if you intend to copy shader back to Shadertoy.
-  ```glsl
-  #ifndef CXXSWIZZLE
-  void foo();
-  #endif
-  ```
-
-### const int used for array size
-```glsl
-const int ArraySize=10; 
-vec3 Array[ArraySize];
-```
-```
-error C2327: '`anonymous-namespace'::_cxxswizzle_fragment_shader_image::ArraySize': is not a type name, static, or enumerator
-```
-*Solution*: use a macro instead.
-```glsl
-#define ArraySize 10
-```
-If you can't use a macro then use this:
-```glsl
-CXXSWIZZLE_STATIC const int ArraySize = 10;
-```
-If you intend to copy the shader back to Shadertoy you will need to add this as well:
-```glsl
-#ifndef CXXSWIZZLE_STATIC
-#define CXXSWIZZLE_STATIC
-#endif
-```
-
-### Ternary operator and swizzles
-
-```glsl
-p.xz = (p.z>p.x) ? p.zx : p.xz;
-```
-```
-error: conditional expression is ambiguous; 'indexed_proxy<[3 * ...], 2UL aka 2, 0UL aka 0>' can be converted to 'indexed_proxy<[3 * ...], 0UL aka 0, 2UL aka 2>' and vice versa
-error: operands to ?: have different types ‘swizzle::detail::vector_base_type_helper<float, 3>::proxy_generator<2, 0>::type’ {aka ‘swizzle::detail::indexed_proxy<swizzle::vector_<float, 0, 1>, std::array<float, 3>, float, 2, 0>’} and ‘swizzle::detail::vector_base_type_helper<float, 3>::proxy_generator<0, 2>::type’ {aka ‘swizzle::detail::indexed_proxy<swizzle::vector_<float, 0, 1>, std::array<float, 3>, float, 0, 2>’}
-```
-*Solution*: MSVC seems to resolve the ambiguity somehow, but g++ and clang need a hint:
-```glsl
-p.xz = (p.z>p.x) ? (vec2)p.zx : p.xz;
-```
-
-
-## Problematic Shadertoys examples
-
-#### E1M1 - Hangar (https://www.shadertoy.com/view/lsSXzD)
-
-Will not work out of the box because of function declarations. C++ obviously has function declarations, but because of how CxxSwizzle samples are set up, they are not going to work and need to be wrapped with an `#ifdef`:
-```glsl
-#ifndef CXXSWIZZLE
-vec3 SampleTexture( const in float fTexture, const in vec2 vUV );
-void MapIntersect( out float fClosestT, out vec4 vHitInfo );
-float hash(float p);
-#endif
-```
-
-
-#### [NV15] 2001 Space Station (https://www.shadertoy.com/view/4lBGRh)
-
-GLSL allows you to have variables and functions of the same name. That is not a case with C++, so each `Rotate` function needs to be fixed and not use `sin` and `cos` as variables:
-```glsl
-vec3 RotateX(vec3 v, float rad)
-{
-  float cs = cos(rad);
-  float sn = sin(rad);
-  //if (RIGHT_HANDED_COORD)
-  return vec3(v.x, cs * v.y + sn * v.z, -sn * v.y + cs * v.z);
-  //else return new float3(x, cos * y - sin * z, sin * y + cos * z);
-}
-vec3 RotateY(vec3 v, float rad)
-{
-  float cs = cos(rad);
-  float sn = sin(rad);
-  //if (RIGHT_HANDED_COORD)
-  return vec3(cs * v.x - sn * v.z, v.y, sn * v.x + cs * v.z);
-  //else return new float3(cos * x + sin * z, y, -sin * x + cos * z);
-}
-vec3 RotateZ(vec3 v, float rad)
-{
-  float cs = cos(rad);
-  float sn = sin(rad);
-  //if (RIGHT_HANDED_COORD)
-  return vec3(cs * v.x + sn * v.y, -sn * v.x + cs * v.y, v.z);
-}
-```
-
-
-#### [SH17C] Physically Based Shading (https://www.shadertoy.com/view/4sSfzK)
-
-This is a fun one. To start with GLSL's syntax for arrays initialization is simply not compatible with C++'s one, so it is macro time:
-
-```glsl
-CXXSWIZZLE_ARRAY(vec3, BASE_COLORS,
-    vec3(0.74),
-    vec3(0.51, 0.72, 0.81),
-    vec3(0.66, .85, .42),
-    vec3(0.87, 0.53, 0.66),
-    vec3(0.51, 0.46, 0.74),
-    vec3(0.78, 0.71, 0.45)
-);
-```
-
-Another thing is struct initialization syntax is also incompatible with C++. But this time a sneaky macro can be generated to work around it, provied you pass add the type name (`SHCoefficients` in this case) to `CUSTOM_STRUCTS` CMake list option.
-
-The last issue is regarding `AppState` struct - it is being passed with `out`. In such case a tiny piece of code needs to be generated - use `CUSTOM_STRUCTS` CMake list.
-
-
-#### [SH17B] Pixel Shader Dungeon (https://www.shadertoy.com/view/Xs2fWD)
-
-Will not compile because of global `const int` being used as an array size. Since in CxxSwizzle global symbols are actually fields of a struct, an equivalent syntax would be `static const int`. So either use a `CXXSWIZZLE_STATIC`:
-
-```glsl
-CXXSWIZZLE_STATIC const int ENEMY_NUM           = 3;
-CXXSWIZZLE_STATIC const int LOG_NUM             = 4;
-```
-
-Or use plain old defines:
-```glsl
-#define ENEMY_NUM 3
-#define LOG_NUM   4
-```
-
-Another reason the shader will not compile is because `GameState` is passed with `inout` - add `GameState` to `CUSTOM_STRUCTS` CMake list.
-

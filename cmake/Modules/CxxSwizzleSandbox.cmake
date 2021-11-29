@@ -54,18 +54,13 @@ macro(cxxswizzle_prepare_setup setup)
 
 endmacro()
 
-macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root_override)
+macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root)
 
     set(template_dir "${CMAKE_SOURCE_DIR}/sandbox_template")
 
     file(GLOB shader_file_list "${shadertoy_dir}/*.frag")
     
     set(gen_include_dir "${CMAKE_CURRENT_BINARY_DIR}/${target_name}_gen")
-
-    set(textures_root ${CXXSWIZZLE_SANDBOX_TEXTURES_ROOT})
-    if (NOT "${textures_root_override}" STREQUAL "")
-        set(textures_root ${textures_root_override})
-    endif()
 
     # find common
     unset(CONFIG_FRAG_COMMON_INCLUDE)
@@ -191,10 +186,10 @@ macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root_ove
 
     endif()
 
-    if (NOT ${CXXSWIZZLE_SANDBOX_TRACY_PROFILER_ROOT} STREQUAL "")
-        source_group("shared" FILES "${tracy_profiler_root}/TracyClient.cpp")
-        target_sources(${target_name} PRIVATE "${tracy_profiler_root}/TracyClient.cpp")
-        target_include_directories(${target_name} PRIVATE ${tracy_profiler_root})
+    if (NOT ${TRACY_PROFILER_ROOT} STREQUAL "")
+        source_group("shared" FILES "${TRACY_PROFILER_ROOT}/TracyClient.cpp")
+        target_sources(${target_name} PRIVATE "${TRACY_PROFILER_ROOT}/TracyClient.cpp")
+        target_include_directories(${target_name} PRIVATE ${TRACY_PROFILER_ROOT})
         target_compile_options(${target_name} PRIVATE "-DTRACY_ENABLE")
     endif()
 

@@ -1000,7 +1000,8 @@ int main(int argc, char* argv[])
                         if (!exists(p))
                         {
                             fprintf(stderr, "ERROR: texture does not exist: %s\n", u8str.c_str());
-                            return 1;
+                            textures[path] = stl_utils::create_sdl_object_or_throw(SDL_CreateRGBSurfaceWithFormat, 0, 1, 1, 8, SDL_PIXELFORMAT_INDEX8);
+                            continue;
                         }
 
                         u8str = p.u8string();
@@ -1011,7 +1012,8 @@ int main(int argc, char* argv[])
                     if (!image)
                     {
                         fprintf(stderr, "ERROR: failed to load %s: %s\n", u8str.c_str(), IMG_GetError());
-                        return 1;
+                        textures[path] = stl_utils::create_sdl_object_or_throw(SDL_CreateRGBSurfaceWithFormat, 0, 1, 1, 8, SDL_PIXELFORMAT_INDEX8);
+                        continue;
                     }
 
                     if (image->format->format == SDL_PIXELFORMAT_INDEX8)
@@ -1145,12 +1147,11 @@ int main(int argc, char* argv[])
             ImGui_ImplSDL2_InitForOpenGL(window.get(), nullptr);
             CXXSWIZZLE_SCOPE_EXIT([]() { ImGui_ImplSDL2_Shutdown(); });
 
-            printf("p           - pause/unpause\n");
-            printf("left arrow  - decrease time by 1 s\n");
-            printf("right arrow - increase time by 1 s\n");
-            printf("space       - blit now! (show incomplete render)\n");
-            printf("t           - toggle multithreading\n");
-            printf("esc         - quit\n");
+            printf("shift + p           - pause/unpause\n");
+            printf("shift + left arrow  - decrease time by 1 s\n");
+            printf("shift + right arrow - increase time by 1 s\n");
+            printf("shift + space       - blit now! (show incomplete render)\n");
+            printf("esc                 - quit\n");
             printf("\n");
             
             ImGuiIO& io = ImGui::GetIO();
@@ -1239,7 +1240,9 @@ int main(int argc, char* argv[])
                     ImGui_ImplSDL2_NewFrame(window.get());
                     ImGui::NewFrame();
 
-                    if (ImGui::IsKeyPressed(SDL_SCANCODE_SPACE))
+                    bool is_shift_down = ImGui::IsKeyDown(SDL_SCANCODE_LSHIFT) || ImGui::IsKeyDown(SDL_SCANCODE_RSHIFT);
+
+                    if (is_shift_down && ImGui::IsKeyPressed(SDL_SCANCODE_SPACE))
                     {
                         blit_now = true;
                     }
@@ -1265,13 +1268,13 @@ int main(int argc, char* argv[])
                         }
 
                         ImGui::SameLine();
-                        if (ImGui::Button(paused ? ">" : "||", button_size) || ImGui::IsKeyPressed(SDL_SCANCODE_P))
+                        if (ImGui::Button(paused ? ">" : "||", button_size) || is_shift_down && ImGui::IsKeyPressed(SDL_SCANCODE_P))
                         {
                             paused = !paused;
                         }
 
                         ImGui::SameLine();
-                        if (ImGui::ArrowButton("SeekBack", ImGuiDir_Left) || ImGui::IsKeyPressed(SDL_SCANCODE_LEFT))
+                        if (ImGui::ArrowButton("SeekBack", ImGuiDir_Left) || is_shift_down && ImGui::IsKeyPressed(SDL_SCANCODE_LEFT))
                         {
                             time = std::max(0.0f, time - 1.0f);
                             progress.cancel = true;
@@ -1281,7 +1284,7 @@ int main(int argc, char* argv[])
                         imgui_utils::imgui_text_centered(40.0f, true, "%.2f", time);
 
                         ImGui::SameLine();
-                        if (ImGui::ArrowButton("SeekForward", ImGuiDir_Right) || ImGui::IsKeyPressed(SDL_SCANCODE_RIGHT))
+                        if (ImGui::ArrowButton("SeekForward", ImGuiDir_Right) || is_shift_down && ImGui::IsKeyPressed(SDL_SCANCODE_RIGHT))
                         {
                             time += 1.0f;
                             progress.cancel = true;
@@ -1294,10 +1297,14 @@ int main(int argc, char* argv[])
                         imgui_utils::imgui_text_centered(60.0f, true, "%dx%d\n", render_targets.width, render_targets.height);
 
                         ImGui::SameLine();
-                        if (ImGui::RadioButton("MT", multithreaded) || ImGui::IsKeyPressed(SDL_SCANCODE_T))
+                        if (ImGui::RadioButton("MT", multithreaded))
                         {
                             set_multithreaded(multithreaded = !multithreaded);
                             progress.cancel = true;
+                        }
+                        if (ImGui::IsItemHovered()) 
+                        {
+                            ImGui::SetTooltip("Enable/disable multithreading");
                         }
 
                         ImGui::SameLine();
