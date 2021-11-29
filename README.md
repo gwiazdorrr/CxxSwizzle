@@ -4,32 +4,16 @@
 
 ![Samples](https://github.com/gwiazdorrr/CxxSwizzle/workflows/CI/badge.svg?branch=modernisation)
 
-This project lets you download and run GLSL [shadertoys](https://www.shadertoy.com/) as C++17 code. Most of the time no code alterations are needed, automated trivial fixes push the odds to over 96%, based on the top 1000 most popular shadertoys.
+This project lets you download and run GLSL [shadertoys](https://www.shadertoy.com/) as C++17 code. Out of 1000 top shadertoys (on 26.11.2021), 840 compile without any code alterations and 953 compile if automatic trivial code patching is enabled, using Visual Studio 2019.
 
 The repo is structured in the following way:
-- `include`:  header-only, dependency free headers that replicate GLSL syntax, types and built-in functions in C++, as completely as humanely possible. This is C++ now:
-```glsl
-vec4 foo(0);                        // 0,0,0,0
-foo.yx = vec2(2, 1);                // 1,2,0,0
-foo.zw = foo.xy * 2;                // 1,2,2,4
-vec2 bar = max(foo.xw, foo.yz).yx;  // 4,2
-bar = clamp(foo.xw, 0, 2);          // 1,2  
-mat2 m(foo.xyz, 1);                 // 1,2,2,1
-bar *= m;                           // 5,2
-```
-- `shadertoys`:  
-- `samples` :
-- `textures`: texture cache
-- Some very painfully concieved CMake macros that download shaders using Shadertoy API and apply tivial code fixes, if enabled. Uses [json-cmake](https://github.com/sbellus/json-cmake).
-- Template project using `SDL2`, `SDL2-image`, `nlohmann_json` and optionally `OpenMP` and [Vc](https://github.com/VcDevel/Vc) (not to be confused with VC++/MSVC) to bring it all together. `vcpkg` is used to resolve all the dependencies.
-
-There are a handful of shadertoys already included, in the sample directory. 
-
-Projects provide Shadertoy integration and is able to download and compile a complete Shadertoy (shaders & textures), provided its visibility is set to `public+api`. Out of 1000 most popular shaders:
-
-- XX% compiled without any alterations
-- 965 compiled and linked successfully after trivial automated changes
-
+* `include`: header-only, dependency free headers that replicate GLSL syntax, types and built-in functions in C++, as completely as humanely possible. If you wish to use `CxxSwizzle` in your project, this directory is all you need.
+* `sandbox_template`: a cross-platform shadertoy sandbox project template, using `SDL2`, `Dear ImGui`, [imgui-sdl](https://github.com/Tyyppi77/imgui_sdl) and optionally `OpenMP` and [Vc](https://github.com/VcDevel/Vc) (not to be confused with `VC++`/`MSVC`). `vcpkg` is used to resolve the dependencies. Shared by the samples and downloaded shadertoys.
+* `samples`: a set of some of the best shadertoys, with a license permissive enough to have them included here.
+* `shadertoys`: placeholder directory where shadertoys are downloaded to
+* `textures`: placeholder directory where textures are downloaded to
+* `test`: test project 
+* `cmake` : some very painfully concieved CMake macros that download shaders using Shadertoy API and apply tivial code fixes, if enabled. Uses [json-cmake](https://github.com/sbellus/json-cmake).
 
 ## Setup
 
@@ -37,14 +21,17 @@ Projects provide Shadertoy integration and is able to download and compile a com
 ```
 git clone https://github.com/gwiazdorrr/CxxSwizzle.git
 ```
-2. Init vcpkg submodule
+2. Init vcpkg and imgui_sdl submodules
 ```
 git submodule update --init
 ```
 3. Configure with CMake toolchain file and a generator of your choice:
 ```
 cmake -G Ninja -B build -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
+cd build
+ninja
 ```
+TODO: cmake gui
 
 If you already have `vcpkg` globally installed, you can skip step 2, provided you pass the proper path to `vcpkg.cmake` in the step 3.
 
