@@ -14,8 +14,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 		p.x*=r.x/r.y;
 		z+=.07;
 		l=length(p);
-		uv+=p/l*(sin(z)+1.)*abs(sin(l*9.-z*2.));
-		c[i]=.01/length(abs(mod(uv,1.)-.5));
+		uv+=p/l*(sin(z)+1.)*abs(sin(l*9.-z-z));
+		c[i]=.01/length(mod(uv,1.)-.5);
 	}
 	fragColor=vec4(c/l,t);
 }

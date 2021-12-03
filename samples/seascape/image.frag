@@ -136,7 +136,10 @@ float heightMapTracing(vec3 ori, vec3 dir, out vec3 p) {
     float tm = 0.0;
     float tx = 1000.0;    
     float hx = map(ori + dir * tx);
-    if(hx > 0.0) return tx;   
+    if(hx > 0.0) {
+        p = ori + dir * tx;
+        return tx;   
+    }
     float hm = map(ori + dir * tm);    
     float tmid = 0.0;
     for(int i = 0; i < NUM_STEPS; i++) {

@@ -28,7 +28,6 @@ if (BUILD_SAMPLES_SCALAR)
 	create_sample_scalar("_sh16c__doom")
 	create_sample_scalar("creation_by_silexars")
 	create_sample_scalar("dry_ice_2")
-	create_sample_scalar("raymarching_-_primitives")
 	create_sample_scalar("seascape")
 endif()
 

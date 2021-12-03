@@ -11,7 +11,7 @@
 /*
 #include <iostream>
 
-CXX_CONST int tabSize = 48;
+const int tabSize = 48;
 
 std::int64_t divTab[tabSize][tabSize];
 std::int64_t preTab[tabSize][tabSize];

@@ -168,7 +168,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	vec3 tot = vec3(0.0);
         
 #if AA
-	CXX_ARRAY_N(vec2, 4) rook;
+	vec2 rook[4];
     rook[0] = vec2( 1./8., 3./8.);
     rook[1] = vec2( 3./8.,-1./8.);
     rook[2] = vec2(-1./8.,-3./8.);

@@ -1,18 +1,18 @@
 // Created by David Gallardo - xjorma/2020
 // License Creative Commons Attribution-NonCommercial-ShareAlike 3.0
 
-CXX_CONST float dissipation 	= 0.95;
+const float dissipation 	= 0.95;
 
-CXX_CONST float ballRadius		= 0.06;
-CXX_CONST float fogHeigth		= ballRadius * 4.;
-CXX_CONST int	nbSlice			= 24;
-CXX_CONST float fogSlice		= fogHeigth / float(nbSlice);
-CXX_CONST int	nbSphere 		= 3;
-CXX_CONST float shadowDensity 	= 25.;
-CXX_CONST float fogDensity 		= 20.;
-CXX_CONST float lightHeight     = 1.;
+const float ballRadius		= 0.06;
+const float fogHeigth		= ballRadius * 4.;
+const int	nbSlice			= 24;
+const float fogSlice		= fogHeigth / float(nbSlice);
+const int	nbSphere 		= 3;
+const float shadowDensity 	= 25.;
+const float fogDensity 		= 20.;
+const float lightHeight     = 1.;
 
-CXX_CONST float tau =  radians(360.);
+const float tau =  radians(360.);
 
 
 // https://www.shadertoy.com/view/4djSRW
