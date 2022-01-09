@@ -11,12 +11,12 @@ set_property(GLOBAL PROPERTY USE_FOLDERS On)
 
 set(TRACY_PROFILER_ROOT "" CACHE PATH "Path to the Tracy Profiler root. Leave empty if you don't want to use it.")
 
-option(BUILD_SAMPLES_SCALAR "Build Samples (Scalar)" ON)
-option(BUILD_SAMPLES_SIMD "Build Samples (SIMD)" ON)
+option(BUILD_SAMPLES "Build Samples (Scalar)" ON)
+option(BUILD_SAMPLES_SIMD "Build Samples (SIMD)" OFF)
 option(BUILD_TESTS "Build Tests" OFF)
 option(BUILD_SHADERTOYS "Build Shadertoys" ON)
 
-if (BUILD_SAMPLES_SCALAR OR BUILD_SAMPLES_SIMD)
+if (BUILD_SAMPLES OR BUILD_SAMPLES_SIMD)
 	add_subdirectory(samples)
 endif()
 
@@ -30,6 +30,7 @@ if (BUILD_SHADERTOYS)
 	set(SHADERTOY_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/shadertoys" CACHE PATH "Directory where shadertoys are downloaded to/read from.")
 
 	set(SHADERTOY_SETUP "scalar" CACHE STRING "SIMD type")
+	mark_as_advanced(SHADERTOY_SETUP)
 	set_property(CACHE SHADERTOY_SETUP PROPERTY STRINGS ${CXXSWIZZLE_SETUPS})
 
 	# handle downloads
