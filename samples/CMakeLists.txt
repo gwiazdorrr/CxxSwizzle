@@ -23,7 +23,7 @@ macro(create_sample_simd_vc_masked name)
 	create_sample("${name}" "simd_vc_masked")
 endmacro()
 
-if (BUILD_SAMPLES_SCALAR)
+if (BUILD_SAMPLES)
 	cxxswizzle_prepare_setup("scalar")
 	create_sample_scalar("_sh16c__doom")
 	create_sample_scalar("creation_by_silexars")
@@ -32,16 +32,13 @@ if (BUILD_SAMPLES_SCALAR)
 endif()
 
 if (BUILD_SAMPLES_SIMD)
-	cxxswizzle_prepare_setup("simd_naive")
-	create_sample_simd_naive("seascape")
-
 	cxxswizzle_prepare_setup("simd_vc")
-	create_sample_simd_vc("creation_by_silexars")
-	create_sample_simd_vc("seascape")
-	create_sample_simd_vc("dry_ice_2")
+	create_sample_simd_vc("creation_by_silexars_patched")
+
+	# has artifacts due to one branch being followed at a time
+	create_sample_simd_vc("seascape_patched")
 
 	cxxswizzle_prepare_setup("simd_vc_masked")
-	create_sample_simd_vc_masked("creation_by_silexars")
-	create_sample_simd_vc_masked("seascape")
-	create_sample_simd_vc_masked("dry_ice_2")
+	# no artifacts
+	create_sample_simd_vc_masked("seascape_patched")
 endif()
