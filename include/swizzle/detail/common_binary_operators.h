@@ -1,8 +1,6 @@
-// CxxSwizzle
-// Copyright (c) 2013-2015, Piotr Gwiazdowski <gwiazdorrr+github at gmail.com>
+// CxxSwizzle (c) 2013-2021 Piotr Gwiazdowski
 #pragma once
 
-#include "static_functors.h"
 
 namespace swizzle
 {
@@ -14,72 +12,59 @@ namespace swizzle
         //! to a vector/scalar (proxies!) can use these operators too.
         //! Note that because VC++ is unable to align SIMD types when passing by value,
         //! functions defined here use C++03 pass-by-reference style.
-        template <typename VectorType, typename ScalarType, typename VectorArgType = const VectorType&, typename ScalarArgType = const ScalarType&>
+        template <typename TVector, typename TScalar, typename TVectorArg = const TVector&, typename TScalarArg = const TScalar&>
         struct common_binary_operators
         {
-            typedef VectorArgType vector_arg_type;
-            typedef ScalarArgType scalar_arg_type;
-
-            friend VectorType operator+(vector_arg_type v, scalar_arg_type s)
+            friend TVector operator+(TVectorArg v, TScalarArg s)
             {
-                VectorType result(v);
-                return result += s;
+                return TVector(v) += s;
             }
-            friend VectorType operator+(scalar_arg_type s, vector_arg_type v)
+            friend TVector operator+(TScalarArg s, TVectorArg v)
             {
                 return v + s;
             }
-            friend VectorType operator+(vector_arg_type v1, vector_arg_type v2)
+            friend TVector operator+(TVectorArg v1, TVectorArg v2)
             {
-                VectorType result(v1);
-                return result += v2;
+                return TVector(v1) += v2;
             }
 
-            friend VectorType operator*(vector_arg_type v, scalar_arg_type s)
+            friend TVector operator*(TVectorArg v, TScalarArg s)
             {
-                VectorType result(v);
-                return result *= s;
+                return TVector(v) *= s;
             }
-            friend VectorType operator*(scalar_arg_type s, vector_arg_type v)
+            friend TVector operator*(TScalarArg s, TVectorArg v)
             {
                 return v * s;
             }
-            friend VectorType operator*(vector_arg_type v1, vector_arg_type v2)
+            friend TVector operator*(TVectorArg v1, TVectorArg v2)
             {
-                VectorType result(v1);
-                return result *= v2;
+                return TVector(v1) *= v2;
             }
 
-            friend VectorType operator-(vector_arg_type v, scalar_arg_type s)
+            friend TVector operator-(TVectorArg v, TScalarArg s)
             {
-                VectorType result(v);
-                return result -= s;
+                return TVector(v) -= s;
             }
-            friend VectorType operator-(scalar_arg_type s, vector_arg_type v)
+            friend TVector operator-(TScalarArg s, TVectorArg v)
             {
-                VectorType result(s);
-                return result -= v;
+                return TVector(s) -= v;
             }
-            friend VectorType operator-(vector_arg_type v1, vector_arg_type v2)
+            friend TVector operator-(TVectorArg v1, TVectorArg v2)
             {
-                VectorType result(v1);
-                return result -= v2;
+                return TVector(v1) -= v2;
             }
 
-            friend VectorType operator/(vector_arg_type v, scalar_arg_type s)
+            friend TVector operator/(TVectorArg v, TScalarArg s)
             {
-                VectorType result(v);
-                return result /= s;
+                return TVector(v) /= s;
             }
-            friend VectorType operator/(scalar_arg_type s, vector_arg_type v)
+            friend TVector operator/(TScalarArg s, TVectorArg v)
             {
-                VectorType result(s);
-                return result /= v;
+                return TVector(s) /= v;
             }
-            inline friend VectorType operator/(vector_arg_type v1, vector_arg_type v2)
+            inline friend TVector operator/(TVectorArg v1, TVectorArg v2)
             {
-                VectorType result(v1);
-                return result /= v2;
+                return TVector(v1) /= v2;
             }
         };
     }

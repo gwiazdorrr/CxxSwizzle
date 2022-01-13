@@ -1,30 +1,47 @@
-# Copyright (c) 2019-2020 Luca Cappa
-# Released under the term specified in file LICENSE.txt
-# SPDX short identifier: MIT
-name: hosted-basic-autocache
+name: CI
 on: [push]
 
 jobs:
   job:
-    name: ${{ matrix.os }}-hosted-basic
-    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.name }}-${{ matrix.buildType }}
+    runs-on: ${{ matrix.os }}-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        name: [ubuntu-gcc-9, ubuntu-clang, macos-clang, windows-msvc-2019, windows-gcc]
+        buildType: [Release]
         include:
-          - os: windows-latest
+          - name: windows-msvc-2019
+            os: windows
+            cxx: cl.exe
+            cc: cl.exe
             triplet: x64-windows
-            vcpkgCommitId: '0591528cbfde14ccfd3900c3fb19aba382c05349'
-            vcpkgPackages: 'sdl'
-          - os: ubuntu-latest
+            generator: Visual Studio 16 2019
+          - name: windows-gcc
+            os: windows
+            cxx: gcc.exe
+            cc: g++.exe
+            triplet: x64-windows
+            generator: Ninja
+          - name: ubuntu-gcc-9
+            os: ubuntu
+            cxx: g++-9
+            cc: gcc-9
             triplet: x64-linux
-            vcpkgCommitId: '0591528cbfde14ccfd3900c3fb19aba382c05349'
-            vcpkgPackages: 'sdl'
-          - os: macos-latest
+            generator: Ninja
+            cxxFlags: -march=native
+          - name: ubuntu-clang
+            os: ubuntu
+            cxx: clang++
+            cc: clang
+            triplet: x64-linux
+            generator: Ninja
+          - name: macos-clang
+            os: macos
+            cxx: clang++
+            cc: clang
             triplet: x64-osx
-            vcpkgCommitId: '0591528cbfde14ccfd3900c3fb19aba382c05349'
-            vcpkgPackages: 'sdl'
+            generator: Ninja
 
     steps:
       - uses: actions/checkout@v1
@@ -32,29 +49,40 @@ jobs:
           submodules: true
 
       - uses: lukka/get-cmake@latest
-      - name: dir
-        run: find ${{ runner.workspace }}
-        if: "!contains( matrix.os, 'windows')"
-      - name: dir
-        run: gci -recurse ${{ runner.workspace }}
-        if: contains( matrix.os, 'windows')
+      - uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Set Environment vars
+        run: |
+          echo "CXX=${{ matrix.cxx }}" >> $GITHUB_ENV
+          echo "CC=${{ matrix.cc }}" >> $GITHUB_ENV
+
+      - name: Print Compiler Version
+        if: runner.os != 'Windows'
+        run: |
+          ${{ matrix.cxx }} --version
+
       - name: Restore artifacts, or run vcpkg, build and cache artifacts
-        uses: lukka/run-vcpkg@v2
+        uses: lukka/run-vcpkg@v6
         id: runvcpkg
         with:
-          vcpkgArguments: '${{ matrix.vcpkgPackages }}'
-          vcpkgTriplet: '${{ matrix.triplet }}'
-          vcpkgDirectory: '${{ runner.workspace }}/b/vcpkg'
-          vcpkgGitCommitId: '${{ matrix.vcpkgCommitId }}'
-      - name: Prints outputs of run-vcpkg task
-        run: echo "'${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}' '${{  steps.runvcpkg.outputs.RUNVCPKG_VCPKG_TRIPLET_OUT }}' "
-      - name: Run CMake+Ninja without triplet
-        uses: lukka/run-cmake@v2
+          # Just install vcpkg for now, do not install any ports in this step yet.
+          setupOnly: true
+          vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+          appendedCacheKey: ${{ hashFiles( '**/vcpkg.json' ) }}
+          vcpkgTriplet: ${{ matrix.triplet }}
+
+      - name: Run CMake+Ninja
+        uses: lukka/run-cmake@v3
         id: runcmake
         with:
-          cmakeGenerator: 'Ninja'  
-          cmakeListsOrSettingsJson: 'CMakeListsTxtBasic'
+          cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
           cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
+          vcpkgTriplet: ${{ matrix.triplet }}
           useVcpkgToolchainFile: true
-          buildWithCMakeArgs: '-- -v'
-          buildDirectory: '${{ runner.workspace }}/b/ninja/'
+          buildDirectory: '${{ runner.workspace }}/b/${{ matrix.name }}/'
+          cmakeAppendedArgs: '-G "${{ matrix.generator }}" -DCMAKE_BUILD_TYPE=${{ matrix.buildType }} -DCMAKE_CXX_FLAGS="${{ matrix.cxxFlags }}" -DBUILD_TESTS=ON'
+          
+      - name: Run CTest
+        run: |
+         cd ${{ runner.workspace }}/b/${{ matrix.name }}/test
+         ctest -V

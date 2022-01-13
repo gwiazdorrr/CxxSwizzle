@@ -1,110 +1,292 @@
-CxxSwizzle
-==========
+# CxxSwizzle
 
-2015.02.17 Update: The library now comes with SIMD support. More info soon.
+![Samples](https://github.com/gwiazdorrr/CxxSwizzle/workflows/CI/badge.svg?branch=modernisation)
 
-CxxSwizzle (a reality-friendly way of writing down "C++ Swizzle") is a header-only, dependency free extensible library bringing shader languages' (GLSL, HLSL) vector "swizzle" syntax into C++. Basically, you can do this in C++ now:
+This project lets you download and run GLSL [shadertoys](https://www.shadertoy.com/) as C++17 code. Out of 1000 top shadertoys (on 26.11.2021), 840 compile without any code alterations and 953 compile if code patching is enabled. Code after patching is still GLSL-compatible and can be pasted back to the Shadertoy.
 
-    vec4 foo(0);                        // 0,0,0,0
-    foo.yx = vec2(2, 1);                // 1,2,0,0
-    foo.zw = foo.xy * 2;                // 1,2,2,4
-    vec2 bar = max(foo.xw, foo.yz).yx;  // 4,2
-    bar = clamp(foo.xw, 0, 2);          // 1,2  
-    mat2 m(foo.xyz, 1);                 // 1,2,2,1
-    bar *= m;                           // 5,2
-    // etc.
+Here is the brilliant ["DooM" shadertoy port by P_Malin](https://www.shadertoy.com/view/lldGDr), run as C++ code.
+!["Doom Shadertoy"](./README_Doom.gif)
 
-What's the use? Familiar and easy to use syntax for non-critical pieces of code. Also, given GLSL/HLSL similarity to C you can execute most shaders directly as C++ code, with just a little help from the preprocessor (keyword substitution). That gives debugging and flexibility capabilities unpararelled by existing shader debugging solutions - you can use IDE of your choice, add logging, assertions, breakpoints (even conditional ones!), unit tests for functions etc.
+Another example, ["Creation" by Danilo Guanabara](https://www.shadertoy.com/view/XsXXDn), being debugged in Visual Studio:
+![Creation Debugging"](./README_Creation.png)
 
-The following snippet will compile both in C++ and GLSL.
+The repository is structured in the following way:
+* `include`: header-only, dependency free headers that replicate GLSL syntax, types and built-in functions in C++, as completely as humanely possible. If you wish to use `CxxSwizzle` in your project, this directory is all you need.
+* `sandbox_template`: a cross-platform shadertoy sandbox project template, using `SDL2`, `Dear ImGui`, [imgui-sdl](https://github.com/Tyyppi77/imgui_sdl) and optionally `OpenMP` and [Vc](https://github.com/VcDevel/Vc) (not to be confused with `VC++`/`MSVC`). `vcpkg` is used to resolve the dependencies. Shared by the samples and downloaded shadertoys.
+* `samples`: a set of some of the best shadertoys, with a license permissive enough to have them included here.
+* `shadertoys`: placeholder directory where shadertoys are downloaded to
+* `textures`: placeholder directory where textures are downloaded to
+* `test`: test project 
+* `cmake` : some very painfully concieved CMake macros that download shaders using Shadertoy API and apply tivial code fixes, if enabled. Uses [json-cmake](https://github.com/sbellus/json-cmake).
 
-    #ifdef __cplusplus
-    #include <cassert>
-    #include <iostream>
-    #else
-    #define assert(x)
-    #define CPP_DO(x)
-    #endif
+## Setup
 
-    void test_sin(vec4 a)
-    {
-        vec4 b = sin(a);
+1. Clone the repository
+```
+git clone https://github.com/gwiazdorrr/CxxSwizzle.git
+```
+2. Init vcpkg and imgui_sdl submodules
+```
+git submodule update --init
+```
+3. Configure with CMake toolchain file and a generator of your choice. For example, using `ninja`:
+```
+cmake -G Ninja -B build -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
+cd build
+ninja
+```
+If you already have `vcpkg` globally installed, you can skip step 2, provided you pass the proper path to `vcpkg.cmake` in the step 3.
 
-        // sanity checks
-        assert( all(lessThanEqual(b, vec4(1))) );
-        assert( all(greaterThanEqual(b, vec4(-1))) );
+## Downloading shadertoys
 
-        // print out
-        CPP_DO( std::cout << "sin(" << a << ") == " << b << "\n"; )
+**TL;DR:** set `SHADERTOY_DOWNLOAD` to any of `top_*` options and run `cmake`.
 
-        #ifdef __cplusplus
-        
-        // test trigonometric symmetry
-        const float c_pi = 3.14159265358979323846f;
-        const vec4 c_eps = vec4(0.0001);
+Downloading shadertoys takes place in CMake's configure step (not great, not terrible). Note that only shadertoys with `public+api` visibility can be downloaded this way. The process in controlled with following variables:
 
-        vec4 c = cos(c_pi/2 - a);
-        if ( any(greaterThan(abs(c - b), c_eps)) )
-        {
-            // programmatic breakpoint
-            __asm int 3;
-        }
-        
-        #endif
-    }
+* `SHADERTOY_DOWNLOAD` controls the download process. If set to `id`, `SHADERTOY_DOWNLOAD_PARAM` is interpreted as a list of shadertoy IDs (semicolon-separated). If set to `top_*`, `SHADERTOY_DOWNLOAD_PARAM` is interpreted as a search term. The parameter is forcefully set to `none` after the download is done, to avoid redownloading same shaders during next CMake's configure phase.
+* `SHADERTOY_DOWNLOAD_PARAM` either a semicolon-separated list of IDs or a search term
+* `SHADERTOY_DOWNLOAD_MAX_COUNT` specifies the upper limit of how many shadertoys to download.
+* `SHADERTOY_ROOT` a directory where shadertoys are downloaded to (`./shadertoys` by default)
+* `SHADERTOY_TEXTURES_ROOT` a directory where textures are downloaded to (`./textures` by default)
+* `SHADERTOY_APPLY_TRIVIAL_FIXES` can be cheched to avoid headaches with most common GLSL to C++ problems. 
+* `SHADERTOY_API_KEY` (advanced) is the API key used to access Shadertoy API. If the default key gets rate-limited, you will need to create your own [key](https://www.shadertoy.com/howto#q2) and set the parameter.
+* `SHADERTOY_SETUP` (advanced) specifies which sandbox setup to use. The default one (`scalar`) has no support for partial derivatives, but branches/loop work out of the box. If you are feeling adventurous check out `simd` variants.
 
-In fact you can pretty much take any shader from http://glsl.heroku.com or http://shadertoy.com (the second one takes loooong to load) and execute it as C++ code. The sample project is a simplistic example of how to do exactly that. For instance, this shader from sample, can be run both as GLSL (try it here: http://glsl.heroku.com/e#10661.0) and as C++ (in sample, shaders/leadlight.frag):
+### Use case: download specific shadertoys
 
-    uniform float time;
-    uniform vec2 mouse;
-    uniform vec2 resolution;
+1. Set `SHADERTOY_DOWNLOAD` to `id`
+2. Set `SHADERTOY_DOWNLOAD_PARAM` to an id of any shadertoy with `public+api` visiblity (e.g. [WtVfRc](https://www.shadertoy.com/view/WtVfRc)). If you want to download a batch, separate ids with a semicolon.
+3. Click `Configure` in `cmake-gui` or run `cmake`
 
-    // Leadlight by @hintz 2013-05-02
+### Use case: query and download shadertoys
 
-    void main()
-    {
-        vec2 position = gl_FragCoord.xy / resolution.x - 0.5;
-        
-        float r = length(position);
-        float a = atan(position.y, position.x);
-        float t = time + 100.0/(r+1.0);
-        
-        float light = 15.0*abs(0.05*(sin(t)+sin(time+a*8.0)));
-        vec3 color = vec3(-sin(r*5.0-a-time+sin(r+t)), sin(r*3.0+a-cos(time)+sin(r+t)), cos(r+a*2.0+log(5.001-(a/4.0))+time)-sin(r+t));
-        
-        gl_FragColor = vec4((normalize(color)+0.3) * light , 1.0);
-    }
+1. Set `SHADERTOY_DOWNLOAD` to `top_love`, `top_popular`, `top_newest` or `top_hot`. 
+2. Leave `SHADERTOY_DOWNLOAD_PARAM` empty or set it to a search term. 
+3. Set `SHADERTOY_DOWNLOAD_MAX_COUNT` to limit how many shaders you want to download.
+3. Click `Configure` in `cmake-gui` or run `cmake`
 
-Note that contrary to the headers the sample needs SDL library. 
-    
-HLSL can be compiled as well, but likely not without some changes. There's no way to make semantics valid in C++, for instance. Also, named cbuffers would need some work. I am still looking into this.
+### Automatic trivial fixes
 
-The library is written in C++11 subset supported by VS2013. It works with g++ 4.8.1 and most likely will work with clang, too. There are no external dependencies.
+If `SHADERTOY_APPLY_TRIVIAL_FIXES` is enabled, shaders of a shadertoy are patched according to these rules:
 
-There is a legacy branch written in C++11 subset supported by VS2010 - most notably the lack of variadic templates was a great pain and limitation. That's why it's no longer maintained.
+- Replaces `^^` operator with `!=`. Could be replaced with C++'s `^`, but that's not compatible with GLSL.
+- Any global const is replaced with `CXX_CONST` (defined as `static inline constexpr`). 
+- Function forward declaration are wrapped with `CXX_IGNORE`. This is not a C++ issue, but rather a consequence of how shaders get included (in a `struct` scope)
+- Arrays: the biggest headache. There are two alternative ways of declaring an array in GLSL. On top of that initialization syntax is not compatible with C++. Arrays have `length()` method, which is used surprisingly often. Sadly, seems there's no silver bullet here, if you want the replacement macros to be compatible with the limited preprocessor GLSL uses.
+  - `int [size] foo` -> `CXX_ARRAY_N(int, size) foo`
+  - `int foo[size]` -> `CXX_ARRAY_N(int, size) foo`
+  - global `int [] foo = int[](0, 1, 2, 3)` -> `CXX_ARRAY_FIELD(int, foo)(0, 1, 2, 3)`
+  - global `int foo [] = int[](0, 1, 2, 3)` -> `CXX_ARRAY_FIELD(int, foo)(0, 1, 2, 3)`
+  - `int [] foo` -> `CXX_ARRAY(int) foo`
+  - `int foo[]` -> `CXX_ARRAY(int) foo`
+  - `int[](0, 1, 2, 3)` -> `CXX_MAKE_ARRAY(int)(0, 1, 2, 3)`
 
-Compability
----------------------------------------------------
+Note that all these macros are easily GLSL compatible:
+```glsl
+#define CXX_CONST const
+#define CXX_IGNORE(x) x
+#define CXX_ARRAY_FIELD(type, name) type[] name
+#define CXX_ARRAY(type) type[]
+#define CXX_ARRAY_N(type, size) type[size]
+#define CXX_MAKE_ARRAY(type) type[]
+```
 
-When using g++, following flags must be added to the compiler command line:
+## Adding non public+api shadertoys
 
-    -std=c++11 -fno-operator-names
+If a shadertoy can't be downloaded there's always an option of downloading it manually.
+1. If the shadertoy uses textures, they will need to be downloaded somehow. The easiest way is to use browser's DevTools (F12), switch to `Network` tab and refresh the shadertoy webpage. Textures should be easily found in the list of requests. Save them in `SHADERTOY_TEXTURES_ROOT`.
+2. Create a directory in `SHADERTOY_ROOT`, say `SHADERTOY_ROOT/foo`. That's where passes and config need to be saved to.
+3. Copy passes and save them in following files:
+    - `Image` -> `image.frag`
+    - `Buffer A` -> `buffer_a.frag`
+    - `Buffer B` -> `buffer_b.frag`
+    - `Buffer C` -> `buffer_c.frag`
+    - `Buffer D` -> `buffer_d.frag`
+4. Create `shadertoy_config.hpp` file. This is where passes are configured. The most barebones contents are:
+```cpp
+shadertoy_config shadertoy_config::make_default()
+{
+    shadertoy_config config;
+    return config;
+}
+```
+If the shadertoy uses textures / buffers, `iChannels` settings need to be replicated. 
+* Input: Pass
+```cpp
+    config.get_pass(pass_type::image).get_sampler(0) = sampler_config::make_buffer(pass_type::buffer_a)
+        .init(texture_wrap_modes::clamp, texture_filter_modes::nearest, true);
+```
+* Input: Texture
+```cpp
+    config.get_pass(pass_type::buffer_a).get_sampler(1) = sampler_config::make_texture(
+        "foo.jpg")
+        .init(texture_wrap_modes::repeat, texture_filter_modes::mipmap, false);
+```
+* Input: Cubemap
+```cpp
+    config.get_pass(pass_type::image).get_sampler(3) = sampler_config::make_cubemap({
+        "face_0.png",
+        "face_1.png",
+        "face_2.png",
+        "face_3.png",
+        "face_4.png",
+        "face_5.png"})
+        .init(texture_wrap_modes::clamp, texture_filter_modes::linear, false);
+```
+* Input: Keyboard
+```cpp
+   config.get_pass(pass_type::buffer_c).get_sampler(3) = sampler_config::make_keyboard()
+       .init(texture_wrap_modes::clamp, texture_filter_modes::nearest, true);
+```
 
-The less obvious second flag disables alterantive operators names, such as `and` ar `not` which, coincidentally, are also the names of some GLSL functions.
+After that's done, run `cmake`.
 
-If using CMake, just set CMAKE_CXX_FLAGS variable.
+## Other CMake options
 
-Diferences between GLM
----------------------------------------------------
+* `TRACY_PROFILER_ROOT`: setting to [Tracy Profiler](https://github.com/wolfpld/tracy) path will enable the profiler integration.
+* `Vc_IMPL`: enforces specific SIMD instruction set (AVX2, SSE3 etc.) if using one of `simd_vc` sandbox modes
 
-This shows up a lot in comments - why use CxxSwizzle and not GLM (http://glm.g-truc.net)? Well, here are main differences:
+## GLSL support status
 
-* GLM swizzling seems kind of half done and has its quirks. Bottom line, there's nowhere near as much flexibility as you have with GLSL/HLSL and CxxSwizzle.
-* GLM is highly susceptible to ambiguity errors. In GLSL/HLSL number literals are contextual, i.e. `0.5` can mean any precision floating point number. Not in C++.
-* GLM can't handle some vector construction cases.
-* GLM has more features. Covers greater array of GLSL functions, as well as "support" OGL and GLU functions. Something CxxSwizzle will hopefully catch up soon.
-* GLM has an optional SIMD support. Focus of CxxSwizzle was not a performance; it *is going to be painfully slow* regardless if you are going to emulate shader or even structure your code similarly to shaders. SSE is not going to help here much. However, I do recognise the room for improvement and am aware of naivity of current math implementation - hence the `swizzle::glsl::naive` namespace.
-* GLM is mature
+Parts of [GLSL Lang Spec 4.60](https://www.khronos.org/registry/OpenGL/specs/gl/GLSLangSpec.4.60.pdf) CxxSwizzle attempted at replicating:
 
-Other, "ideological" differences:
-* GLM is code and macro heavy (for what it provides), while CxxSwizzle is compact, clean and mostly template based
+- [ ] Baisc Types [4.1]
+  - [x] scalar types
+  - [x] `vec2..4`
+  - [x] `ivec2..4`
+  - [x] `uvec2..4`
+  - [x] `bvec2..4`
+  - [ ] `dvec2..4`
+  - [x] `mat2..4`
+  - [x] `mat2..4x2..4`
+  - [ ] `dmat2..4`
+  - [ ] `dmat2..4x2..4`
+  - [x] `sampler1D` *(as sampler_generic)*
+  - [x] `sampler2D` *(as sampler_generic)*
+  - [x] `samplerCube` *(as sampler_generic)*
+  - [ ] `sampler3D`
+  - [ ] other sampler types 
+- [ ] Implicit Conversions [4.1.10]
+- [x] Parameter Qualifiers [4.6]
+  - [x] `const`
+  - [x] `in`
+  - [x] `out`
+  - [x] `inout`
+- [x] Precision Qualifiers [4.7]
+  - [x] `highp` *(no effect)*
+  - [x] `mediump` *(no effect)*
+  - [x] `lowp` *(no effect)*
+- [ ] Operators [5.1]
+- [x] Constructors [5.4]
+  - [x] Conversion and Scalar Constructors [5.4.1]
+  - [ ] Vector and Matrix Constructors [5.4.2] *needs tests*
+  - [x] Structure Constructors [5.4.3] *(see Workarounds)*
+  - [ ] Array Constructors [5.4.4] 
+    - [x] One-dimensional  *(see Workarounds)*
+    - [ ] Multi-dimensional
+- [x] Vector and Scalar Components and Length [5.5]
+  - [x] Swizzling
+  - [x] Vector `length` method
+  - [ ] Scalar `x` compoment
+- [x] Matrix Components [5.6]
+- [x] Structure and Array Operations [5.7]
+  - [x] Array length method *(see Workarounds)*
+  - [ ] Equality operator
+  - [x] Other operators
+- [x] Vector and Matrix Operations [5.10] *needs more tests*
+- [x] Function Definitions [6.1]
+  - [x] Prototypes *(see Workarounds)*
+  - [x] Definitions
+- [x] Jumps [6.4]
+  - [x] `discard`
+- [ ] Built-in Variables [7]
+  - [x] `gl_FragCoord`
+  - [x] `gl_FragColor`
+  - [ ] Other variables
+- [ ] Built-in Functions
+  - [x] Angle and Trigonometry Functions [8.1]
+  - [x] Exponential Functions [8.2]
+  - [ ] Common Functions [8.3]
+    - [ ] `fma`
+    - [ ] `frexp`, `ldexp`
+    - [x] Other functions
+  - [ ] Floating-Point Pack and Unpack Functions [8.4]
+  - [ ] Geometric Functions [8.5]
+    - [ ] `ftransform`
+    - [x] Other functions
+  - [x] Matrix Functions [8.6]
+    - [ ] `matrixCompMult`
+    - [ ] `outerProduct`
+    - [x] `transpose`
+    - [ ] `determinant`
+    - [ ] `inverse`
+  - [x] Vector Relational Functions [8.7]
+  - [ ] Integer Functions [8.8]
+  - [ ] Texture Functions [8.9] *(sampler ignores lod and partial derivatives)*
+    - [x] `textureSize`
+    - [x] `texture`
+    - [x] `texelFetch`  *(robust buffer access needs implementing)*
+    - [x] `textureLod`
+    - [x] `textureGrad`
+    - [ ] Other  functions
+  - [ ] Fragment Processing Functions [8.13] *(SIMD only)*
+    - [x] `dfDx`
+    - [x] `dfDy`
+    - [x] `fwidth`
+    - [ ] Coarse and Fine derivatives
+    - [ ] Interpolation Functions
+
+## Shadertoy integration status
+
+- [ ] Downloading Shaders with "public+api" visibility
+  - [x] By id
+    - [x] Single
+    - [x] Batch
+  - [x] Query
+    - [x] Name
+    - [x] Sort (Popular, Newest, Love, Hot)
+    - [x] From-To
+    - [ ] Filters
+- [ ] Shader Inputs
+  - [x] iResolution
+  - [x] iTime
+  - [x] iTimeDelta
+  - [x] iFrame
+  - [ ] iChannelTime *Note: always 0*
+  - [x] iChannelResolution
+  - [x] iMouse
+  - [x] iChannel0...3
+  - [x] iDate
+  - [ ] iSampleRate *Note: always 0*
+  - [x] iFrameRate
+- [ ] Sources
+  - [x] Common
+  - [x] Buffer A
+  - [x] Buffer B
+  - [x] Buffer C
+  - [x] Buffer D
+  - [ ] Sound
+  - [ ] Cubemap A
+- [ ] Channels
+  - [ ] Misc
+    - [x] Keyboard
+    - [ ] Webcam
+    - [ ] Microphone
+    - [ ] Soundcloud
+    - [x] Buffer A
+    - [x] Buffer B
+    - [x] Buffer C
+    - [x] Buffer D
+    - [ ] Cubemap A
+  - [x] Textures
+  - [x] Cubemaps
+  - [ ] Volumes
+  - [ ] Videos
+  - [ ] Music
+- [ ] Sampler options
+  - [ ] Filter
+    - [ ] mipmap *Note: there's generally no support for mipmaps at the moment*
+    - [x] linear
+    - [x] nearest
+  - [x] Wrap
+  - [x] VFlip

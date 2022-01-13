@@ -1,0 +1,280 @@
+// CxxSwizzle (c) 2013-2021 Piotr Gwiazdowski
+
+#include <shadertoy_sandbox.hpp>
+#include <tuple>
+
+using namespace swizzle;
+
+namespace
+{ 
+    #define CXXSWIZZLE_MASK_FUNCTION_NAMES
+    #include <swizzle/define_vector_functions.hpp>
+
+    struct builtin_inout_proxy
+    {
+        // proxies are needed for vectors, as they need to work with swizzles
+        using vec2 =  swizzle::inout_wrapper<swizzle::vec2>;
+        using vec3 =  swizzle::inout_wrapper<swizzle::vec3>;
+        using vec4 =  swizzle::inout_wrapper<swizzle::vec4>;
+        using ivec2 = swizzle::inout_wrapper<swizzle::ivec2>;
+        using ivec3 = swizzle::inout_wrapper<swizzle::ivec3>;
+        using ivec4 = swizzle::inout_wrapper<swizzle::ivec4>;
+        using uvec2 = swizzle::inout_wrapper<swizzle::uvec2>;
+        using uvec3 = swizzle::inout_wrapper<swizzle::uvec3>;
+        using uvec4 = swizzle::inout_wrapper<swizzle::uvec4>;
+        using bvec2 = swizzle::inout_wrapper<swizzle::bvec2>;
+        using bvec3 = swizzle::inout_wrapper<swizzle::bvec3>;
+        using bvec4 = swizzle::inout_wrapper<swizzle::bvec4>;
+
+        // regular types don't need proxies
+        using float_type = swizzle::float_type&;
+        using int_type =   swizzle::int_type&;
+        using uint_type =  swizzle::uint_type&;
+        using bool_type =  swizzle::bool_type&;
+
+        // matrices likewise
+        using mat2   = swizzle::mat2;
+        using mat3   = swizzle::mat3;
+        using mat4   = swizzle::mat4;
+        using mat2x2 = swizzle::mat2x2;
+        using mat2x3 = swizzle::mat2x3;
+        using mat2x4 = swizzle::mat2x4;
+        using mat3x2 = swizzle::mat3x2;
+        using mat3x3 = swizzle::mat3x3;
+        using mat3x4 = swizzle::mat3x4;
+        using mat4x2 = swizzle::mat4x2;
+        using mat4x3 = swizzle::mat4x3;
+        using mat4x4 = swizzle::mat4x4;
+
+        template <typename TElement, size_t TSize>
+        using array = swizzle::array<TElement, TSize>&;
+    };
+
+    struct _cxxswizzle_scalar
+    {
+        using float_type = float;
+        using int_type =   int32_t;
+        using uint_type =  uint32_t;
+        using bool_type =  bool;
+    };
+
+    // change meaning of glsl keywords to match sandbox
+    #define uniform 
+    #define in
+    #define out inout
+    #define inout inout_proxy::
+    #define float float_type
+    #define int  int_type
+    #define uint uint_type
+    #define bool bool_type
+    #define lowp
+    #define highp
+    #define mediump
+    #define final final_
+    #define discard switch(0) case 0: _cxxswizzle_discarded = true;
+    // char is not a type in glsl so can be used freely
+    #define char _cxxswizzle_keyword_mask_char
+    #define signed _cxxswizzle_keyword_mask_signed
+    #define unsigned _cxxswizzle_keyword_mask_unsigned
+    #define new _cxxswizzle_keyword_mask_new
+    #define try _cxxswizzle_keyword_mask_try
+    #define catch _cxxswizzle_keyword_mask_catch
+
+    // cmath constants need to be undefined, as sometimes shaders define their own
+    #undef M_E       
+    #undef M_LOG2E   
+    #undef M_LOG10E  
+    #undef M_LN2     
+    #undef M_LN10    
+    #undef M_PI      
+    #undef M_PI_2    
+    #undef M_PI_4    
+    #undef M_1_PI    
+    #undef M_2_PI    
+    #undef M_2_SQRTPI
+    #undef M_SQRT2   
+    #undef M_SQRT1_2 
+    #undef INFINITY
+
+    // undef other common stuff
+    #ifdef _UPPER
+    #undef _UPPER
+    #endif
+    #ifdef _LOWER
+    #undef _LOWER
+    #endif
+    #ifdef _DIGIT
+    #undef _DIGIT
+    #endif
+    #ifdef _SPACE
+    #undef _SPACE
+    #endif
+    #ifdef _PUNCT
+    #undef _PUNCT
+    #endif
+    #ifdef _CONTROL
+    #undef _CONTROL
+    #endif
+    #ifdef _BLANK
+    #undef _BLANK
+    #endif
+    #ifdef _HEX
+    #undef _HEX
+    #endif
+    #ifdef _LEADBYTE
+    #undef _LEADBYTE
+    #endif
+    #ifdef _ALPHA
+    #undef _ALPHA
+    #endif
+
+    #ifdef __VERSION__
+    #undef __VERSION__
+    #endif 
+    #define __VERSION__ 460
+
+    #define CXXSWIZZLE_CAT(a,b)         CXXSWIZZLE_CAT_INNER(a,b) 
+    #define CXXSWIZZLE_CAT_INNER(a,b)   a ## b
+
+    // e.g. precission mediump float;
+    #define precision using CXXSWIZZLE_CAT(__cxxswizzle_precision_, __LINE__) =
+
+    #ifdef CXXSWIZZLE_INTERNAL_BATCH_WRITE_MASK_TYPE
+
+    #define return(x)   _cxxswizzle_result = x; batch_write_mask::multiply_to(_cxxswizzle_return_scope);
+
+    #define if(x)       switch(batch_write_mask _cxxswizzle_if_scope      = { static_cast<batch_write_mask::mask_type>(x), batch_write_mask::if_tag{} })       case true:
+    #define else_if(x)  switch(batch_write_mask _cxxswizzle_else_if_scope = { static_cast<batch_write_mask::mask_type>(x), batch_write_mask::else_if_tag{} })  case true:
+    #define else        switch(batch_write_mask _cxxswizzle_else_scope    = batch_write_mask::else_tag{})                                                      case true: 
+
+    #define while(x)    switch(batch_write_mask _cxxswizzle_loop_scope    = batch_write_mask::loop_tag{}) case true: while(CXX_FOR_CONDITION(x))
+    #define for(x)      switch(batch_write_mask _cxxswizzle_loop_scope    = batch_write_mask::loop_tag{}) case true: for(x)
+    
+
+    #define break       {\
+        switch(batch_write_mask::multiply_to(_cxxswizzle_loop_scope)) case true: goto CXXSWIZZLE_CAT(NOT_BREAK, __LINE__);\
+        break;\
+        CXXSWIZZLE_CAT(NOT_BREAK, __LINE__): (void)0; \
+    }
+
+    #define CXX_RESULT(t) { batch_write_mask _cxxswizzle_return_scope = batch_write_mask::loop_tag{}; t _cxxswizzle_result;
+    #define CXX_RETURN  return _cxxswizzle_result; }
+
+    #define CXX_FOR_CONDITION(x) (_cxxswizzle_loop_scope &= static_cast<batch_write_mask::mask_type>(x))
+    #else 
+    #define CXX_FOR_CONDITION(x) x
+    #define CXX_RESULT(t)
+    #define CXX_RETURN
+    #define else_if else if
+    #endif
+  
+
+    #define CXXSWIZZLE_VA_COUNT(...) std::tuple_size<decltype(std::make_tuple(__VA_ARGS__))>::value
+
+    namespace detail
+    {
+        template<typename ...Args>
+        constexpr std::size_t va_count(Args&&...) { return sizeof...(Args); }
+    }
+
+    template <typename T, typename ...Arg>
+    constexpr auto _cxxswizzle_make(Arg&& ...arg)
+    {
+        return ::swizzle::detail::make_with_narrowing<T>(std::forward<Arg>(arg)...);
+    }
+
+    #define CXXSWIZZLE
+    #define CXX_MAKE_ARRAY(type)        make_array<type>
+    #define CXX_ARRAY(type)             array
+    #define CXX_ARRAY_N(type, size)     array<type, size>
+
+    #include <swizzle/detail/preprocessor_sub.hpp>
+    #define CXXSWIZZLE_LINE_ID(x) CXXSWIZZLE_SUB(__COUNTER__, x)
+
+    // C++ rules do not allow any useful deduction (eg. CTAD) for fields and this is impossible to marry
+    // with GLSL implicit array size syntax and type narrowing rules. To make array field macro compatible
+    // with GLSL preprocessor this rather nasty workaround is in place
+    #define CXX_ARRAY_FIELD(type, name) \
+        using CXXSWIZZLE_CAT(cxxswizzle_array_type_, CXXSWIZZLE_LINE_ID(0)) = type;\
+        array_ptr<type> name = CXXSWIZZLE_CAT(cxxswizzle_array_placeholder_, CXXSWIZZLE_LINE_ID(1));\
+        CXX_ARRAY_FIELD_PLACEHOLDER 
+
+    #define CXX_ARRAY_FIELD_PLACEHOLDER(...) \
+        array<CXXSWIZZLE_CAT(cxxswizzle_array_type_, CXXSWIZZLE_LINE_ID(2)), CXXSWIZZLE_VA_COUNT(__VA_ARGS__)> CXXSWIZZLE_CAT(cxxswizzle_array_placeholder_, CXXSWIZZLE_LINE_ID(3)) = make_array<CXXSWIZZLE_CAT(cxxswizzle_array_type_, CXXSWIZZLE_LINE_ID(4))>( __VA_ARGS__ )
+
+    #define CXX_STATIC static
+    #define CXX_SCALAR _cxxswizzle_scalar::
+    #define CXX_CONST  static inline const
+    #define CXX_IGNORE(...)
+
+    #pragma warning(push)
+    #pragma warning(disable: 4244) // disable return implicit conversion warning
+    #pragma warning(disable: 4305) // disable truncation warning
+
+    struct _cxxswizzle_fragment_shader_@CONFIG_FRAG_NAME@ : shadertoy::shader_inputs
+    {
+        using _cxxswizzle_fragment_shader = _cxxswizzle_fragment_shader_@CONFIG_FRAG_NAME@;
+
+@CONFIG_FRAG_CUSTOM_STRUCTS_SUPPORT@
+
+        vec4 gl_FragCoord;
+        vec4 gl_FragColor;
+        bool_type _cxxswizzle_discarded;
+
+        #cmakedefine CONFIG_FRAG_COMMON_INCLUDE
+        #ifdef CONFIG_FRAG_COMMON_INCLUDE
+        #include "@CONFIG_FRAG_COMMON_INCLUDE@"
+        #endif
+
+        #include "@CONFIG_FRAG_PATH@"
+    };
+}
+
+
+// need to undef any stuff that might possibly have been defined in the shader and ruin the following function
+#undef namespace
+#undef shadertoy
+#undef vec4
+#undef @CONFIG_FRAG_NAME@
+#undef const
+#undef shader_inputs
+#undef uniforms
+#undef vec2
+#undef fragCoord
+#undef vec4
+#undef prevFragColor
+#undef bool_type
+#undef discarded
+#undef _cxxswizzle_fragment_shader_@CONFIG_FRAG_NAME@
+#undef shader
+#undef static_cast
+#undef gl_FragColor
+#undef gl_FragCoord
+#undef false
+#undef mainImage
+#undef _cxxswizzle_discarded
+#undef return
+#undef nonmasked
+#undef swizzle
+#undef detail
+#undef if
+#undef break
+
+namespace shadertoy
+{
+    vec4 @CONFIG_FRAG_NAME@(const shader_inputs& uniforms, vec2 fragCoord, vec4 prevFragColor, bool_type* discarded)
+    {
+        _cxxswizzle_fragment_shader_@CONFIG_FRAG_NAME@ shader;
+        static_cast<shader_inputs&>(shader) = uniforms;
+        swizzle::detail::nonmasked(shader.gl_FragColor) = prevFragColor;
+        swizzle::detail::nonmasked(shader.gl_FragCoord) = vec4(fragCoord, 0.0f, 0.0f);
+        swizzle::detail::nonmasked(shader._cxxswizzle_discarded) = bool_type { false };
+        swizzle::batch_write_mask_reset();
+        shader.mainImage(shader.gl_FragColor, fragCoord);
+        if (discarded)
+        {
+            *discarded = shader._cxxswizzle_discarded;
+        }
+        return shader.gl_FragColor;
+    }
+}
