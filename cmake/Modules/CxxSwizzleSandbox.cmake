@@ -45,7 +45,6 @@ macro(cxxswizzle_prepare_setup setup)
     # basic requirements
     find_package(SDL2 CONFIG REQUIRED)
     find_package(SDL2-image CONFIG REQUIRED)
-    find_package(OpenMP)
     find_package(imgui CONFIG REQUIRED)
 
     if (${setup} STREQUAL "simd_vc" OR ${setup} STREQUAL "simd_vc_with_masking")
@@ -160,10 +159,6 @@ macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root)
         cmake_policy(SET CMP0057 NEW)
         target_link_libraries(${target_name} PRIVATE Vc::Vc)
         target_compile_options(${target_name} PRIVATE "${Vc_DEFINITIONS}")
-    endif()
-
-    if (OPENMP_FOUND)
-        target_link_libraries(${target_name} PRIVATE OpenMP::OpenMP_CXX)
     endif()
 
     if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

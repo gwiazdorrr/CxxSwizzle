@@ -22,10 +22,8 @@ static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 #include <unordered_map>
 #include <filesystem>
 #include <optional>
- 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
+#include <algorithm>
+#include <execution>
 
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
@@ -50,6 +48,48 @@ using swizzle::detail::nonmasked;
 
 namespace utils
 {
+    struct for_iterator
+    {
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = int;
+        using difference_type = std::ptrdiff_t;
+        using pointer = const int*;
+        using reference = const int&;
+
+        for_iterator() : index(0), step(0) {}
+        for_iterator(int index, int step = 1) : index(index), step(step) {}
+
+        int operator*() const
+        {
+            return index;
+        }
+
+        for_iterator& operator++()
+        {
+            index += step;
+            return *this;
+        }
+        for_iterator operator++(int)
+        {
+            for_iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+        friend bool operator== (const for_iterator& a, const for_iterator& b)
+        {
+            return a.index == b.index;
+        };
+
+        friend bool operator!= (const for_iterator& a, const for_iterator& b)
+        {
+            return a.index != b.index;
+        };
+
+        int index;
+        int step;
+    };
+
     template <typename F>
     struct scope_exit 
     {
@@ -350,13 +390,10 @@ struct render_target_float : aligned_render_target_base
         assert(width == dst.width);
         assert(height == dst.height);
 
-#ifdef _OPENMP
-#pragma omp for
-#endif
-        for (int y = 0; y < height; ++y)
+        std::for_each(std::execution::par_unseq, utils::for_iterator(0), utils::for_iterator(height), [&](int y) 
         {
             auto p = static_cast<uint8_t*>(dst.first_row) + y * dst.pitch;
-            for (int x = 0; x < width; ++x)
+            for (int x = 0; x < dst.width; ++x)
             {
                 auto t = get(x, y);
 
@@ -368,7 +405,7 @@ struct render_target_float : aligned_render_target_base
                 *reinterpret_cast<uint32_t*>(p) = rgba;
                 p += dst.bytes_per_pixel;
             }
-        }
+        });
     }
 };
 
@@ -635,25 +672,25 @@ struct shadertoy_renderer
         int num_threads;
     };
 
-    static stats render(const shadertoy_config& config, shader_inputs inputs, render_target_rgba32& target, buffer_render_target_list& buffers, shadertoy_input_textures context, progress& progress)
+    static stats render(const shadertoy_config& config, shader_inputs inputs, render_target_rgba32& target, buffer_render_target_list& buffers, shadertoy_input_textures context, progress& progress, bool parallel)
     {
         progress.num_pixels = 0;
 
         std::chrono::microseconds duration(0);
 
-        duration += render_pass_if_enabled<pass_type::buffer_a>(config, inputs, buffers[0], context, progress).duration;
+        duration += render_pass_if_enabled<pass_type::buffer_a>(config, inputs, buffers[0], context, progress, parallel).duration;
         context.buffers[0] = &buffers[0];
 
-        duration += render_pass_if_enabled<pass_type::buffer_b>(config, inputs, buffers[1], context, progress).duration;
+        duration += render_pass_if_enabled<pass_type::buffer_b>(config, inputs, buffers[1], context, progress, parallel).duration;
         context.buffers[1] = &buffers[1];
 
-        duration += render_pass_if_enabled<pass_type::buffer_c>(config, inputs, buffers[2], context, progress).duration;
+        duration += render_pass_if_enabled<pass_type::buffer_c>(config, inputs, buffers[2], context, progress, parallel).duration;
         context.buffers[2] = &buffers[2];
 
-        duration += render_pass_if_enabled<pass_type::buffer_d>(config, inputs, buffers[3], context, progress).duration;
+        duration += render_pass_if_enabled<pass_type::buffer_d>(config, inputs, buffers[3], context, progress, parallel).duration;
         context.buffers[3] = &buffers[3];
 
-        auto result = render_pass_if_enabled<pass_type::image>(config, inputs, target, context, progress);
+        auto result = render_pass_if_enabled<pass_type::image>(config, inputs, target, context, progress, parallel);
         result.duration += duration;
 
         return result;
@@ -661,7 +698,7 @@ struct shadertoy_renderer
 
 private:
     template <pass_type pass, typename TRenderTarget>
-    static stats render_pass_if_enabled(const shadertoy_config& config, shader_inputs& inputs, TRenderTarget& render_target, shadertoy_input_textures& context, progress& progress)
+    static stats render_pass_if_enabled(const shadertoy_config& config, shader_inputs& inputs, TRenderTarget& render_target, shadertoy_input_textures& context, progress& progress, bool parallel)
     {
         constexpr shader_function fun = shadertoy::get_pass_func(pass);
         if constexpr (fun != nullptr)
@@ -670,7 +707,7 @@ private:
             set_shader_inputs_samplers(inputs, data_buffer, config.get_pass(pass), context);
 
             progress.current_pass = pass;
-            stats result = render_inner<fun>(inputs, render_target, progress.num_pixels, progress.cancel);
+            stats result = render_inner<fun>(inputs, render_target, progress.num_pixels, progress.cancel, parallel);
             return result;
         }
         else
@@ -746,7 +783,7 @@ private:
     }
 
     template <shader_function func, typename TRenderTarget>
-    static stats render_inner(shader_inputs uniforms, TRenderTarget& rt, std::atomic_int& num_pixels, const std::atomic_bool& cancelled)
+    static stats render_inner(shader_inputs uniforms, TRenderTarget& rt, std::atomic_int& num_pixels, const std::atomic_bool& cancelled, bool parallel)
     {
         assert(rt.width % columns_per_batch == 0);
         assert(rt.height % rows_per_batch == 0);
@@ -778,40 +815,41 @@ private:
         const int max_x = rt.width;
         const int max_y = rt.height;
 
-#ifdef _OPENMP
-#pragma omp parallel default(shared)
+        auto work = [&](int y)
         {
-#pragma omp master
-            num_threads = omp_get_num_threads();
+            if (cancelled)
+                return;
 
-#pragma omp for
-#else
-        {
-#endif
-            for (int y = 0; y < max_y; y += rows_per_batch)
+            swizzle::float_type frag_coord_y = static_cast<float>(max_y - y) - y_offsets;
+
+            uint8_t* ptr = reinterpret_cast<uint8_t*>(rt.first_row) + y * rt.pitch;
+
+            int x;
+            for (x = 0; x < max_x; x += columns_per_batch)
             {
-                if (cancelled)
-                    continue;
+                swizzle::bool_type discarded = false;
+                swizzle::vec4 color = func(uniforms, vec2(static_cast<float>(x) + x_offsets, frag_coord_y), {}, &discarded);
 
-                swizzle::float_type frag_coord_y = static_cast<float>(max_y - y) - y_offsets;
-
-                uint8_t* ptr = reinterpret_cast<uint8_t*>(rt.first_row) + y * rt.pitch;
-
-                int x;
-                for (x = 0; x < max_x; x += columns_per_batch)
+                if (!discarded)
                 {
-                    swizzle::bool_type discarded = false;
-                    swizzle::vec4 color = func(uniforms, vec2(static_cast<float>(x) + x_offsets, frag_coord_y), {}, &discarded);
-
-                    if (!discarded)
-                    {
-                        rt.store(ptr, color, rt.pitch);
-                    }
-
-                    ptr += rt.bytes_per_pixel * columns_per_batch;
+                    rt.store(ptr, color, rt.pitch);
                 }
 
-                num_pixels += (max_x)*rows_per_batch;
+                ptr += rt.bytes_per_pixel * columns_per_batch;
+            }
+
+            num_pixels += (max_x)*rows_per_batch;
+        };
+
+        if (parallel)
+        {
+            std::for_each(std::execution::par_unseq, utils::for_iterator(0, rows_per_batch), utils::for_iterator(max_y), std::move(work));
+        }
+        else
+        {
+            for (int y = 0; y < max_y; y += rows_per_batch)
+            {
+                work(y);
             }
         }
 
@@ -922,14 +960,6 @@ struct cmdline_options
 
 //-----------------------------------------------------------------------
 
-void set_multithreaded(bool enabled)
-{
-#ifdef _OPENMP
-    static int max_thread_count = omp_get_max_threads();
-    omp_set_num_threads(enabled ? max_thread_count : 1);
-#endif
-}
-
 int main(int argc, char* argv[])
 {
     using namespace std;
@@ -1031,8 +1061,7 @@ int main(int argc, char* argv[])
         shadertoy_render_targets render_targets(options.resolution_x, options.resolution_y);
         shadertoy_renderer::stats last_render_stats = { };
 
-        bool multithreaded = options.multi_threaded;
-        set_multithreaded(multithreaded);
+        bool multi_threaded = options.multi_threaded;
 
         if (options.output_path != nullptr)
         {
@@ -1060,7 +1089,7 @@ int main(int argc, char* argv[])
                 nonmasked(inputs.iDate) = date.consume();
 
                 shadertoy_input_textures context(textures, keyboard.data, render_targets.buffers[1 - i & 1]);
-                last_render_stats = shadertoy_renderer::render(config, inputs, render_targets.target, render_targets.buffers[i & 1], context, progress);
+                last_render_stats = shadertoy_renderer::render(config, inputs, render_targets.target, render_targets.buffers[i & 1], context, progress, multi_threaded);
                 
                 std::string output = utils::replace_all(options.output_path, "%n", std::to_string(i));
                 output = utils::replace_all(output, "%t", std::to_string(time));
@@ -1113,7 +1142,7 @@ int main(int argc, char* argv[])
                 nonmasked(inputs.iDate) = date.consume();
 
                 shadertoy_input_textures context(textures, keyboard_copy.data, render_targets.buffers[1 - num_frames & 1]);
-                return std::async([&, inputs, context]() { return shadertoy_renderer::render(config, inputs, render_targets.target, render_targets.buffers[num_frames & 1], context, progress); });
+                return std::async([&, inputs, context]() { return shadertoy_renderer::render(config, inputs, render_targets.target, render_targets.buffers[num_frames & 1], context, progress, multi_threaded); });
             };
 
 
@@ -1297,9 +1326,9 @@ int main(int argc, char* argv[])
                         imgui_utils::imgui_text_centered(60.0f, true, "%dx%d\n", render_targets.width, render_targets.height);
 
                         ImGui::SameLine();
-                        if (ImGui::RadioButton("MT", multithreaded))
+                        if (ImGui::RadioButton("MT", multi_threaded))
                         {
-                            set_multithreaded(multithreaded = !multithreaded);
+                            multi_threaded = !multi_threaded;
                             progress.cancel = true;
                         }
                         if (ImGui::IsItemHovered()) 
