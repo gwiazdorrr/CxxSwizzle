@@ -132,6 +132,10 @@ macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root)
         unset(CONFIG_CALLING_CONVENTION)
     endif()
 
+    if(ENABLE_PARALLELISM)
+        set(CONFIG_ENABLE_PARALLELISM 1)
+    endif()
+
     configure_file("${template_dir}/config.hpp.in" "${codegen_config_path}")
 
     list(APPEND codegen_file_list ${codegen_config_path})

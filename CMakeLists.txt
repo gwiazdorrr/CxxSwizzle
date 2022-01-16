@@ -10,6 +10,7 @@ include(CxxSwizzleSandbox)
 set_property(GLOBAL PROPERTY USE_FOLDERS On)
 
 set(TRACY_PROFILER_ROOT "" CACHE PATH "Path to the Tracy Profiler root. Leave empty if you don't want to use it.")
+option(ENABLE_PARALLELISM "Enables C++ Parallelism. Support for this is patchy to say the least." ON)
 
 option(BUILD_SAMPLES "Build Samples (Scalar)" ON)
 option(BUILD_SAMPLES_SIMD "Build Samples (SIMD)" OFF)

@@ -145,6 +145,7 @@ After that's done, run `cmake`.
 
 * `TRACY_PROFILER_ROOT`: setting to [Tracy Profiler](https://github.com/wolfpld/tracy) path will enable the profiler integration.
 * `Vc_IMPL`: enforces specific SIMD instruction set (AVX2, SSE3 etc.) if using one of `simd_vc` sandbox modes
+* `ENABLE_PARALLELISM`: if there are any problems related to `<execution>` header or `std::execution::par_unseq`, unchecking this option should help - at a cost of single-threaded rendering.
 
 ## GLSL support status
 

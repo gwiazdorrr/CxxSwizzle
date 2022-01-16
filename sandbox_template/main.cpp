@@ -18,7 +18,10 @@ static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 #include <filesystem>
 #include <optional>
 #include <algorithm>
+
+#ifdef CONFIG_ENABLE_PARALLELISM
 #include <execution>
+#endif
 
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
@@ -385,7 +388,7 @@ struct render_target_float : aligned_render_target_base
         assert(width == dst.width);
         assert(height == dst.height);
 
-        std::for_each(std::execution::par_unseq, utils::for_iterator(0), utils::for_iterator(height), [&](int y) 
+        auto work = [&](int y)
         {
             auto p = static_cast<uint8_t*>(dst.first_row) + y * dst.pitch;
             for (int x = 0; x < dst.width; ++x)
@@ -400,7 +403,16 @@ struct render_target_float : aligned_render_target_base
                 *reinterpret_cast<uint32_t*>(p) = rgba;
                 p += dst.bytes_per_pixel;
             }
-        });
+        };
+
+#ifdef CONFIG_ENABLE_PARALLELISM
+        std::for_each(std::execution::par_unseq, utils::for_iterator(0), utils::for_iterator(height), std::move(work));
+#else
+        for (int y = 0; y < height; ++y) 
+        {
+            work(y);
+        }
+#endif
     }
 };
 
@@ -836,11 +848,13 @@ private:
             num_pixels += (max_x)*rows_per_batch;
         };
 
+#ifdef CONFIG_ENABLE_PARALLELISM
         if (parallel)
         {
             std::for_each(std::execution::par_unseq, utils::for_iterator(0, rows_per_batch), utils::for_iterator(max_y), std::move(work));
         }
         else
+#endif
         {
             for (int y = 0; y < max_y; y += rows_per_batch)
             {
