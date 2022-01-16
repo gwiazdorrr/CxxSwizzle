@@ -21,8 +21,8 @@ jobs:
           cc: clang
           triplet: x64-linux
           generator: Ninja
-          cmakeArgs: -DBUILD_SAMPLES=ON -DBUILD_SAMPLES_SIMD=OFF -DBUILD_TESTS=OFF
           buildDir: ${{ runner.workspace }}/b/${{ matrix.buildType }}
+          cmakeArgs: -DBUILD_SAMPLES=OFF -DBUILD_SAMPLES_SIMD=OFF -DBUILD_TESTS=ON
 
       - name: Run CTest
         run: |

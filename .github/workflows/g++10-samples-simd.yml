@@ -1,4 +1,4 @@
-name: clang-samples
+name: g++10-samples-simd
 on: [push]
 
 jobs:
@@ -17,9 +17,10 @@ jobs:
       - id: build
         uses: ./.github/actions/cmake-build
         with:
-          cxx: clang++
-          cc: clang
+          cxx: g++
+          cc: gcc
           triplet: x64-linux
           generator: Ninja
           buildDir: ${{ runner.workspace }}/b/${{ matrix.buildType }}
-          cmakeArgs: -DBUILD_SAMPLES=ON -DBUILD_SAMPLES_SIMD=OFF -DBUILD_TESTS=OFF
+          cmakeArgs: -DBUILD_SAMPLES=OFF -DBUILD_SAMPLES_SIMD=ON -DBUILD_TESTS=OFF
+          cxxFlags: -march=native

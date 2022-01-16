@@ -1,4 +1,4 @@
-name: clang-samples
+name: g++10-tests
 on: [push]
 
 jobs:
@@ -17,9 +17,15 @@ jobs:
       - id: build
         uses: ./.github/actions/cmake-build
         with:
-          cxx: clang++
-          cc: clang
+          cxx: g++
+          cc: gcc
           triplet: x64-linux
           generator: Ninja
           buildDir: ${{ runner.workspace }}/b/${{ matrix.buildType }}
-          cmakeArgs: -DBUILD_SAMPLES=ON -DBUILD_SAMPLES_SIMD=OFF -DBUILD_TESTS=OFF
+          cmakeArgs: -DBUILD_SAMPLES=OFF -DBUILD_SAMPLES_SIMD=OFF -DBUILD_TESTS=ON
+          cxxFlags: -march=native
+
+      - name: Run CTest
+        run: |
+         cd ${{ runner.workspace }}/b/${{ matrix.buildType }}/test
+         ctest -V

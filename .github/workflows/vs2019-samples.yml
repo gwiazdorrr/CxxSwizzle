@@ -21,5 +21,5 @@ jobs:
           cc: cl.exe
           triplet: x64-windows
           generator: Visual Studio 16 2019
-          cmakeArgs: -DBUILD_SAMPLES=ON -DBUILD_SAMPLES_SIMD=OFF -DBUILD_TESTS=OFF
           buildDir: ${{ runner.workspace }}/b/${{ matrix.buildType }}
+          cmakeArgs: -DBUILD_SAMPLES=ON -DBUILD_SAMPLES_SIMD=OFF -DBUILD_TESTS=OFF
