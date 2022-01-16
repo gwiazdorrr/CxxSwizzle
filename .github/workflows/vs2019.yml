@@ -27,5 +27,15 @@ jobs:
 
       - name: Run CTest
         run: |
-         cd ${{ runner.workspace }}/b/${{ matrix.buildType }}/test
-         ctest -V
+          cd ${{ runner.workspace }}/b/${{ matrix.buildType }}/test
+          ctest -V
+      
+      - name: Run Samples
+        run: |
+          ${{ runner.workspace }}/b/${{ matrix.buildType }}/samples/${{ matrix.buildType }}/sample_scalar_seascape.exe -o ${{ runner.workspace }}/seascape.png
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: seascape
+          path: ${{ runner.workspace }}/seascape.png
+
