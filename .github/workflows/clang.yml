@@ -1,10 +1,10 @@
-name: vs2019-samples-simd
+name: clang
 on: [push]
 
 jobs:
   job:
     name: ${{ matrix.buildType }}
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -14,12 +14,18 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: true
+      
       - id: build
         uses: ./.github/actions/cmake-build
         with:
-          cxx: cl.exe
-          cc: cl.exe
-          triplet: x64-windows
-          generator: Visual Studio 16 2019
+          cxx: clang++
+          cc: clang
+          triplet: x64-linux
+          generator: Ninja
           buildDir: ${{ runner.workspace }}/b/${{ matrix.buildType }}
-          cmakeArgs: -DBUILD_SAMPLES=OFF -DBUILD_SAMPLES_SIMD=ON -DBUILD_TESTS=OFF
+          cmakeArgs: -DBUILD_SAMPLES=ON -DBUILD_SAMPLES_SIMD=ON -DBUILD_TESTS=ON
+
+      - name: Run CTest
+        run: |
+         cd ${{ runner.workspace }}/b/${{ matrix.buildType }}/test
+         ctest -V

@@ -1,4 +1,4 @@
-name: g++10-samples
+name: g++10
 on: [push]
 
 jobs:
@@ -14,6 +14,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: true
+      
       - id: build
         uses: ./.github/actions/cmake-build
         with:
@@ -22,5 +23,10 @@ jobs:
           triplet: x64-linux
           generator: Ninja
           buildDir: ${{ runner.workspace }}/b/${{ matrix.buildType }}
-          cmakeArgs: -DBUILD_SAMPLES=ON -DBUILD_SAMPLES_SIMD=OFF -DBUILD_TESTS=OFF
+          cmakeArgs: -DBUILD_SAMPLES=ON -DBUILD_SAMPLES_SIMD=ON -DBUILD_TESTS=ON
           cxxFlags: -march=native
+
+      - name: Run CTest
+        run: |
+         cd ${{ runner.workspace }}/b/${{ matrix.buildType }}/test
+         ctest -V

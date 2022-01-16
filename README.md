@@ -1,20 +1,9 @@
 # CxxSwizzle
 
-![Samples Visual Studio 2019](https://github.com/gwiazdorrr/CxxSwizzle/workflows/vs2019-samples/badge.svg?branch=ci/composite-actions)
-![SIMD Samples Visual Studio 2019](https://github.com/gwiazdorrr/CxxSwizzle/workflows/vs2019-samples-simd/badge.svg?branch=ci/composite-actions)
-![Tests Visual Studio 2019](https://github.com/gwiazdorrr/CxxSwizzle/workflows/vs2019-tests/badge.svg?branch=ci/composite-actions)
-
-![Samples Clang](https://github.com/gwiazdorrr/CxxSwizzle/workflows/clang-samples/badge.svg?branch=ci/composite-actions)
-![SIMD Samples Clang](https://github.com/gwiazdorrr/CxxSwizzle/workflows/clang-samples-simd/badge.svg?branch=ci/composite-actions)
-![Tests Visual Clang](https://github.com/gwiazdorrr/CxxSwizzle/workflows/clang-tests/badge.svg?branch=ci/composite-actions)
-
-![Samples g++10](https://github.com/gwiazdorrr/CxxSwizzle/workflows/g++10-samples/badge.svg?branch=ci/composite-actions)
-![SIMD Samples g++10](https://github.com/gwiazdorrr/CxxSwizzle/workflows/g++10-samples-simd/badge.svg?branch=ci/composite-actions)
-![Tests Visual g++10](https://github.com/gwiazdorrr/CxxSwizzle/workflows/g++10-tests/badge.svg?branch=ci/composite-actions)
-
-![Samples Apple Clang](https://github.com/gwiazdorrr/CxxSwizzle/workflows/apple-clang-samples/badge.svg?branch=ci/composite-actions)
-![SIMD Samples Apple Clang](https://github.com/gwiazdorrr/CxxSwizzle/workflows/apple-clang-samples-simd/badge.svg?branch=ci/composite-actions)
-![Tests Visual Apple Clang](https://github.com/gwiazdorrr/CxxSwizzle/workflows/apple-clang-tests/badge.svg?branch=ci/composite-actions)
+![Visual Studio 2019](https://github.com/gwiazdorrr/CxxSwizzle/workflows/vs2019/badge.svg?branch=ci/composite-actions)
+![Clang](https://github.com/gwiazdorrr/CxxSwizzle/workflows/clang/badge.svg?branch=ci/composite-actions)
+![g++10](https://github.com/gwiazdorrr/CxxSwizzle/workflows/g++10/badge.svg?branch=ci/composite-actions)
+![Apple Clang](https://github.com/gwiazdorrr/CxxSwizzle/workflows/apple-clang/badge.svg?branch=ci/composite-actions)
 
 This project lets you download and run GLSL [shadertoys](https://www.shadertoy.com/) as C++17 code. Out of 1000 top shadertoys (on 26.11.2021), 840 compile without any code alterations and 953 compile if code patching is enabled. Code after patching is still GLSL-compatible and can be pasted back to the Shadertoy.
 
