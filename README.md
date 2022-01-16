@@ -35,7 +35,8 @@ cmake -G Ninja -B build -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.
 cd build
 ninja
 ```
-If you already have `vcpkg` globally installed, you can skip step 2, provided you pass the proper path to `vcpkg.cmake` in the step 3.
+If you are using CMake GUI, after clicking `Configure` select `Specify toolchain file for cross-compiling` and make sure the path in the next window points to `vcpkg/scripts/buildsystems/vcpkg.cmake`.
+
 
 ## Downloading shadertoys
 
