@@ -1,0 +1,25 @@
+name: apple-clang-samples
+on: [push]
+
+jobs:
+  job:
+    name: ${{ matrix.buildType }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        buildType: [Release]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - id: build
+        uses: ./.github/actions/cmake-build
+        with:
+          cxx: clang++
+          cc: clang
+          triplet: x64-osx
+          generator: Ninja
+          buildDir: ${{ runner.workspace }}/b/${{ matrix.buildType }}
+          cmakeArgs: -DBUILD_SAMPLES=ON -DBUILD_SAMPLES_SIMD=OFF -DBUILD_TESTS=OFF
