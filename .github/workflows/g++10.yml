@@ -18,8 +18,8 @@ jobs:
       - id: build
         uses: ./.github/actions/cmake-build
         with:
-          cxx: g++
-          cc: gcc
+          cxx: g++-10
+          cc: gcc-10
           triplet: x64-linux
           generator: Ninja
           buildDir: ${{ runner.workspace }}/b/${{ matrix.buildType }}
