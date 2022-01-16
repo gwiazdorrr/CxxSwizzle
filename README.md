@@ -1,6 +1,8 @@
 # CxxSwizzle
 
-![Samples](https://github.com/gwiazdorrr/CxxSwizzle/workflows/CI/badge.svg?branch=modernisation)
+![Samples Visual Studio 2019](https://github.com/gwiazdorrr/CxxSwizzle/workflows/vs2019-samples/badge.svg?branch=ci/composite-actions)
+![SIMD Samples Visual Studio 2019](https://github.com/gwiazdorrr/CxxSwizzle/workflows/vs2019-samples-simd/badge.svg?branch=ci/composite-actions)
+![Tests Visual Studio 2019](https://github.com/gwiazdorrr/CxxSwizzle/workflows/vs2019-tests/badge.svg?branch=ci/composite-actions)
 
 This project lets you download and run GLSL [shadertoys](https://www.shadertoy.com/) as C++17 code. Out of 1000 top shadertoys (on 26.11.2021), 840 compile without any code alterations and 953 compile if code patching is enabled. Code after patching is still GLSL-compatible and can be pasted back to the Shadertoy.
 
