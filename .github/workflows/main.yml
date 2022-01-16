@@ -33,8 +33,8 @@ jobs:
             cmakeArgs: -DENABLE_PARALLELISM=OFF
           - name: ubuntu-gcc-10
             os: ubuntu
-            cxx: g++-9
-            cc: gcc-9
+            cxx: g++-10
+            cc: gcc-10
             triplet: x64-linux
             generator: Ninja
             cxxFlags: -march=native
