@@ -10,15 +10,10 @@ static_assert(sizeof(vec3) == sizeof(swizzle::float_type[3]), "Too big");
 static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 
 #include <ctime>
-#include <condition_variable>
 #include <functional>
 #include <future>
-#include <iomanip>
-#include <iostream>
 #include <memory>
-#include <mutex>
 #include <sstream>
-#include <fstream>
 #include <unordered_map>
 #include <filesystem>
 #include <optional>
