@@ -1,6 +1,7 @@
 # CxxSwizzle
 
 ![Visual Studio 2019](https://github.com/gwiazdorrr/CxxSwizzle/workflows/vs2019/badge.svg?branch=ci/composite-actions)
+![Visual Studio 2022](https://github.com/gwiazdorrr/CxxSwizzle/workflows/vs2022/badge.svg?branch=ci/composite-actions)
 ![Clang](https://github.com/gwiazdorrr/CxxSwizzle/workflows/clang/badge.svg?branch=ci/composite-actions)
 ![g++10](https://github.com/gwiazdorrr/CxxSwizzle/workflows/g++10/badge.svg?branch=ci/composite-actions)
 ![Apple Clang](https://github.com/gwiazdorrr/CxxSwizzle/workflows/apple-clang/badge.svg?branch=ci/composite-actions)
