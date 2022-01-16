@@ -3,7 +3,11 @@
 ![Visual Studio 2019](https://github.com/gwiazdorrr/CxxSwizzle/workflows/vs2019/badge.svg?branch=ci/composite-actions)
 ![Visual Studio 2022](https://github.com/gwiazdorrr/CxxSwizzle/workflows/vs2022/badge.svg?branch=ci/composite-actions)
 ![Clang 11](https://github.com/gwiazdorrr/CxxSwizzle/workflows/clang-11/badge.svg?branch=ci/composite-actions)
+![Clang 12](https://github.com/gwiazdorrr/CxxSwizzle/workflows/clang-12/badge.svg?branch=ci/composite-actions)
+![Clang 13](https://github.com/gwiazdorrr/CxxSwizzle/workflows/clang-13/badge.svg?branch=ci/composite-actions)
 ![GCC 10](https://github.com/gwiazdorrr/CxxSwizzle/workflows/gcc-10/badge.svg?branch=ci/composite-actions)
+![GCC 11](https://github.com/gwiazdorrr/CxxSwizzle/workflows/gcc-11/badge.svg?branch=ci/composite-actions)
+![GCC 12](https://github.com/gwiazdorrr/CxxSwizzle/workflows/gcc-12/badge.svg?branch=ci/composite-actions)
 ![Apple Clang](https://github.com/gwiazdorrr/CxxSwizzle/workflows/apple-clang/badge.svg?branch=ci/composite-actions)
 
 This project lets you download and run GLSL [shadertoys](https://www.shadertoy.com/) as C++17 code. Out of 1000 top shadertoys (on 26.11.2021), 840 compile without any code alterations and 953 compile if code patching is enabled. Code after patching is still GLSL-compatible and can be pasted back to the Shadertoy.
