@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        name: [ubuntu-gcc-9, ubuntu-clang, macos-clang, windows-msvc-2019, windows-gcc]
+        name: [ubuntu-gcc-9, ubuntu-gcc-10, ubuntu-clang, macos-clang, windows-msvc-2019, windows-gcc]
         buildType: [Release]
         include:
           - name: windows-msvc-2019
@@ -30,6 +30,14 @@ jobs:
             triplet: x64-linux
             generator: Ninja
             cxxFlags: -march=native
+            cmakeArgs: -DENABLE_PARALLELISM=OFF
+          - name: ubuntu-gcc-10
+            os: ubuntu
+            cxx: g++-10
+            cc: gcc-10
+            triplet: x64-linux
+            generator: Ninja
+            cxxFlags: -march=native
           - name: ubuntu-clang
             os: ubuntu
             cxx: clang++
@@ -42,6 +50,7 @@ jobs:
             cc: clang
             triplet: x64-osx
             generator: Ninja
+            cmakeArgs: -DENABLE_PARALLELISM=OFF
 
     steps:
       - uses: actions/checkout@v1
@@ -80,7 +89,7 @@ jobs:
           vcpkgTriplet: ${{ matrix.triplet }}
           useVcpkgToolchainFile: true
           buildDirectory: '${{ runner.workspace }}/b/${{ matrix.name }}/'
-          cmakeAppendedArgs: '-G "${{ matrix.generator }}" -DCMAKE_BUILD_TYPE=${{ matrix.buildType }} -DCMAKE_CXX_FLAGS="${{ matrix.cxxFlags }}" -DBUILD_TESTS=ON'
+          cmakeAppendedArgs: '-G "${{ matrix.generator }}" -DCMAKE_BUILD_TYPE=${{ matrix.buildType }} -DCMAKE_CXX_FLAGS="${{ matrix.cxxFlags }}" -DBUILD_TESTS=ON ${{ matrix.cmakeArgs }}'
           
       - name: Run CTest
         run: |
