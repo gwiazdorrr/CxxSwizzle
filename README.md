@@ -142,11 +142,17 @@ If the shadertoy uses textures / buffers, `iChannels` settings need to be replic
 
 After that's done, run `cmake`.
 
-## Other CMake options
+## Other notable CMake options
 
 * `TRACY_PROFILER_ROOT`: setting to [Tracy Profiler](https://github.com/wolfpld/tracy) path will enable the profiler integration.
 * `Vc_IMPL`: enforces specific SIMD instruction set (AVX2, SSE3 etc.) if using one of `simd_vc` sandbox modes
 * `ENABLE_PARALLELISM`: if there are any problems related to `<execution>` header or `std::execution::par_unseq`, unchecking this option should help - at a cost of single-threaded rendering.
+* `BUILD_SAMPLES_SIMD`: builds SIMD samples. Uses `Vc` lib to make that happen. When configuring on Windows, you might expect something like this in the log (harmless, a result of `Vc` scripts being a tad outdated):
+```
+c
+1: fatal error C1083: Cannot open source file: 'C:/SRC/CxxSwizzle/build/vcpkg_installed/x64-windows/share/vc/msvc_version.c': No such file or directory
+```
+
 
 ## GLSL support status
 
