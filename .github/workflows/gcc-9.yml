@@ -1,4 +1,4 @@
-name: gcc-12
+name: no-parallelism-gcc-9
 on: [push]
 
 jobs:
@@ -18,12 +18,12 @@ jobs:
       - id: build
         uses: ./.github/actions/cmake-build
         with:
-          cxx: g++-12
-          cc: gcc-12
+          cxx: g++-9
+          cc: gcc-9
           triplet: x64-linux
           generator: Ninja
           buildDir: ${{ runner.workspace }}/b/${{ matrix.buildType }}
-          cmakeArgs: -DBUILD_SAMPLES=ON -DBUILD_SAMPLES_SIMD=ON -DBUILD_TESTS=ON
+          cmakeArgs: -DBUILD_SAMPLES=ON -DBUILD_SAMPLES_SIMD=ON -DBUILD_TESTS=ON -DENABLE_PARALLELISM=OFF
           cxxFlags: -march=native
 
       - name: Run CTest
