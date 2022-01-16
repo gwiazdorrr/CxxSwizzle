@@ -26,5 +26,5 @@ jobs:
 
       - name: Run CTest
         run: |
-         cd ${{ runner.workspace }}/b/${{ matrix.name }}/test
+         cd ${{ runner.workspace }}/b/${{ matrix.buildType }}/test
          ctest -V
