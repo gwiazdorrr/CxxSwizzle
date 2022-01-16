@@ -1,0 +1,25 @@
+name: clang-samples-simd
+on: [push]
+
+jobs:
+  job:
+    name: ${{ matrix.buildType }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        buildType: [Release]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - id: build
+        uses: ./.github/actions/cmake-build
+        with:
+          cxx: clang++
+          cc: clang
+          triplet: x64-linux
+          generator: Ninja
+          cmakeArgs: -DBUILD_SAMPLES=OFF -DBUILD_SAMPLES_SIMD=ON -DBUILD_TESTS=OFF
+          buildDir: ${{ runner.workspace }}/b/${{ matrix.buildType }}
