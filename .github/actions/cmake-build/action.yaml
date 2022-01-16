@@ -1,0 +1,64 @@
+name: 'Build'
+description: 'Build CxxSwizzle test/samples'
+inputs:
+  buildType:
+    required: false
+    default: "Release"
+  buildDir:
+    required: true
+  generator:
+    required: true
+  cc:
+    description: 'C compiler'
+    required: true
+  cxx:
+    description: 'C++ compiler'
+    required: true
+  triplet:
+    description: "vcpkg triplet"
+    required: true
+  cxxFlags:
+    description: "Additional C++ flags"
+    required: false
+  cmakeArgs:
+    description: "Additional CMake arguments"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - uses: lukka/get-cmake@latest
+    - uses: seanmiddleditch/gha-setup-ninja@master
+
+    - name: Set Environment vars
+      run: |
+        echo "CXX=${{ inputs.cxx }}" >> $GITHUB_ENV
+        echo "CC=${{ inputs.cc }}"   >> $GITHUB_ENV
+      shell: bash
+
+    - name: Print Compiler Version
+      if: runner.os != 'Windows'
+      run: |
+        ${{ inputs.cxx }} --version
+      shell: bash
+
+    - name: Restore artifacts, or run vcpkg, build and cache artifacts
+      uses: lukka/run-vcpkg@v6
+      id: runvcpkg
+      with:
+        # Just install vcpkg for now, do not install any ports in this step yet.
+        setupOnly: true
+        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+        appendedCacheKey: ${{ hashFiles( '**/vcpkg.json' ) }}
+        vcpkgTriplet: ${{ inputs.triplet }}
+
+    - name: Run CMake+Ninja
+      uses: lukka/run-cmake@v3
+      id: runcmake
+      with:
+        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
+        cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
+        vcpkgTriplet: ${{ inputs.triplet }}
+        useVcpkgToolchainFile: true
+        buildDirectory: '${{ inputs.buildDir }}/'
+        cmakeAppendedArgs: '-G "${{ inputs.generator }}" -DCMAKE_BUILD_TYPE=${{ inputs.buildType }} -DCMAKE_CXX_FLAGS="${{ inputs.cxxFlags }}" -DBUILD_TESTS=ON ${{ inputs.cmakeArgs }}'
