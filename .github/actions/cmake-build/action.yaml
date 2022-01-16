@@ -4,6 +4,8 @@ inputs:
   buildType:
     required: false
     default: "Release"
+  buildDir:
+    required: true
   generator:
     required: true
   cc:
@@ -58,5 +60,5 @@ runs:
         cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
         vcpkgTriplet: ${{ inputs.triplet }}
         useVcpkgToolchainFile: true
-        buildDirectory: '${{ runner.workspace }}/b/${{ matrix.name }}/'
+        buildDirectory: '${{ inputs.buildDir }}/'
         cmakeAppendedArgs: '-G "${{ inputs.generator }}" -DCMAKE_BUILD_TYPE=${{ inputs.buildType }} -DCMAKE_CXX_FLAGS="${{ inputs.cxxFlags }}" -DBUILD_TESTS=ON ${{ inputs.cmakeArgs }}'
