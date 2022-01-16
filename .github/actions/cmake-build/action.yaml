@@ -32,11 +32,13 @@ runs:
       run: |
         echo "CXX=${{ inputs.cxx }}" >> $GITHUB_ENV
         echo "CC=${{ inputs.cc }}"   >> $GITHUB_ENV
+      shell: bash
 
     - name: Print Compiler Version
       if: runner.os != 'Windows'
       run: |
         ${{ inputs.cxx }} --version
+      shell: bash
 
     - name: Restore artifacts, or run vcpkg, build and cache artifacts
       uses: lukka/run-vcpkg@v6
