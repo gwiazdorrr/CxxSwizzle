@@ -676,7 +676,6 @@ struct shadertoy_renderer
     {
         std::chrono::microseconds duration;
         int num_pixels;
-        int num_threads;
     };
 
     static stats render(const shadertoy_config& config, shader_inputs inputs, render_target_rgba32& target, buffer_render_target_list& buffers, shadertoy_input_textures context, progress& progress, bool parallel)
@@ -719,7 +718,7 @@ private:
         }
         else
         {
-            return stats{ std::chrono::microseconds{}, 0, 0 };
+            return stats{ std::chrono::microseconds{}, 0 };
         }
     }
 
@@ -805,8 +804,6 @@ private:
         swizzle::float_type x_offsets(0);
         swizzle::float_type y_offsets(0);
 
-        int num_threads = 1;
-
         {
             float_traits::aligned_storage_type aligned_storage;
             float* aligned = reinterpret_cast<float*>(&aligned_storage);
@@ -862,7 +859,7 @@ private:
             }
         }
 
-        return stats{ std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - render_begin), num_pixels, num_threads };
+        return stats{ std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - render_begin), num_pixels };
     }
 };
 
