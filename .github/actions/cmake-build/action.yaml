@@ -6,6 +6,8 @@ inputs:
     default: "Release"
   buildDir:
     required: true
+  outputDir:
+    required: true
   generator:
     required: true
   cc:
@@ -22,7 +24,7 @@ inputs:
     required: false
   cmakeArgs:
     description: "Additional CMake arguments"
-    required: true
+    required: false
 
 runs:
   using: "composite"
@@ -52,7 +54,7 @@ runs:
         appendedCacheKey: ${{ hashFiles( '**/vcpkg.json' ) }}
         vcpkgTriplet: ${{ inputs.triplet }}
 
-    - name: Run CMake
+    - name: Build with CMake
       uses: lukka/run-cmake@v3
       id: runcmake
       with:
@@ -61,5 +63,40 @@ runs:
         vcpkgTriplet: ${{ inputs.triplet }}
         useVcpkgToolchainFile: true
         buildDirectory: '${{ inputs.buildDir }}/'
-        cmakeAppendedArgs: '-G "${{ inputs.generator }}" -DCMAKE_BUILD_TYPE=${{ inputs.buildType }} -DCMAKE_CXX_FLAGS="${{ inputs.cxxFlags }}" -DBUILD_TESTS=ON ${{ inputs.cmakeArgs }}'
+        cmakeAppendedArgs: '-G "${{ inputs.generator }}" -DCMAKE_BUILD_TYPE=${{ inputs.buildType }} -DCMAKE_CXX_FLAGS="${{ inputs.cxxFlags }}" -DBUILD_SAMPLES=ON -DBUILD_SAMPLES_SIMD=ON -DBUILD_TESTS=ON ${{ inputs.cmakeArgs }}'
         buildWithCMakeArgs: '--config ${{ inputs.buildType }}'
+    
+    - name: Test with CTest
+      shell: pwsh
+      run: |
+        cd ${{ inputs.buildDir }}/test
+        ctest -V
+
+    - name: Run samples
+      shell: pwsh
+      run: |
+        cd ${{ inputs.outputDir }}
+
+        echo sample_scalar_seascape
+        ./sample_scalar_seascape -o sample_scalar_seascape.png
+
+        echo sample_scalar_creation_by_silexars
+        ./sample_scalar_creation_by_silexars -o sample_creation_by_silexars.png -t 10
+
+        echo sample_scalar_dry_ice_2
+        ./sample_scalar_dry_ice_2 -n 25 -o sample_scalar_dry_ice_2.png -d 0.5
+
+        echo sample_simd_vc_masked_seascape_patched
+        ./sample_simd_vc_masked_seascape_patched -o sample_simd_vc_masked_seascape_patched.png
+
+        echo sample_simd_vc_seascape_patched
+        ./sample_simd_vc_seascape_patched -o sample_simd_vc_seascape_patched.png
+
+        echo sample_simd_vc_creation_by_silexars_patched
+        ./sample_simd_vc_creation_by_silexars_patched -o sample_simd_vc_creation_by_silexars_patched.png -t 10
+
+    - name: Upload screenshots
+      uses: actions/upload-artifact@v2
+      with:
+        name: screenshots
+        path: ${{ inputs.outputDir }}/sample_*.png
