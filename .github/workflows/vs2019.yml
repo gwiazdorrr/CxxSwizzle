@@ -24,18 +24,4 @@ jobs:
           generator: Visual Studio 16 2019
           buildDir: ${{ runner.workspace }}/b/${{ matrix.buildType }}
           cmakeArgs: -DBUILD_SAMPLES=ON -DBUILD_SAMPLES_SIMD=ON -DBUILD_TESTS=ON
-
-      - name: Run CTest
-        run: |
-          cd ${{ runner.workspace }}/b/${{ matrix.buildType }}/test
-          ctest -V
-      
-      - name: Run Samples
-        run: |
-          ${{ runner.workspace }}/b/${{ matrix.buildType }}/samples/${{ matrix.buildType }}/sample_scalar_seascape.exe -o ${{ runner.workspace }}/seascape.png
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: seascape
-          path: ${{ runner.workspace }}/seascape.png
-
+          outputDir: ${{ runner.workspace }}/b/${{ matrix.buildType }}/samples/${{ matrix.buildType }}
