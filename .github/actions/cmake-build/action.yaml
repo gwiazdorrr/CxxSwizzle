@@ -81,19 +81,19 @@ runs:
         ./sample_scalar_seascape -o sample_scalar_seascape.png
 
         echo sample_scalar_creation_by_silexars
-        ./sample_scalar_creation_by_silexars -o sample_creation_by_silexars.png
+        ./sample_scalar_creation_by_silexars -o sample_creation_by_silexars.png -t 10
 
         echo sample_scalar_dry_ice_2
-        ./sample_scalar_dry_ice_2 -n 100 -o sample_scalar_dry_ice_2.png
+        ./sample_scalar_dry_ice_2 -n 25 -o sample_scalar_dry_ice_2.png -d 0.5
 
         echo sample_simd_vc_masked_seascape_patched
         ./sample_simd_vc_masked_seascape_patched -o sample_simd_vc_masked_seascape_patched.png
 
         echo sample_simd_vc_seascape_patched
         ./sample_simd_vc_seascape_patched -o sample_simd_vc_seascape_patched.png
-        
+
         echo sample_simd_vc_creation_by_silexars_patched
-        ./sample_simd_vc_creation_by_silexars_patched -o sample_simd_vc_creation_by_silexars_patched.png
+        ./sample_simd_vc_creation_by_silexars_patched -o sample_simd_vc_creation_by_silexars_patched.png -t 10
 
     - name: Upload screenshots
       uses: actions/upload-artifact@v2
