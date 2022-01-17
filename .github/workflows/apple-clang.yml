@@ -23,9 +23,5 @@ jobs:
           triplet: x64-osx
           generator: Ninja
           buildDir: ${{ runner.workspace }}/b/${{ matrix.buildType }}
-          cmakeArgs: -DBUILD_SAMPLES=ON -DBUILD_SAMPLES_SIMD=ON -DBUILD_TESTS=ON -DENABLE_PARALLELISM=OFF
-
-      - name: Run CTest
-        run: |
-         cd ${{ runner.workspace }}/b/${{ matrix.buildType }}/test
-         ctest -V
+          outputDir: ${{ runner.workspace }}/b/${{ matrix.buildType }}/samples
+          cmakeArgs: -DENABLE_PARALLELISM=OFF

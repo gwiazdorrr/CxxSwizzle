@@ -76,11 +76,23 @@ runs:
       shell: pwsh
       run: |
         cd ${{ inputs.outputDir }}
+
+        echo sample_scalar_seascape
         ./sample_scalar_seascape -o sample_scalar_seascape.png
+
+        echo sample_scalar_creation_by_silexars
         ./sample_scalar_creation_by_silexars -o sample_creation_by_silexars.png
+
+        echo sample_scalar_dry_ice_2
         ./sample_scalar_dry_ice_2 -n 100 -o sample_scalar_dry_ice_2.png
+
+        echo sample_simd_vc_masked_seascape_patched
         ./sample_simd_vc_masked_seascape_patched -o sample_simd_vc_masked_seascape_patched.png
+
+        echo sample_simd_vc_seascape_patched
         ./sample_simd_vc_seascape_patched -o sample_simd_vc_seascape_patched.png
+        
+        echo sample_simd_vc_creation_by_silexars_patched
         ./sample_simd_vc_creation_by_silexars_patched -o sample_simd_vc_creation_by_silexars_patched.png
 
     - name: Upload screenshots
