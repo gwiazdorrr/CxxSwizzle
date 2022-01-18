@@ -77,6 +77,9 @@ runs:
       run: |
         cd ${{ inputs.outputDir }}
 
+        echo sample_scalar__sh16c__doom
+        ./sample_scalar__sh16c__doom -o sample_scalar__sh16c__doom.png -d 0.5 -n 15
+
         echo sample_scalar_seascape
         ./sample_scalar_seascape -o sample_scalar_seascape.png
 

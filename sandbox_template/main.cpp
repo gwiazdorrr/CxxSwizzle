@@ -1074,7 +1074,9 @@ int main(int argc, char* argv[])
             shadertoy_keyboard keyboard;
             shadertoy_date date;
 
-            sdl_ptr<SDL_Surface> target_surface = create_matching_sdl_surface(render_targets.target);
+            auto& rt = render_targets.target;
+            auto target_surface = create_sdl_object_or_throw(SDL_CreateRGBSurfaceFrom, rt.first_row, rt.width, rt.height, 32, rt.pitch, 0x000000FF, 0x0000FF00, 0x00FF0000, 0x0);
+
             float delta = 0.0f;
             int fps = 0;
             float time = options.time;
