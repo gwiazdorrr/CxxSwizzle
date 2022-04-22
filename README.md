@@ -48,28 +48,33 @@ If you are using CMake GUI, after clicking `Configure` select `Specify toolchain
 
 **TL;DR:** set `SHADERTOY_DOWNLOAD` to any of `top_*` options and run `cmake`.
 
-Downloading shadertoys takes place in CMake's configure step (not great, not terrible). Note that only shadertoys with `public+api` visibility can be downloaded this way. The process in controlled with following variables:
+Downloading shadertoys takes place in CMake's configure step (not great, not terrible). Note that only shadertoys with `public+api` visibility can be downloaded this way. The process in controlled with following properties:
 
-* `SHADERTOY_DOWNLOAD` controls the download process. If set to `id`, `SHADERTOY_DOWNLOAD_PARAM` is interpreted as a list of shadertoy IDs (semicolon-separated). If set to `top_*`, `SHADERTOY_DOWNLOAD_PARAM` is interpreted as a search term. The parameter is forcefully set to `none` after the download is done, to avoid redownloading same shaders during next CMake's configure phase.
-* `SHADERTOY_DOWNLOAD_PARAM` either a semicolon-separated list of IDs or a search term
-* `SHADERTOY_DOWNLOAD_MAX_COUNT` specifies the upper limit of how many shadertoys to download.
-* `SHADERTOY_ROOT` a directory where shadertoys are downloaded to (`./shadertoys` by default)
-* `SHADERTOY_TEXTURES_ROOT` a directory where textures are downloaded to (`./textures` by default)
-* `SHADERTOY_APPLY_TRIVIAL_FIXES` can be cheched to avoid headaches with most common GLSL to C++ problems. 
+* `SHADERTOY_DOWNLOAD_IDS` is either a single shadertoy ID (e.g. `WtVfRc`) or a list of shadertoy IDs (semicolon-separated)
+* `SHADERTOY_DOWNLOAD_QUERY_TYPE` specifies the type of query (most loved, newest etc.) to run using Shadertoy API to obtain a list of shadertoys to download.
+
+Setting any of the above will trigger the download process. To avoid redownloading same shaders during next CMake's configure phase, both properties are forcefully set to an empty string and "none", respectively. After CMake's generate step is complete, each shadertoy should now be ready to build as a standalone C++ project.
+
+Another properties relevant to downloading Shadertoys:
+
+* `SHADERTOY_DOWNLOAD_QUERY_ARG` - an optional search term for the query.
+* `SHADERTOY_DOWNLOAD_QUERY_MAX_COUNT` - the upper limit of how many shadertoys to download.
+* `SHADERTOY_ROOT` - a directory where shadertoys are downloaded to (`./shadertoys` by default)
+* `SHADERTOY_TEXTURES_ROOT` - a directory where textures are downloaded to (`./textures` by default)
+* `SHADERTOY_APPLY_TRIVIAL_FIXES` can be cheched to avoid headaches with most common GLSL to C++ problems (enabled by default).
 * `SHADERTOY_API_KEY` (advanced) is the API key used to access Shadertoy API. If the default key gets rate-limited, you will need to create your own [key](https://www.shadertoy.com/howto#q2) and set the parameter.
 * `SHADERTOY_SETUP` (advanced) specifies which sandbox setup to use. The default one (`scalar`) has no support for partial derivatives, but branches/loop work out of the box. If you are feeling adventurous check out `simd` variants.
 
 ### Use case: download specific shadertoys
 
-1. Set `SHADERTOY_DOWNLOAD` to `id`
-2. Set `SHADERTOY_DOWNLOAD_PARAM` to an id of any shadertoy with `public+api` visiblity (e.g. [WtVfRc](https://www.shadertoy.com/view/WtVfRc)). If you want to download a batch, separate ids with a semicolon.
-3. Click `Configure` in `cmake-gui` or run `cmake`
+1. Set `SHADERTOY_DOWNLOAD_IDS` to an id of any shadertoy with `public+api` visiblity (e.g. [WtVfRc](https://www.shadertoy.com/view/WtVfRc)). If you want to download a batch, separate ids with a semicolon.
+2. Click `Configure` in `cmake-gui` or run `cmake`
 
 ### Use case: query and download shadertoys
 
-1. Set `SHADERTOY_DOWNLOAD` to `top_love`, `top_popular`, `top_newest` or `top_hot`. 
-2. Leave `SHADERTOY_DOWNLOAD_PARAM` empty or set it to a search term. 
-3. Set `SHADERTOY_DOWNLOAD_MAX_COUNT` to limit how many shaders you want to download.
+1. Set `SHADERTOY_DOWNLOAD_QUERY_TYPE` to `top_love`, `top_popular`, `top_newest` or `top_hot`. 
+2. Leave `SHADERTOY_DOWNLOAD_QUERY_ARG` empty or set it to a search term. 
+3. Set `SHADERTOY_DOWNLOAD_QUERY_MAX_COUNT` to limit how many shaders you want to download.
 3. Click `Configure` in `cmake-gui` or run `cmake`
 
 ### Automatic trivial fixes

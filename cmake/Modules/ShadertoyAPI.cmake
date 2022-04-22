@@ -32,6 +32,7 @@ macro(_shadertoy_sanitize_name result name)
     string(REPLACE "#"  "_" ${result} ${${result}})
     string(REPLACE "^"  "_" ${result} ${${result}})
     string(REPLACE "."  "_" ${result} ${${result}})
+    string(REPLACE "@"  "_" ${result} ${${result}})
 endmacro()
 
 macro(_shadertoy_create_file path contents msg)
@@ -40,8 +41,15 @@ macro(_shadertoy_create_file path contents msg)
 endmacro()
 
 macro(_shadertoy_download_file url path msg)
-    message(STATUS "Downloading ${url} to ${path} ${msg}")
-    file(DOWNLOAD ${url} ${path})
+    message(STATUS "Downloading ${url} to ${path}")
+    file(DOWNLOAD "${url}" ${path} STATUS DOWNLOAD_STATUS)
+    list(GET DOWNLOAD_STATUS 0 STATUS_CODE)
+    list(GET DOWNLOAD_STATUS 1 ERROR_MESSAGE)
+    if(${STATUS_CODE} EQUAL 0)
+        # success
+    else()
+        message(FATAL_ERROR "Failed to download ${url} (${STATUS_CODE}): ${ERROR_MESSAGE}")
+    endif()
 endmacro()
 
 macro(_shadertoy_unescape_str str result)
@@ -202,7 +210,10 @@ endmacro()
 macro(shadertoy_download api_key shader_id root_dir textures_root download_error_is_fatal patch_source_files)
     set(shadertoy_json_path "${CMAKE_CURRENT_BINARY_DIR}/${shader_id}.json")
     set(shadertoy_query "https://www.shadertoy.com/api/v1/shaders/${shader_id}?key=${api_key}")
-        
+
+    message(CHECK_START "Downloading Shadertoy ${shader_id}")
+    list(APPEND CMAKE_MESSAGE_INDENT "  ")
+    
     _shadertoy_download_file(${shadertoy_query} ${shadertoy_json_path} "(Shadertoy JSON shader description)")
 
     message(STATUS "Parsing ${shadertoy_json_path}")
@@ -212,19 +223,21 @@ macro(shadertoy_download api_key shader_id root_dir textures_root download_error
     if (SHADER.Error)
         if (${download_error_is_fatal})
             if (SHADER.Error STREQUAL "Shader not found")
-                message(FATAL_ERROR "Shartoy API returned an error: ${SHADER.Error}.\nThis happens if shader is not published "
+                message(FATAL_ERROR "Shadertoy API returned an error: ${SHADER.Error}.\nThis happens if shader is not published "
                 "as public+api. Anyway, this shader needs to be downloaded manually (see README.md for instructions)")
             else()
-                message(FATAL_ERROR "Shartoy API returned an error: ${SHADER.Error}.")
+                message(FATAL_ERROR "Shadertoy API returned an error: ${SHADER.Error}.")
             endif()
         else()
             if (SHADER.Error STREQUAL "Shader not found")
-                message(WARNING "Shartoy API returned an error: ${SHADER.Error}.\nThis happens if shader is not published "
+                message(WARNING "Shadertoy API returned an error: ${SHADER.Error}.\nThis happens if shader is not published "
                 "as public+api. Anyway, this shader needs to be downloaded manually (see README.md for instructions)")
             else()
-                message(WARNING "Shartoy API returned an error: ${SHADER.Error}.")
+                message(WARNING "Shadertoy API returned an error: ${SHADER.Error}.")
             endif()
         endif()
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
+        message(CHECK_FAIL "failed")
     else()
 
         # debug
@@ -233,6 +246,8 @@ macro(shadertoy_download api_key shader_id root_dir textures_root download_error
         # endforeach()
 
         set(shader_name ${SHADER.Shader.info.name})
+
+        message(STATUS "Shadertoy ${shader_id} is \"${SHADER.Shader.info.name}\" by ${SHADER.Shader.info.username}")
 
         # create directory
         _shadertoy_sanitize_name(shader_name_sanitized ${shader_name})
@@ -391,32 +406,44 @@ macro(shadertoy_download api_key shader_id root_dir textures_root download_error
         
         _shadertoy_create_file("${shader_directory}/shadertoy_config.hpp" "${shadertoy_config}" "")
 
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
+        message(CHECK_PASS "success")
     endif()
-
 
     sbeClearJson(SHADER)
 endmacro()
 
 macro(shadertoy_query api_key sort_type query max_count out_list)
     set(shadertoy_json_path "${CMAKE_CURRENT_BINARY_DIR}/sort_${sort_type}.json")
-    set(shadertoy_query "https://www.shadertoy.com/api/v1/shaders/query/${query}?sort=${sort_type}&key=${api_key}&from=0&num=${max_count}")
+    set(shadertoy_query "${query}?sort=${sort_type}&key=${api_key}&from=0&num=${max_count}")
+    set(shadertoy_query_url "https://www.shadertoy.com/api/v1/shaders/query/${shadertoy_query}")
 
-    _shadertoy_download_file(${shadertoy_query} ${shadertoy_json_path} "(Shadertoy JSON shader list)")
+    message(CHECK_START "Running Shadertoy query")
+    list(APPEND CMAKE_MESSAGE_INDENT "  ")
+
+    _shadertoy_download_file(${shadertoy_query_url} ${shadertoy_json_path} "(Shadertoy JSON shader list)")
 
     message(STATUS "Parsing ${shadertoy_json_path}")
     file(READ "${shadertoy_json_path}" shadertoy_json)
     sbeParseJson(SHADER_LIST shadertoy_json)
 
     if (SHADER_LIST.Error)
-        message(FATAL_ERROR "Shartoy API returned an error: ${SHADER_LIST.Error}.")
+        message(FATAL_ERROR "Shadertoy API returned an error: ${SHADER_LIST.Error}.")
+
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
+        message(CHECK_FAIL "failed")
+    else()
+        list(LENGTH SHADER_LIST.Results len)
+        message(STATUS "Found ${len} shaders")
+
+        foreach(shader_index ${SHADER_LIST.Results})
+            set(SHADER_ID SHADER_LIST.Results_${shader_index})
+            list(APPEND ${out_list} "${${SHADER_ID}}")
+        endforeach()
+
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
+        message(CHECK_PASS "success")
     endif()
-
-    message(STATUS "Found ${SHADER_LIST.Shaders} shaders")
-
-    foreach(shader_index ${SHADER_LIST.Results})
-        set(SHADER_ID SHADER_LIST.Results_${shader_index})
-        list(APPEND ${out_list} "${${SHADER_ID}}")
-    endforeach()
 
 endmacro()
 
