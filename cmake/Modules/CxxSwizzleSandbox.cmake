@@ -43,7 +43,7 @@ endmacro()
 macro(cxxswizzle_prepare_setup setup)
 
     # basic requirements
-    find_package(SDL2 CONFIG REQUIRED)
+    find_package(SDL2 2.0.17 CONFIG REQUIRED)
     find_package(SDL2-image CONFIG REQUIRED)
     find_package(imgui CONFIG REQUIRED)
 
@@ -148,8 +148,7 @@ macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root)
                          "${template_dir}/shadertoy_sandbox.hpp"
                          "${template_dir}/shadertoy_sandbox.cpp.in" 
                          "${template_dir}/config.hpp.in"
-                         "${template_dir}/cxxswizzle.natvis"
-                         "${CMAKE_SOURCE_DIR}/imgui_sdl/imgui_sdl.cpp")
+                         "${template_dir}/cxxswizzle.natvis")
 
 
     source_group("" FILES ${shader_file_list} "${shadertoy_config_path}")
@@ -158,7 +157,7 @@ macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root)
 
     add_executable(${target_name} ${shared_file_list} ${codegen_file_list} ${shader_file_list} ${shadertoy_config_path})
     
-    target_include_directories(${target_name} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include ${gen_include_dir} ${template_dir} ${shadertoy_dir} "${CMAKE_SOURCE_DIR}/imgui_sdl")
+    target_include_directories(${target_name} PRIVATE ${CxxSwizzle_SOURCE_DIR}/include ${gen_include_dir} ${template_dir} ${shadertoy_dir})
     target_link_libraries(${target_name} PRIVATE SDL2::SDL2 SDL2::SDL2main SDL2::SDL2_image imgui::imgui)
     set_target_properties(${target_name} PROPERTIES CXX_STANDARD 17)
     set_target_properties(${target_name} PROPERTIES CXX_STANDARD_REQUIRED ON)

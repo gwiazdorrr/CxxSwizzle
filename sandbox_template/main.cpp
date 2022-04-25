@@ -28,9 +28,11 @@ static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 #include <SDL_video.h>
 #include <SDL_image.h>
 
+
 #include <imgui.h>
-#include <imgui_sdl.h>
 #include <imgui_impl_sdl.h>
+#include <imgui_impl_sdlrenderer.h>
+
 
 #ifdef TRACY_ENABLE
 #include <Tracy.hpp>
@@ -1178,11 +1180,10 @@ int main(int argc, char* argv[])
             ImGui::CreateContext();
             CXXSWIZZLE_SCOPE_EXIT([=]() { ImGui::DestroyContext(); });
 
-            ImGuiSDL::Initialize(renderer.get(), render_targets.width, render_targets.height + status_bar_height);
-            CXXSWIZZLE_SCOPE_EXIT([]() { ImGuiSDL::Deinitialize(); });
-
-            ImGui_ImplSDL2_InitForOpenGL(window.get(), nullptr);
+            ImGui_ImplSDL2_InitForSDLRenderer(window.get(), renderer.get());
             CXXSWIZZLE_SCOPE_EXIT([]() { ImGui_ImplSDL2_Shutdown(); });
+
+            ImGui_ImplSDLRenderer_Init(renderer.get());
 
             printf("shift + p           - pause/unpause\n");
             printf("shift + left arrow  - decrease time by 1 s\n");
@@ -1274,7 +1275,8 @@ int main(int argc, char* argv[])
 
                 // imgui
                 {
-                    ImGui_ImplSDL2_NewFrame(window.get());
+                    ImGui_ImplSDLRenderer_NewFrame();
+                    ImGui_ImplSDL2_NewFrame();
                     ImGui::NewFrame();
 
                     bool is_shift_down = ImGui::IsKeyDown(SDL_SCANCODE_LSHIFT) || ImGui::IsKeyDown(SDL_SCANCODE_RSHIFT);
@@ -1528,13 +1530,13 @@ int main(int argc, char* argv[])
                     }
                 }
 
+                ImGui::Render();
                 SDL_RenderClear(renderer.get());
 
                 SDL_Rect rect_image = { 0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y) - status_bar_height };
                 SDL_RenderCopy(renderer.get(), target_texture.get(), NULL, &rect_image);
 
-                ImGui::Render();
-                ImGuiSDL::Render(ImGui::GetDrawData());
+                ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
 
                 SDL_RenderPresent(renderer.get());
 
