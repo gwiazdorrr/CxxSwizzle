@@ -35,14 +35,19 @@ git clone https://github.com/gwiazdorrr/CxxSwizzle.git
 ```
 git submodule update --init
 ```
-3. Configure with CMake toolchain file and a generator of your choice. For example, using `ninja`:
+
+3. Install vcpkg dependencies (non-Windows platforms), e.g. Debian:
+```
+sudo apt-get install curl zip unzip tar
+```
+
+4. Configure with CMake toolchain file and a generator of your choice. For example, using `ninja`:
 ```
 cmake -G Ninja -B build -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
 cd build
 ninja
 ```
 If you are using CMake GUI, after clicking `Configure` select `Specify toolchain file for cross-compiling` and make sure the path in the next window points to `vcpkg/scripts/buildsystems/vcpkg.cmake`.
-
 
 ## Downloading shadertoys
 
