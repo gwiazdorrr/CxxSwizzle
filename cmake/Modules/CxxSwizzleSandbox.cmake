@@ -47,7 +47,7 @@ macro(cxxswizzle_prepare_setup setup)
     find_package(SDL2-image CONFIG REQUIRED)
     find_package(imgui CONFIG REQUIRED)
 
-    if (${setup} STREQUAL "simd_vc" OR ${setup} STREQUAL "simd_vc_with_masking")
+    if (${setup} STREQUAL "simd_vc" OR ${setup} STREQUAL "simd_vc_masked")
         set(CMAKE_WARN_DEPRECATED_PREV ${CMAKE_WARN_DEPRECATED})
         set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
         # Vc has some really outdated build scripts, supress the message
