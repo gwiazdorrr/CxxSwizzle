@@ -40,15 +40,23 @@ macro(_shadertoy_create_file path contents msg)
     file(WRITE ${path} "${contents}")
 endmacro()
 
-macro(_shadertoy_download_file url path msg)
+macro(_shadertoy_download_file url path user_agent msg)
+
+    set (httpheader "")
+    if (NOT user_agent STREQUAL "")
+        set(httpheader "User-Agent: ${user_agent}")
+    endif()
+
     message(STATUS "Downloading ${url} to ${path}")
-    file(DOWNLOAD "${url}" ${path} STATUS DOWNLOAD_STATUS)
+    file(DOWNLOAD "${url}" ${path} 
+        STATUS DOWNLOAD_STATUS
+        HTTPHEADER "${httpheader}"
+        LOG DOWNLOAD_LOG
+    )
     list(GET DOWNLOAD_STATUS 0 STATUS_CODE)
-    list(GET DOWNLOAD_STATUS 1 ERROR_MESSAGE)
-    if(${STATUS_CODE} EQUAL 0)
-        # success
-    else()
-        message(FATAL_ERROR "Failed to download ${url} (${STATUS_CODE}): ${ERROR_MESSAGE}")
+    if(STATUS_CODE)
+        list(GET DOWNLOAD_STATUS 1 ERROR_MESSAGE)
+        message(FATAL_ERROR "Failed to download ${url} (${STATUS_CODE}): ${ERROR_MESSAGE}\nFull Log: ${DOWNLOAD_LOG}")
     endif()
 endmacro()
 
@@ -207,14 +215,14 @@ macro(_shadertoy_patch_code path)
     
 endmacro()
 
-macro(shadertoy_download api_key shader_id root_dir textures_root download_error_is_fatal patch_source_files)
+macro(shadertoy_download api_key shader_id root_dir textures_root download_error_is_fatal patch_source_files user_agent)
     set(shadertoy_json_path "${CMAKE_CURRENT_BINARY_DIR}/${shader_id}.json")
     set(shadertoy_query "https://www.shadertoy.com/api/v1/shaders/${shader_id}?key=${api_key}")
 
     message(CHECK_START "Downloading Shadertoy ${shader_id}")
     list(APPEND CMAKE_MESSAGE_INDENT "  ")
     
-    _shadertoy_download_file(${shadertoy_query} ${shadertoy_json_path} "(Shadertoy JSON shader description)")
+    _shadertoy_download_file(${shadertoy_query} ${shadertoy_json_path} "${user_agent}" "(Shadertoy JSON shader description)")
 
     message(STATUS "Parsing ${shadertoy_json_path}")
     file(READ "${shadertoy_json_path}" shadertoy_json)
@@ -317,7 +325,7 @@ macro(shadertoy_download api_key shader_id root_dir textures_root download_error
                     if (EXISTS ${target_file})
                         message(STATUS "Skipping texture ${source_url}, already in cache.")
                     else()
-                        _shadertoy_download_file(${source_url} ${target_file}  "")
+                        _shadertoy_download_file(${source_url} ${target_file} "${user_agent}" "")
                     endif()
 
                     set(make "sampler_config::make_texture(${spacing}\"${input_name}\")")
@@ -345,7 +353,7 @@ macro(shadertoy_download api_key shader_id root_dir textures_root download_error
                             if (EXISTS ${target_file})
                                 message(STATUS "Skipping texture ${source_url}, already in cache.")
                             else()
-                                _shadertoy_download_file(${source_url} ${target_file}  "")
+                                _shadertoy_download_file(${source_url} ${target_file} "${user_agent}" "")
                             endif()
 
                             list(APPEND faces "\"${target_file_name}\"")
@@ -413,7 +421,7 @@ macro(shadertoy_download api_key shader_id root_dir textures_root download_error
     sbeClearJson(SHADER)
 endmacro()
 
-macro(shadertoy_query api_key sort_type query max_count out_list)
+macro(shadertoy_query api_key sort_type query max_count user_agent out_list)
     set(shadertoy_json_path "${CMAKE_CURRENT_BINARY_DIR}/sort_${sort_type}.json")
     set(shadertoy_query "${query}?sort=${sort_type}&key=${api_key}&from=0&num=${max_count}")
     set(shadertoy_query_url "https://www.shadertoy.com/api/v1/shaders/query/${shadertoy_query}")
@@ -421,7 +429,7 @@ macro(shadertoy_query api_key sort_type query max_count out_list)
     message(CHECK_START "Running Shadertoy query")
     list(APPEND CMAKE_MESSAGE_INDENT "  ")
 
-    _shadertoy_download_file(${shadertoy_query_url} ${shadertoy_json_path} "(Shadertoy JSON shader list)")
+    _shadertoy_download_file(${shadertoy_query_url} ${shadertoy_json_path} "${user_agent}" "(Shadertoy JSON shader list)")
 
     message(STATUS "Parsing ${shadertoy_json_path}")
     file(READ "${shadertoy_json_path}" shadertoy_json)

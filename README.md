@@ -69,6 +69,7 @@ Another properties relevant to downloading Shadertoys:
 * `SHADERTOY_APPLY_TRIVIAL_FIXES` can be cheched to avoid headaches with most common GLSL to C++ problems (enabled by default).
 * `SHADERTOY_API_KEY` (advanced) is the API key used to access Shadertoy API. If the default key gets rate-limited, you will need to create your own [key](https://www.shadertoy.com/howto#q2) and set the parameter.
 * `SHADERTOY_SETUP` (advanced) specifies which sandbox setup to use. The default one (`scalar`) has no support for partial derivatives, but branches/loop work out of the box. If you are feeling adventurous check out `simd` variants.
+* `SHADERTOY_HTTP_USERAGENT` (advanced) specifies custom [User-Agent](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/User-Agent) string used in HTTP requests. This is useful in case the default ("curl/x.xx.x") results in 403 response codes.
 
 ### Use case: download specific shadertoys
 
