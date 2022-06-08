@@ -30,7 +30,7 @@ if (BUILD_SHADERTOYS)
 	set(SHADERTOY_TEXTURES_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/textures" CACHE PATH "Directory where textures are downloaded to/read from.")
 	set(SHADERTOY_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/shadertoys" CACHE PATH "Directory where shadertoys are downloaded to/read from.")
 
-	set(SHADERTOY_HTTP_USERAGENT "" CACHE STRING "As of 07/06/2022, Shadertoy API returns 403 for curl's User-Agent. This field allows to override the default User-Agent.")
+	set(SHADERTOY_HTTP_USERAGENT "" CACHE STRING "Overrides the default User-Agent (curl/x.xx.x).")
 	mark_as_advanced(SHADERTOY_HTTP_USERAGENT)
 
 	set(SHADERTOY_SETUP "scalar" CACHE STRING "SIMD type")
@@ -39,7 +39,7 @@ if (BUILD_SHADERTOYS)
 
 	# handle downloads
 
-	set(SHADERTOY_API_KEY "BtntM7" CACHE STRING "Shadertoy API Key (go to https://www.shadertoy.com/howto#q2 for details)")
+	set(SHADERTOY_API_KEY "rdrK44" CACHE STRING "Shadertoy API Key (go to https://www.shadertoy.com/howto#q2 for details)")
 	mark_as_advanced(SHADERTOY_API_KEY)
 
 	option(SHADERTOY_APPLY_TRIVIAL_FIXES "" ON)
