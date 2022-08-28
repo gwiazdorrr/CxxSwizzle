@@ -90,13 +90,13 @@ runs:
         ./sample_scalar_dry_ice_2 -n 25 -o sample_scalar_dry_ice_2.png -d 0.5
 
         echo sample_simd_vc_masked_seascape
-        ./sample_simd_vc_masked_seascape_patched -o sample_simd_vc_masked_seascape_patched.png
+        ./sample_simd_vc_masked_seascape -o sample_simd_vc_masked_seascape.png
 
         echo sample_simd_vc_seascape
-        ./sample_simd_vc_seascape_patched -o sample_simd_vc_seascape_patched.png
+        ./sample_simd_vc_seascape -o sample_simd_vc_seascape.png
 
         echo sample_simd_vc_creation_by_silexars
-        ./sample_simd_vc_creation_by_silexars_patched -o sample_simd_vc_creation_by_silexars_patched.png -t 10
+        ./sample_simd_vc_creation_by_silexars -o sample_simd_vc_creation_by_silexars.png -t 10
 
     - name: Upload screenshots
       uses: actions/upload-artifact@v2
