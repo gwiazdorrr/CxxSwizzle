@@ -48,7 +48,7 @@ bool floorIntersect(in vec3 ro, in vec3 rd, in float floorHeight, out float t)
     return false;
 } 
 
-// https://www.iquilezles.org/www/articles/intersectors/intersectors.htm
+// https://iquilezles.org/articles/intersectors
 
 vec2 sphIntersect( in vec3 ro, in vec3 rd, in vec3 ce, float ra )
 {
@@ -62,7 +62,7 @@ vec2 sphIntersect( in vec3 ro, in vec3 rd, in vec3 ce, float ra )
 }
 
 
-// https://www.iquilezles.org/www/articles/boxfunctions/boxfunctions.htm
+// https://iquilezles.org/articles/boxfunctions
 
 vec2 boxIntersection( in vec3 ro, in vec3 rd, in vec3 rad, in vec3 center,out vec3 oN ) 
 {
