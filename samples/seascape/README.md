@@ -9,11 +9,11 @@ No changes were needed to run this shadertoy in scalar mode. To make it SIMD-com
 - loops index variables are explicitly marked as scalar for arrays index operators to work
 - `heightMapTracing` has a single return now
 
-With these changes the shader runs without artifacts in `simd_vc_masked` mode.
+With these changes the shader runs without artifacts in `simd_vc_masked` mode. Other SIMD mode suffer from artifacts dues to conditionals.
 
 ## Configurations
 
 * [x] scalar
-* [ ] simd_naive (artifacts due to conditionals)
-* [ ] simd_vc (artifacts due to conditionals)
+* [ ] simd_naive (artifacts)
+* [ ] simd_vc (artifacts)
 * [x] simd_vc_masked
