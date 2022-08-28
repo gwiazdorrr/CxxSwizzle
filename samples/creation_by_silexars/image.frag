@@ -7,7 +7,10 @@
 void mainImage( out vec4 fragColor, in vec2 fragCoord ){
 	vec3 c;
 	float l,z=t;
-	for(int i=0;i<3;i++) {
+	// added CXX_SCALAR here to force the usage of a regular int in the loop;
+	// without it c[i] assignment would fail to compile as for SIMD types
+	// accessed with a batch it is read only
+	for(CXX_SCALAR int i=0;i<3;i++) {
 		vec2 uv,p=fragCoord.xy/r;
 		uv=p;
 		p-=.5;
