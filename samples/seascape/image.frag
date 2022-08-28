@@ -4,21 +4,21 @@
  * Contact: tdmaav@gmail.com
  */
 
-const int NUM_STEPS = 8;
-const float PI	 	= 3.141592;
-const float EPSILON	= 1e-3;
+CXX_CONST CXX_SCALAR int NUM_STEPS = 8;
+CXX_CONST CXX_SCALAR float PI	 	= 3.141592;
+CXX_CONST CXX_SCALAR float EPSILON	= 1e-3;
 #define EPSILON_NRM (0.1 / iResolution.x)
 #define AA
 
 // sea
-const int ITER_GEOMETRY = 3;
-const int ITER_FRAGMENT = 5;
-const float SEA_HEIGHT = 0.6;
-const float SEA_CHOPPY = 4.0;
-const float SEA_SPEED = 0.8;
-const float SEA_FREQ = 0.16;
-const vec3 SEA_BASE = vec3(0.0,0.09,0.18);
-const vec3 SEA_WATER_COLOR = vec3(0.8,0.9,0.6)*0.6;
+CXX_CONST CXX_SCALAR int ITER_GEOMETRY = 3;
+CXX_CONST CXX_SCALAR int ITER_FRAGMENT = 5;
+CXX_CONST CXX_SCALAR float SEA_HEIGHT = 0.6;
+CXX_CONST CXX_SCALAR float SEA_CHOPPY = 4.0;
+CXX_CONST CXX_SCALAR float SEA_SPEED = 0.8;
+CXX_CONST CXX_SCALAR float SEA_FREQ = 0.16;
+CXX_CONST vec3 SEA_BASE = vec3(0.0,0.09,0.18);
+CXX_CONST vec3 SEA_WATER_COLOR = vec3(0.8,0.9,0.6)*0.6;
 #define SEA_TIME (1.0 + iTime * SEA_SPEED)
 const mat2 octave_m = mat2(1.6,1.2,-1.2,1.6);
 
@@ -78,7 +78,7 @@ float map(vec3 p) {
     vec2 uv = p.xz; uv.x *= 0.75;
     
     float d, h = 0.0;    
-    for(int i = 0; i < ITER_GEOMETRY; i++) {        
+    for(CXX_SCALAR int i = 0; CXX_FOR_CONDITION(i < ITER_GEOMETRY); i++) {
     	d = sea_octave((uv+SEA_TIME)*freq,choppy);
     	d += sea_octave((uv-SEA_TIME)*freq,choppy);
         h += d * amp;        
@@ -95,7 +95,7 @@ float map_detailed(vec3 p) {
     vec2 uv = p.xz; uv.x *= 0.75;
     
     float d, h = 0.0;    
-    for(int i = 0; i < ITER_FRAGMENT; i++) {        
+    for(CXX_SCALAR int i = 0; CXX_FOR_CONDITION(i < ITER_FRAGMENT); i++) {
     	d = sea_octave((uv+SEA_TIME)*freq,choppy);
     	d += sea_octave((uv-SEA_TIME)*freq,choppy);
         h += d * amp;        
@@ -136,25 +136,28 @@ float heightMapTracing(vec3 ori, vec3 dir, out vec3 p) {
     float tm = 0.0;
     float tx = 1000.0;    
     float hx = map(ori + dir * tx);
+    float result;
     if(hx > 0.0) {
         p = ori + dir * tx;
-        return tx;   
-    }
-    float hm = map(ori + dir * tm);    
-    float tmid = 0.0;
-    for(int i = 0; i < NUM_STEPS; i++) {
-        tmid = mix(tm,tx, hm/(hm-hx));                   
-        p = ori + dir * tmid;                   
-    	float hmid = map(p);
-		if(hmid < 0.0) {
-        	tx = tmid;
-            hx = hmid;
-        } else {
-            tm = tmid;
-            hm = hmid;
+        result = tx;
+    } else {
+        float hm = map(ori + dir * tm);    
+        float tmid = 0.0;
+        for(CXX_SCALAR int i = 0; CXX_FOR_CONDITION(i < NUM_STEPS); i++) {
+            tmid = mix(tm,tx, hm/(hm-hx));                   
+            p = ori + dir * tmid;                   
+    	    float hmid = map(p);
+		    if(hmid < 0.0) {
+        	    tx = tmid;
+                hx = hmid;
+            } else {
+                tm = tmid;
+                hm = hmid;
+            }
         }
+        result = tmid;
     }
-    return tmid;
+    return result;
 }
 
 vec3 getPixel(in vec2 coord, float time) {    
@@ -188,8 +191,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord ) {
 	
 #ifdef AA
     vec3 color = vec3(0.0);
-    for(int i = -1; i <= 1; i++) {
-        for(int j = -1; j <= 1; j++) {
+    for(CXX_SCALAR int i = -1; CXX_FOR_CONDITION(i <= 1); i++) {
+        for(CXX_SCALAR int j = -1; CXX_FOR_CONDITION(j <= 1); j++) {
         	vec2 uv = fragCoord+vec2(i,j)/3.0;
     		color += getPixel(uv, time);
         }

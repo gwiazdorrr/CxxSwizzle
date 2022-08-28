@@ -32,13 +32,14 @@ if (BUILD_SAMPLES)
 endif()
 
 if (BUILD_SAMPLES_SIMD)
+	cxxswizzle_prepare_setup("simd_naive")
+	create_sample_simd_naive("creation_by_silexars")
+
 	cxxswizzle_prepare_setup("simd_vc")
-	create_sample_simd_vc("creation_by_silexars_patched")
+	create_sample_simd_vc("creation_by_silexars")
+	create_sample_simd_vc("seascape") # has artifacts
 
-	# has artifacts due to one branch being followed at a time
-	create_sample_simd_vc("seascape_patched")
-
-	cxxswizzle_prepare_setup("simd_vc_masked")
 	# no artifacts
-	create_sample_simd_vc_masked("seascape_patched")
+	cxxswizzle_prepare_setup("simd_vc_masked")
+	create_sample_simd_vc_masked("seascape")
 endif()
