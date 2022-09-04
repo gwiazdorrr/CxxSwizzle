@@ -163,14 +163,14 @@ namespace swizzle
         using namespace Vc;
 
         float_v rbrb = r.interleaveLow(b); // r0b0r1b1...
-        float_v gaga = b.interleaveLow(a); // g0a0g1a1...
+        float_v gaga = g.interleaveLow(a); // g0a0g1a1...
 
         float* p = reinterpret_cast<float*>(ptr);
         rbrb.interleaveLow(gaga).store(p, Aligned); // r0g0b0a0...
         rbrb.interleaveHigh(gaga).store(p + float_v::Size, Aligned);
 
-        rbrb = r.interleaveHigh(g);
-        gaga = b.interleaveHigh(a);
+        rbrb = r.interleaveHigh(b);
+        gaga = g.interleaveHigh(a);
         
         p = reinterpret_cast<float*>(ptr + pitch);
         rbrb.interleaveLow(gaga).store(p, Aligned);
