@@ -20,8 +20,10 @@
             "name": "sdl2",
             "platform": "!(linux&!android)"
         },
-
         "gtest",
-        "vc"
+        {
+            "name": "vc",
+            "platform": "!(arm64&osx)"
+        }
     ]
 }

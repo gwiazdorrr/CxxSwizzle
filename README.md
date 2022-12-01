@@ -49,6 +49,9 @@ ninja
 ```
 If you are using CMake GUI, after clicking `Configure` select `Specify toolchain file for cross-compiling` and make sure the path in the next window points to `vcpkg/scripts/buildsystems/vcpkg.cmake`.
 
+If you are on MacOS and using homebrew > 3.0, vcpkg (as of 11.2022) will have hard time finding `pkg-config`, so make sure to define following environment variables:
+    `export PKG_CONFIG=/opt/homebrew/bin/pkg-config`
+
 ## Downloading shadertoys
 
 **TL;DR:** set `SHADERTOY_DOWNLOAD` to any of `top_*` options and run `cmake`.
