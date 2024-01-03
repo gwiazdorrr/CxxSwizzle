@@ -30,8 +30,8 @@ static_assert(sizeof(vec4) == sizeof(swizzle::float_type[4]), "Too big");
 
 
 #include <imgui.h>
-#include <imgui_impl_sdl.h>
-#include <imgui_impl_sdlrenderer.h>
+#include <imgui_impl_sdl2.h>
+#include <imgui_impl_sdlrenderer2.h>
 
 
 #ifdef TRACY_ENABLE
@@ -1183,7 +1183,7 @@ int main(int argc, char* argv[])
             ImGui_ImplSDL2_InitForSDLRenderer(window.get(), renderer.get());
             CXXSWIZZLE_SCOPE_EXIT([]() { ImGui_ImplSDL2_Shutdown(); });
 
-            ImGui_ImplSDLRenderer_Init(renderer.get());
+            ImGui_ImplSDLRenderer2_Init(renderer.get());
 
             printf("shift + p           - pause/unpause\n");
             printf("shift + left arrow  - decrease time by 1 s\n");
@@ -1275,13 +1275,13 @@ int main(int argc, char* argv[])
 
                 // imgui
                 {
-                    ImGui_ImplSDLRenderer_NewFrame();
+                    ImGui_ImplSDLRenderer2_NewFrame();
                     ImGui_ImplSDL2_NewFrame();
                     ImGui::NewFrame();
 
-                    bool is_shift_down = ImGui::IsKeyDown(SDL_SCANCODE_LSHIFT) || ImGui::IsKeyDown(SDL_SCANCODE_RSHIFT);
+                    bool is_shift_down = ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
 
-                    if (is_shift_down && ImGui::IsKeyPressed(SDL_SCANCODE_SPACE))
+                    if (is_shift_down && ImGui::IsKeyPressed(ImGuiKey_Space))
                     {
                         blit_now = true;
                     }
@@ -1307,13 +1307,13 @@ int main(int argc, char* argv[])
                         }
 
                         ImGui::SameLine();
-                        if (ImGui::Button(paused ? ">" : "||", button_size) || is_shift_down && ImGui::IsKeyPressed(SDL_SCANCODE_P))
+                        if (ImGui::Button(paused ? ">" : "||", button_size) || is_shift_down && ImGui::IsKeyPressed(ImGuiKey_P))
                         {
                             paused = !paused;
                         }
 
                         ImGui::SameLine();
-                        if (ImGui::ArrowButton("SeekBack", ImGuiDir_Left) || is_shift_down && ImGui::IsKeyPressed(SDL_SCANCODE_LEFT))
+                        if (ImGui::ArrowButton("SeekBack", ImGuiDir_Left) || is_shift_down && ImGui::IsKeyPressed(ImGuiKey_LeftArrow))
                         {
                             time = std::max(0.0f, time - 1.0f);
                             progress.cancel = true;
@@ -1323,7 +1323,7 @@ int main(int argc, char* argv[])
                         imgui_utils::imgui_text_centered(40.0f, true, "%.2f", time);
 
                         ImGui::SameLine();
-                        if (ImGui::ArrowButton("SeekForward", ImGuiDir_Right) || is_shift_down && ImGui::IsKeyPressed(SDL_SCANCODE_RIGHT))
+                        if (ImGui::ArrowButton("SeekForward", ImGuiDir_Right) || is_shift_down && ImGui::IsKeyPressed(ImGuiKey_RightArrow))
                         {
                             time += 1.0f;
                             progress.cancel = true;
@@ -1536,7 +1536,7 @@ int main(int argc, char* argv[])
                 SDL_Rect rect_image = { 0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y) - status_bar_height };
                 SDL_RenderCopy(renderer.get(), target_texture.get(), NULL, &rect_image);
 
-                ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
+                ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
 
                 SDL_RenderPresent(renderer.get());
 
