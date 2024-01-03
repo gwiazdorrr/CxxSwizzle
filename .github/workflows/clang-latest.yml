@@ -1,4 +1,4 @@
-name: clang-12
+name: clang-11
 on: [push]
 
 jobs:
@@ -18,8 +18,8 @@ jobs:
       - id: build
         uses: ./.github/actions/cmake-build
         with:
-          cxx: clang++-12
-          cc: clang-12
+          cxx: clang++
+          cc: clang
           triplet: x64-linux
           generator: Ninja
           buildDir: ${{ runner.workspace }}/b/${{ matrix.buildType }}

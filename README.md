@@ -2,10 +2,8 @@
 
 [![vs2019](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/vs2019.yml/badge.svg)](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/vs2019.yml)
 [![vs2022](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/vs2022.yml/badge.svg)](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/vs2022.yml)
-[![clang-11](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/clang-11.yml/badge.svg)](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/clang-11.yml)
-[![clang-12](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/clang-12.yml/badge.svg)](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/clang-12.yml)
-[![gcc-10](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/gcc-10.yml/badge.svg)](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/gcc-10.yml)
-[![no-parallelism-gcc-9](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/gcc-9.yml/badge.svg)](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/gcc-9.yml)
+[![clang-latest](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/clang-latest.yml/badge.svg)](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/clang-latest.yml)
+[![gcc-latest](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/gcc-latest.yml/badge.svg)](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/gcc-latest.yml)
 [![no-parallelism-apple-clang](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/apple-clang.yml/badge.svg)](https://github.com/gwiazdorrr/CxxSwizzle/actions/workflows/apple-clang.yml)
 
 This project lets you download and run GLSL [shadertoys](https://www.shadertoy.com/) as C++17 code. Out of 1000 top shadertoys (on 26.11.2021), 840 compile without any code alterations and 953 compile if code patching is enabled. Code after patching is still GLSL-compatible and can be pasted back to the Shadertoy.
