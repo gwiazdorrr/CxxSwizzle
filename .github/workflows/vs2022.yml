@@ -1,5 +1,5 @@
 name: vs2022
-on: [push]
+on: [push, workflow_dispatch]
 
 jobs:
   job:

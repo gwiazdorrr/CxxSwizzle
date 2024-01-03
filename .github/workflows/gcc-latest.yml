@@ -1,5 +1,5 @@
 name: gcc-latest
-on: [push]
+on: [push, workflow_dispatch]
 
 jobs:
   job:
