@@ -1408,7 +1408,7 @@ int main(int argc, char* argv[])
                         ImGui::SameLine(io.DisplaySize.x - 85 > ImGui::GetItemRectMax().x ? io.DisplaySize.x - 80.0f : 0.0f);
                         imgui_utils::imgui_text_centered(37.0f, false, "%.2f", current_frame_timestamp);
                         ImGui::SameLine();
-                        ImGui::ProgressBar(progress.num_pixels / static_cast<double>(render_targets.width * render_targets.height * render_targets.num_passes), ImVec2(28.0f, button_size.y), "");
+                        ImGui::ProgressBar(progress.num_pixels / static_cast<float>(render_targets.width * render_targets.height * render_targets.num_passes), ImVec2(28.0f, button_size.y), "");
 
                         if (ImGui::BeginPopup("Details"))
                         {
