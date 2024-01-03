@@ -52,13 +52,10 @@ runs:
       uses: lukka/run-cmake@v10
       id: runcmake
       with:
-        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
-        cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
-        vcpkgTriplet: ${{ inputs.triplet }}
-        useVcpkgToolchainFile: true
-        buildDirectory: '${{ inputs.buildDir }}/'
-        cmakeAppendedArgs: '-G "${{ inputs.generator }}" -DCMAKE_BUILD_TYPE=${{ inputs.buildType }} -DCMAKE_CXX_FLAGS="${{ inputs.cxxFlags }}" -DBUILD_SAMPLES=ON -DBUILD_SAMPLES_SIMD=ON -DBUILD_TESTS=ON ${{ inputs.cmakeArgs }}'
-        buildWithCMakeArgs: '--config ${{ inputs.buildType }}'
+        cmakeListsTxtPath: '${{ github.workspace }}/cmakepresets/CMakeLists.txt'
+        configurePreset: 'ninja-multi-vcpkg'
+        buildPreset: 'ninja-multi-vcpkg'
+        buildPresetAdditionalArgs: '[`--config Release`]'
     
     - name: Test with CTest
       shell: pwsh
