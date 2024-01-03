@@ -1,4 +1,4 @@
-name: gcc-10
+name: gcc-latest
 on: [push]
 
 jobs:

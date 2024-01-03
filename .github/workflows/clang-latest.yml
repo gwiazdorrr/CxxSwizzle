@@ -1,4 +1,4 @@
-name: clang-11
+name: clang-latest
 on: [push]
 
 jobs:
