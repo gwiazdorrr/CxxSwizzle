@@ -97,6 +97,14 @@ namespace swizzle
             indexed_swizzle& operator/=(T && o)
             {
                 return operator=(decay() / std::forward<T>(o));
+            
+            }
+
+            //! Forwarding operator. Global non-assignment operators depend on it.
+            template <typename T>
+            indexed_swizzle& operator^=(T&& o)
+            {
+                return operator=(decay() ^ std::forward<T>(o));
             }
 
             inline vector_type operator-() const

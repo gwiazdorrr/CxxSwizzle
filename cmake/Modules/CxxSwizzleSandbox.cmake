@@ -37,6 +37,10 @@ macro(_cxxswizzle_emit_structs structs result_var)
     foreach(struct ${structs})
         set(result "${result}        #define ${struct}(...) _cxxswizzle_make<${struct}>( __VA_ARGS__ ) \n")
     endforeach()
+	foreach(struct ${structs})
+        set(result "${result}        friend bool operator==(const ${struct}& a, const ${struct}& b) { return std::memcmp(&a, &b, sizeof(${struct})) == 0; } \n")
+		set(result "${result}        friend bool operator!=(const ${struct}& a, const ${struct}& b) { return std::memcmp(&a, &b, sizeof(${struct})) != 0; } \n")
+    endforeach()
     set(${result_var} ${result})
 endmacro()
 
@@ -181,11 +185,12 @@ macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root)
 
     if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         # GLSL has "not" function, so better get rid of C++ operator mnemonics
-        target_compile_options(${target_name} PRIVATE "-fno-operator-names")
+        target_compile_options(${target_name} PRIVATE "-fno-operator-names -fno-exceptions")
     elseif(MSVC)
         # fast math, _vectorcall
         # the resons permissive can't be disabled in MSVC, because there's no way to disable mnemonics then
         target_compile_options(${target_name} PRIVATE "/fp:fast"
+												      "/EHsc"
                                                       "-D_ENABLE_EXTENDED_ALIGNED_STORAGE"
                                                       "-D_CRT_SECURE_NO_WARNINGS"
                                                       "-DCXXSWIZZLE_CDECL=__cdecl")

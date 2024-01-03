@@ -172,14 +172,13 @@ namespace stl_utils
     }
 
     template <typename TFunc, typename... TArgs>
-    auto create_sdl_object_or_throw(TFunc&& f, TArgs&&... args)
+    auto create_sdl_object_or_abort(TFunc&& f, TArgs&&... args)
     {
         auto ptr = make_sdl_ptr(f(std::forward<TArgs>(args)...));
         if (!ptr)
         {
-            std::stringstream s;
-            s << "SDL error: " << SDL_GetError();
-            throw std::runtime_error(s.str());
+            fprintf(stderr, "SDL error: %s\n", SDL_GetError());
+            abort();
         }
         return ptr;
     }
@@ -187,12 +186,12 @@ namespace stl_utils
     template <typename TRenderTarget>
     sdl_ptr<SDL_Surface> create_matching_sdl_surface(TRenderTarget& target)
     {
-        return create_sdl_object_or_throw(SDL_CreateRGBSurfaceWithFormatFrom, target.first_row, target.width, target.height, 32, target.pitch, target.sdl_pixelformat);
+        return create_sdl_object_or_abort(SDL_CreateRGBSurfaceWithFormatFrom, target.first_row, target.width, target.height, 32, target.pitch, target.sdl_pixelformat);
     }
 
     sdl_ptr<SDL_Texture> create_matching_sdl_texture(SDL_Renderer* renderer, int w, int h)
     {
-        return create_sdl_object_or_throw(SDL_CreateTexture, renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h);
+        return create_sdl_object_or_abort(SDL_CreateTexture, renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, w, h);
     };
 
     int sdl_keysym_to_ascii(SDL_Keysym keysym) {
@@ -779,7 +778,8 @@ private:
                     auto found = context.textures.find(path);
                     if (found == context.textures.end())
                     {
-                        throw std::runtime_error(path);
+                        fprintf(stderr, "ERROR: texture not found: %s\n", path.c_str());
+                        abort();
                     }
                     *data_buffer++ = make_sampler_data(found->second.get());
                 }
@@ -992,576 +992,565 @@ int main(int argc, char* argv[])
 
     static_assert(::shadertoy::num_samplers >= 4);
 
-    try
-    {
-        shadertoy_config config = shadertoy_config::make_default();
+    shadertoy_config config = shadertoy_config::make_default();
         
-        // load textures
-        bool img_initialized = false;
-        auto ensure_img_initialized = [&img_initialized](int img_flags)
-        {
-            if (!img_initialized) return;
+    // load textures
+    bool img_initialized = false;
+    auto ensure_img_initialized = [&img_initialized](int img_flags)
+    {
+        if (!img_initialized) return;
 
-            img_initialized = true;
-            if (IMG_Init(img_flags) != img_flags)
-            {
-                fprintf(stderr, "WARNING: failed to initialize required jpg and png support: %s\n", IMG_GetError());
-            }
-        };
-        CXXSWIZZLE_SCOPE_EXIT([&img_initialized]() { if (img_initialized) IMG_Quit(); });
-
-        texture_map textures;
-        for (pass_config& pass : config.passes)
+        img_initialized = true;
+        if (IMG_Init(img_flags) != img_flags)
         {
-            for (sampler_config& sampler : pass.samplers)
+            fprintf(stderr, "WARNING: failed to initialize required jpg and png support: %s\n", IMG_GetError());
+        }
+    };
+    CXXSWIZZLE_SCOPE_EXIT([&img_initialized]() { if (img_initialized) IMG_Quit(); });
+
+    texture_map textures;
+    for (pass_config& pass : config.passes)
+    {
+        for (sampler_config& sampler : pass.samplers)
+        {
+            if (sampler.type != sampler_type::texture && sampler.type != sampler_type::cubemap)
+                continue;
+
+            for (auto& path : sampler.paths)
             {
-                if (sampler.type != sampler_type::texture && sampler.type != sampler_type::cubemap)
+                if (textures.find(path) != textures.end())
                     continue;
 
-                for (auto& path : sampler.paths)
+                std::filesystem::path p = path;
+
+                auto str = p.string();
+
+                if (!exists(p) && p.is_relative())
                 {
-                    if (textures.find(path) != textures.end())
-                        continue;
-
-                    std::filesystem::path p = path;
-
-                    auto u8str = p.u8string();
-
-                    if (!exists(p) && p.is_relative())
+                    // try loading from config's dir
+                    if (!options.textures_root.empty())
                     {
-                        // try loading from config's dir
-                        if (!options.textures_root.empty())
-                        {
-                            p = options.textures_root / p;
-                        }
-
-                        if (!exists(p))
-                        {
-                            fprintf(stderr, "ERROR: texture does not exist: %s\n", u8str.c_str());
-                            textures[path] = stl_utils::create_sdl_object_or_throw(SDL_CreateRGBSurfaceWithFormat, 0, 1, 1, 8, SDL_PIXELFORMAT_INDEX8);
-                            continue;
-                        }
-
-                        u8str = p.u8string();
+                        p = options.textures_root / p;
                     }
 
-                    ensure_img_initialized(IMG_INIT_JPG | IMG_INIT_PNG);
-                    auto image = stl_utils::make_sdl_ptr(IMG_Load(u8str.c_str()));
-                    if (!image)
+                    if (!exists(p))
                     {
-                        fprintf(stderr, "ERROR: failed to load %s: %s\n", u8str.c_str(), IMG_GetError());
-                        textures[path] = stl_utils::create_sdl_object_or_throw(SDL_CreateRGBSurfaceWithFormat, 0, 1, 1, 8, SDL_PIXELFORMAT_INDEX8);
+                        fprintf(stderr, "ERROR: texture does not exist: %s\n", str.c_str());
+                        textures[path] = stl_utils::create_sdl_object_or_abort(SDL_CreateRGBSurfaceWithFormat, 0, 1, 1, 8, SDL_PIXELFORMAT_INDEX8);
                         continue;
                     }
 
-                    if (image->format->format == SDL_PIXELFORMAT_INDEX8)
-                    {
-                        textures[path] = std::move(image);
-                    }
-                    else
-                    {
-                        textures[path] = stl_utils::create_sdl_object_or_throw(SDL_ConvertSurfaceFormat, image.get(), SDL_PIXELFORMAT_RGBA32, 0);
-                    }
-                }
-            }
-        }
-
-        shadertoy_render_targets render_targets(options.resolution_x, options.resolution_y);
-        shadertoy_renderer::stats last_render_stats = { };
-
-        bool multi_threaded = options.multi_threaded;
-
-        if (options.output_path != nullptr)
-        {
-            shadertoy_keyboard keyboard;
-            shadertoy_date date;
-
-            auto& rt = render_targets.target;
-            auto target_surface = create_sdl_object_or_throw(SDL_CreateRGBSurfaceFrom, rt.first_row, rt.width, rt.height, 32, rt.pitch, 0x000000FF, 0x0000FF00, 0x00FF0000, 0x0);
-
-            float delta = 0.0f;
-            int fps = 0;
-            float time = options.time;
-
-            shadertoy_renderer::progress progress = {};
-
-            for (int i = 0; i < options.output_frames; ++i)
-            {
-                date.now();
-
-                shader_inputs inputs;
-                nonmasked(inputs.iTime) = time;
-                nonmasked(inputs.iTimeDelta) = delta;
-                nonmasked(inputs.iFrameRate) = fps;
-                nonmasked(inputs.iFrame) = i;
-                nonmasked(inputs.iResolution) = vec3(static_cast<float>(render_targets.width), static_cast<float>(render_targets.height), 0.0f);
-                nonmasked(inputs.iMouse) = vec4(0);
-                nonmasked(inputs.iDate) = date.consume();
-
-                shadertoy_input_textures context(textures, keyboard.data, render_targets.buffers[1 - i & 1]);
-                last_render_stats = shadertoy_renderer::render(config, inputs, render_targets.target, render_targets.buffers[i & 1], context, progress, multi_threaded);
-                
-                std::string output = utils::replace_all(options.output_path, "%n", std::to_string(i));
-                output = utils::replace_all(output, "%t", std::to_string(time));
-
-                ensure_img_initialized(IMG_INIT_PNG);
-                IMG_SavePNG(target_surface.get(), output.c_str());
-
-                delta = options.time_delta.value_or(static_cast<float>(utils::duration_to_seconds(last_render_stats.duration)));
-                time += delta;
-                fps  = static_cast<int>(1 / utils::duration_to_seconds(last_render_stats.duration));
-            }
-        }
-        else
-        {
-            float last_frame_timestamp = 0.0f;
-
-            std::chrono::microseconds fps_frames_duration = {};
-            int fps_frames_num = 0;
-            double current_fps = 0;
-
-            int num_frames = 0;
-            float current_frame_timestamp = 0.0f;
-            
-            bool pending_resize = false;
-
-            float time = options.time;
-
-            shadertoy_renderer::progress progress = {};
-
-            shadertoy_keyboard keyboard_copy;
-            shadertoy_keyboard keyboard;
-            shadertoy_mouse mouse;
-            shadertoy_date date;
-
-            auto render_async = [&]() -> std::future<shadertoy_renderer::stats>
-            {
-                progress.cancel = false;
-
-                // bring about keyboard changes
-                keyboard.consume(keyboard_copy);
-                date.now();
-
-                shader_inputs inputs;
-                nonmasked(inputs.iTime) = time;
-                nonmasked(inputs.iTimeDelta) = static_cast<float>(utils::duration_to_seconds(last_render_stats.duration));
-                nonmasked(inputs.iFrameRate) = static_cast<int>(current_fps);
-                nonmasked(inputs.iFrame) = num_frames;
-                nonmasked(inputs.iResolution) = vec3(static_cast<float>(render_targets.width), static_cast<float>(render_targets.height), 0.0f);
-                nonmasked(inputs.iMouse) = mouse.consume();
-                nonmasked(inputs.iDate) = date.consume();
-
-                shadertoy_input_textures context(textures, keyboard_copy.data, render_targets.buffers[1 - num_frames & 1]);
-                return std::async([&, inputs, context]() { return shadertoy_renderer::render(config, inputs, render_targets.target, render_targets.buffers[num_frames & 1], context, progress, multi_threaded); });
-            };
-
-
-            // initial setup
-            SDL_SetMainReady();
-            if (SDL_Init(SDL_INIT_VIDEO) < 0)
-            {
-                fprintf(stderr, "ERROR: Unable to init SDL\n");
-                return 1;
-            }
-            CXXSWIZZLE_SCOPE_EXIT([]() { SDL_Quit(); });
-
-            const int status_bar_height = 24;
-
-            sdl_ptr<SDL_Window> window          = create_sdl_object_or_throw(SDL_CreateWindow, "CxxSwizzle sample", 
-                SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
-                render_targets.width, render_targets.height + status_bar_height, 
-                SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-
-            sdl_ptr<SDL_Renderer> renderer      = create_sdl_object_or_throw(SDL_CreateRenderer, window.get(), -1, 0);
-            sdl_ptr<SDL_Texture> target_texture = create_matching_sdl_texture(renderer.get(), render_targets.width, render_targets.height);
-            std::unordered_map<std::string, sdl_ptr<SDL_Texture>> ui_textures;
-
-
-            ImGui::CreateContext();
-            CXXSWIZZLE_SCOPE_EXIT([=]() { ImGui::DestroyContext(); });
-
-            ImGui_ImplSDL2_InitForSDLRenderer(window.get(), renderer.get());
-            CXXSWIZZLE_SCOPE_EXIT([]() { ImGui_ImplSDL2_Shutdown(); });
-
-            ImGui_ImplSDLRenderer2_Init(renderer.get());
-
-            printf("shift + p           - pause/unpause\n");
-            printf("shift + left arrow  - decrease time by 1 s\n");
-            printf("shift + right arrow - increase time by 1 s\n");
-            printf("shift + space       - blit now! (show incomplete render)\n");
-            printf("esc                 - quit\n");
-            printf("\n");
-            
-            ImGuiIO& io = ImGui::GetIO();
-
-            std::future<shadertoy_renderer::stats> render_task = render_async();
-
-
-            bool paused = false;
-            pass_type selected_pass = pass_type::image;
-            SDL_SetWindowMinimumSize(window.get(), status_bar_height * 2, status_bar_height * 2);
-            for (auto update_begin = chrono::steady_clock::now();;)
-            {
-                bool blit_now = false;
-                bool quit = false;
-
-                // process events
-                SDL_Event event;
-                while (SDL_PollEvent(&event))
-                {
-                    ImGui_ImplSDL2_ProcessEvent(&event);
-
-                    switch (event.type)
-                    {
-                    case SDL_WINDOWEVENT:
-                        switch (event.window.event)
-                        {
-                        case SDL_WINDOWEVENT_SIZE_CHANGED:
-                            progress.cancel = pending_resize = true;
-                            break;
-                        }
-                        break;
-                    case SDL_QUIT:
-                        progress.cancel = quit = true;
-                        break;
-
-                    case SDL_KEYDOWN:
-                    case SDL_KEYUP:
-                    {
-                        int ascii = sdl_keysym_to_ascii(event.key.keysym);
-                        if (ascii > 0)
-                        {
-                            if (event.type == SDL_KEYDOWN)
-                            {
-                                keyboard.key_down(ascii);
-                            }
-                            else
-                            {
-                                keyboard.key_up(ascii);
-                            }
-                        }
-                        break;
-                    }
-
-                    case SDL_MOUSEMOTION:
-                        if (!io.WantCaptureMouse)
-                        {
-                            mouse.motion(event.button.x, event.button.y);
-                        }
-                        break;
-                    case SDL_MOUSEBUTTONDOWN:
-                        if (!io.WantCaptureMouse)
-                        {
-                            mouse.button_down(event.button.x, event.button.y);
-                        }
-                        break;
-                    case SDL_MOUSEBUTTONUP:
-                        if (!io.WantCaptureMouse)
-                        {
-                            mouse.button_up(event.button.x, event.button.y);
-                        }
-                        break;
-
-                    default:
-                        break;
-                    }
+                    str = p.string();
                 }
 
-                if (quit)
+                ensure_img_initialized(IMG_INIT_JPG | IMG_INIT_PNG);
+                auto image = stl_utils::make_sdl_ptr(IMG_Load(str.c_str()));
+                if (!image)
                 {
-                    break;
+                    fprintf(stderr, "ERROR: failed to load %s: %s\n", str.c_str(), IMG_GetError());
+                    textures[path] = stl_utils::create_sdl_object_or_abort(SDL_CreateRGBSurfaceWithFormat, 0, 1, 1, 8, SDL_PIXELFORMAT_INDEX8);
+                    continue;
                 }
 
-
-                // imgui
+                if (image->format->format == SDL_PIXELFORMAT_INDEX8)
                 {
-                    ImGui_ImplSDLRenderer2_NewFrame();
-                    ImGui_ImplSDL2_NewFrame();
-                    ImGui::NewFrame();
-
-                    bool is_shift_down = ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
-
-                    if (is_shift_down && ImGui::IsKeyPressed(ImGuiKey_Space))
-                    {
-                        blit_now = true;
-                    }
-
-                    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-                    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
-                    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(5.0f, 2.0f));
-                    ImGui::Begin("StatusBar", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
-                    {
-                        const float padding = 5.0f;
-                        auto button_size = ImVec2(22.0f, 20.0f);
-
-                        ImGui::SetWindowPos(ImVec2(0, io.DisplaySize.y - status_bar_height));
-                        ImGui::SetWindowSize(ImVec2(io.DisplaySize.x, status_bar_height));
-
-                        if (ImGui::Button("|<", button_size))
-                        {
-                            time = 0.0f;
-                            progress.cancel = true;
-                            num_frames = 0;
-                            // force render buffers flush
-                            pending_resize = true;
-                        }
-
-                        ImGui::SameLine();
-                        if (ImGui::Button(paused ? ">" : "||", button_size) || is_shift_down && ImGui::IsKeyPressed(ImGuiKey_P))
-                        {
-                            paused = !paused;
-                        }
-
-                        ImGui::SameLine();
-                        if (ImGui::ArrowButton("SeekBack", ImGuiDir_Left) || is_shift_down && ImGui::IsKeyPressed(ImGuiKey_LeftArrow))
-                        {
-                            time = std::max(0.0f, time - 1.0f);
-                            progress.cancel = true;
-                        }
-
-                        ImGui::SameLine();
-                        imgui_utils::imgui_text_centered(40.0f, true, "%.2f", time);
-
-                        ImGui::SameLine();
-                        if (ImGui::ArrowButton("SeekForward", ImGuiDir_Right) || is_shift_down && ImGui::IsKeyPressed(ImGuiKey_RightArrow))
-                        {
-                            time += 1.0f;
-                            progress.cancel = true;
-                        }
-
-                        ImGui::SameLine();
-                        imgui_utils::imgui_text_centered(90.0f, true, "%lG fps", current_fps);
-
-                        ImGui::SameLine();
-                        imgui_utils::imgui_text_centered(60.0f, true, "%dx%d\n", render_targets.width, render_targets.height);
-
-                        ImGui::SameLine();
-                        if (ImGui::RadioButton("MT", multi_threaded))
-                        {
-                            multi_threaded = !multi_threaded;
-                            progress.cancel = true;
-                        }
-                        if (ImGui::IsItemHovered()) 
-                        {
-                            ImGui::SetTooltip("Enable/disable multithreading");
-                        }
-
-                        ImGui::SameLine();
-                        if (ImGui::Button("TEX")) 
-                        {
-                            ImGui::OpenPopup("Details");
-                        }
-
-                        
-
-                        auto pass_type_to_label = [](pass_type pass)
-                        {
-                            switch (pass)
-                            {
-                            case pass_type::buffer_a: return "buffer_a";
-                            case pass_type::buffer_b: return "buffer_b";
-                            case pass_type::buffer_c: return "buffer_c";
-                            case pass_type::buffer_d: return "buffer_d";
-                            case pass_type::image:    return "image";
-                            default:                  return "?";
-                            }
-                        };
-                        auto pass_type_to_label_short = [](pass_type pass)
-                        {
-                            switch (pass)
-                            {
-                            case pass_type::buffer_a: return "A";
-                            case pass_type::buffer_b: return "B";
-                            case pass_type::buffer_c: return "C";
-                            case pass_type::buffer_d: return "D";
-                            case pass_type::image:    return "I";
-                            default:                  return "?";
-                            }
-                        };
-
-
-                        if (render_targets.num_passes > 1)
-                        {
-                            ImGui::SameLine();
-                            ImGui::PushItemWidth(15.0f);
-
-                            if (ImGui::BeginCombo("##PassCombo", pass_type_to_label_short(selected_pass), ImGuiComboFlags_NoArrowButton))
-                            {
-                                for (pass_type pass : shadertoy::passes)
-                                {
-                                    const bool is_selected = (pass == selected_pass);
-                                    if (ImGui::Selectable(pass_type_to_label(pass), is_selected))
-                                    {
-                                        selected_pass = pass;
-                                    }
-
-                                    if (is_selected)
-                                    {
-                                        ImGui::SetItemDefaultFocus();
-                                    }
-                                }
-                                ImGui::EndCombo();
-                            }
-                        }
-
-                        // a low effort way of getting this aligned to the right, if there's a space
-                        ImGui::SameLine(io.DisplaySize.x - 85 > ImGui::GetItemRectMax().x ? io.DisplaySize.x - 80.0f : 0.0f);
-                        imgui_utils::imgui_text_centered(37.0f, false, "%.2f", current_frame_timestamp);
-                        ImGui::SameLine();
-                        ImGui::ProgressBar(progress.num_pixels / static_cast<float>(render_targets.width * render_targets.height * render_targets.num_passes), ImVec2(28.0f, button_size.y), "");
-
-                        if (ImGui::BeginPopup("Details"))
-                        {
-                            if (ImGui::BeginTabBar("Passes"))
-                            {
-                                for (pass_type pass : shadertoy::passes)
-                                {
-                                    if (ImGui::BeginTabItem(pass_type_to_label(pass)))
-                                    {
-                                        int sampler_idx = 0;
-                                        for (auto& sampler : config.get_pass(pass).samplers)
-                                        {
-                                            ImVec2 thumb_size = { 100, 75 };
-
-                                            if (sampler_idx != 0)
-                                            {
-                                                ImGui::SameLine();
-                                            }
-
-                                            ImGui::BeginGroup();
-
-                                            if (sampler.type == sampler_type::none)
-                                            {
-                                                ImGui::Button("None", thumb_size);
-                                            }
-                                            else if (sampler.type == sampler_type::texture)
-                                            {
-                                                auto path = sampler.paths[0];
-                                                if (ui_textures.find(path) == ui_textures.end())
-                                                {
-                                                    ui_textures.emplace(path, create_sdl_object_or_throw(SDL_CreateTextureFromSurface, renderer.get(), textures[path].get()));
-                                                }
-                                                ImGui::Image(ui_textures[path].get(), thumb_size);
-                                            }
-                                            else
-                                            {
-                                                ImGui::Button(sampler.label.c_str(), thumb_size);
-                                            }
-                                            ImGui::Text("iChannel%d", sampler_idx++);
-                                            ImGui::EndGroup();
-                                        }
-
-
-                                        ImGui::EndTabItem();
-                                    }
-                                }
-                                ImGui::EndTabBar();
-                            }
-
-                            ImGui::EndPopup();
-                        }
-
-                    }
-
-                    ImGui::End();
-                    ImGui::PopStyleColor();
-                    ImGui::PopStyleVar(2);
-                }
-                
-
-                // handle frame flushing
-
-                bool frame_ready = !(bool)render_task.wait_for(chrono::microseconds{ 16 });
-                if (pending_resize)
-                {
-                    if (frame_ready)
-                    {
-                        render_targets = shadertoy_render_targets(static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y) - status_bar_height);
-                        target_texture = create_matching_sdl_texture(renderer.get(), render_targets.width, render_targets.height);
-                        pending_resize = false;
-
-                        current_frame_timestamp = time;
-                        render_task = render_async();
-                    }
+                    textures[path] = std::move(image);
                 }
                 else
                 {
-                    if (blit_now || frame_ready)
-                    {
-                        SDL_Rect rect{ 0, 0, render_targets.width, render_targets.height };
-                        if (selected_pass != pass_type::image)
-                        {
-                            int index = static_cast<int>(selected_pass);
-                            render_targets.buffers[num_frames & 1][index].convert(render_targets.target_tmp);
-                            SDL_UpdateTexture(target_texture.get(), &rect, render_targets.target_tmp.first_row, render_targets.target_tmp.pitch);
-                        }
-                        else 
-                        {
-                            SDL_UpdateTexture(target_texture.get(), &rect, render_targets.target.first_row, render_targets.target.pitch);
-                        }
-                    }
-
-                    if (frame_ready)
-                    {
-#ifdef TRACY_ENABLE
-                        FrameMark;
-#endif
-
-                        if (!progress.cancel)
-                        {
-                            ++num_frames;
-                            last_render_stats = render_task.get();
-                            last_frame_timestamp = current_frame_timestamp;
-
-                            // update fps
-                            ++fps_frames_num;
-                            fps_frames_duration += last_render_stats.duration;
-                            if (fps_frames_duration >= std::chrono::milliseconds(500))
-                            {
-                                current_fps = fps_frames_num / utils::duration_to_seconds(fps_frames_duration);
-                                fps_frames_num = 0;
-                                fps_frames_duration = {};
-                            }
-                        }
-
-
-                        current_frame_timestamp = time;
-                        render_task = render_async();
-                    }
+                    textures[path] = stl_utils::create_sdl_object_or_abort(SDL_ConvertSurfaceFormat, image.get(), SDL_PIXELFORMAT_RGBA32, 0);
                 }
+            }
+        }
+    }
 
-                ImGui::Render();
-                SDL_RenderClear(renderer.get());
+    shadertoy_render_targets render_targets(options.resolution_x, options.resolution_y);
+    shadertoy_renderer::stats last_render_stats = { };
 
-                SDL_Rect rect_image = { 0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y) - status_bar_height };
-                SDL_RenderCopy(renderer.get(), target_texture.get(), NULL, &rect_image);
+    bool multi_threaded = options.multi_threaded;
 
-                ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
+    if (options.output_path != nullptr)
+    {
+        shadertoy_keyboard keyboard;
+        shadertoy_date date;
 
-                SDL_RenderPresent(renderer.get());
+        auto& rt = render_targets.target;
+        auto target_surface = create_sdl_object_or_abort(SDL_CreateRGBSurfaceFrom, rt.first_row, rt.width, rt.height, 32, rt.pitch, 0x000000FF, 0x0000FF00, 0x00FF0000, 0x0);
 
-                // update timers
-                auto now = chrono::steady_clock::now();
-                auto delta = chrono::duration_cast<chrono::microseconds>(now - update_begin);
+        float delta = 0.0f;
+        int fps = 0;
+        float time = options.time;
 
-                if (!paused)
+        shadertoy_renderer::progress progress = {};
+
+        for (int i = 0; i < options.output_frames; ++i)
+        {
+            date.now();
+
+            shader_inputs inputs;
+            nonmasked(inputs.iTime) = time;
+            nonmasked(inputs.iTimeDelta) = delta;
+            nonmasked(inputs.iFrameRate) = fps;
+            nonmasked(inputs.iFrame) = i;
+            nonmasked(inputs.iResolution) = vec3(static_cast<float>(render_targets.width), static_cast<float>(render_targets.height), 0.0f);
+            nonmasked(inputs.iMouse) = vec4(0);
+            nonmasked(inputs.iDate) = date.consume();
+
+            shadertoy_input_textures context(textures, keyboard.data, render_targets.buffers[1 - i & 1]);
+            last_render_stats = shadertoy_renderer::render(config, inputs, render_targets.target, render_targets.buffers[i & 1], context, progress, multi_threaded);
+                
+            std::string output = utils::replace_all(options.output_path, "%n", std::to_string(i));
+            output = utils::replace_all(output, "%t", std::to_string(time));
+
+            ensure_img_initialized(IMG_INIT_PNG);
+            IMG_SavePNG(target_surface.get(), output.c_str());
+
+            delta = options.time_delta.value_or(static_cast<float>(utils::duration_to_seconds(last_render_stats.duration)));
+            time += delta;
+            fps  = static_cast<int>(1 / utils::duration_to_seconds(last_render_stats.duration));
+        }
+    }
+    else
+    {
+        float last_frame_timestamp = 0.0f;
+
+        std::chrono::microseconds fps_frames_duration = {};
+        int fps_frames_num = 0;
+        double current_fps = 0;
+
+        int num_frames = 0;
+        float current_frame_timestamp = 0.0f;
+            
+        bool pending_resize = false;
+
+        float time = options.time;
+
+        shadertoy_renderer::progress progress = {};
+
+        shadertoy_keyboard keyboard_copy;
+        shadertoy_keyboard keyboard;
+        shadertoy_mouse mouse;
+        shadertoy_date date;
+
+        auto render_async = [&]() -> std::future<shadertoy_renderer::stats>
+        {
+            progress.cancel = false;
+
+            // bring about keyboard changes
+            keyboard.consume(keyboard_copy);
+            date.now();
+
+            shader_inputs inputs;
+            nonmasked(inputs.iTime) = time;
+            nonmasked(inputs.iTimeDelta) = static_cast<float>(utils::duration_to_seconds(last_render_stats.duration));
+            nonmasked(inputs.iFrameRate) = static_cast<int>(current_fps);
+            nonmasked(inputs.iFrame) = num_frames;
+            nonmasked(inputs.iResolution) = vec3(static_cast<float>(render_targets.width), static_cast<float>(render_targets.height), 0.0f);
+            nonmasked(inputs.iMouse) = mouse.consume();
+            nonmasked(inputs.iDate) = date.consume();
+
+            shadertoy_input_textures context(textures, keyboard_copy.data, render_targets.buffers[1 - num_frames & 1]);
+            return std::async([&, inputs, context]() { return shadertoy_renderer::render(config, inputs, render_targets.target, render_targets.buffers[num_frames & 1], context, progress, multi_threaded); });
+        };
+
+
+        // initial setup
+        SDL_SetMainReady();
+        if (SDL_Init(SDL_INIT_VIDEO) < 0)
+        {
+            fprintf(stderr, "ERROR: Unable to init SDL\n");
+            return 1;
+        }
+        CXXSWIZZLE_SCOPE_EXIT([]() { SDL_Quit(); });
+
+        const int status_bar_height = 24;
+
+        sdl_ptr<SDL_Window> window          = create_sdl_object_or_abort(SDL_CreateWindow, "CxxSwizzle sample", 
+            SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
+            render_targets.width, render_targets.height + status_bar_height, 
+            SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+
+        sdl_ptr<SDL_Renderer> renderer      = create_sdl_object_or_abort(SDL_CreateRenderer, window.get(), -1, 0);
+        sdl_ptr<SDL_Texture> target_texture = create_matching_sdl_texture(renderer.get(), render_targets.width, render_targets.height);
+        std::unordered_map<std::string, sdl_ptr<SDL_Texture>> ui_textures;
+
+
+        ImGui::CreateContext();
+        CXXSWIZZLE_SCOPE_EXIT([=]() { ImGui::DestroyContext(); });
+
+        ImGui_ImplSDL2_InitForSDLRenderer(window.get(), renderer.get());
+        CXXSWIZZLE_SCOPE_EXIT([]() { ImGui_ImplSDL2_Shutdown(); });
+
+        ImGui_ImplSDLRenderer2_Init(renderer.get());
+
+        printf("shift + p           - pause/unpause\n");
+        printf("shift + left arrow  - decrease time by 1 s\n");
+        printf("shift + right arrow - increase time by 1 s\n");
+        printf("shift + space       - blit now! (show incomplete render)\n");
+        printf("esc                 - quit\n");
+        printf("\n");
+            
+        ImGuiIO& io = ImGui::GetIO();
+
+        std::future<shadertoy_renderer::stats> render_task = render_async();
+
+
+        bool paused = false;
+        pass_type selected_pass = pass_type::image;
+        SDL_SetWindowMinimumSize(window.get(), status_bar_height * 2, status_bar_height * 2);
+        for (auto update_begin = chrono::steady_clock::now();;)
+        {
+            bool blit_now = false;
+            bool quit = false;
+
+            // process events
+            SDL_Event event;
+            while (SDL_PollEvent(&event))
+            {
+                ImGui_ImplSDL2_ProcessEvent(&event);
+
+                switch (event.type)
                 {
-                    time += static_cast<float>(utils::duration_to_seconds(delta));
+                case SDL_WINDOWEVENT:
+                    switch (event.window.event)
+                    {
+                    case SDL_WINDOWEVENT_SIZE_CHANGED:
+                        progress.cancel = pending_resize = true;
+                        break;
+                    }
+                    break;
+                case SDL_QUIT:
+                    progress.cancel = quit = true;
+                    break;
+
+                case SDL_KEYDOWN:
+                case SDL_KEYUP:
+                {
+                    int ascii = sdl_keysym_to_ascii(event.key.keysym);
+                    if (ascii > 0)
+                    {
+                        if (event.type == SDL_KEYDOWN)
+                        {
+                            keyboard.key_down(ascii);
+                        }
+                        else
+                        {
+                            keyboard.key_up(ascii);
+                        }
+                    }
+                    break;
                 }
-                update_begin = now;
+
+                case SDL_MOUSEMOTION:
+                    if (!io.WantCaptureMouse)
+                    {
+                        mouse.motion(event.button.x, event.button.y);
+                    }
+                    break;
+                case SDL_MOUSEBUTTONDOWN:
+                    if (!io.WantCaptureMouse)
+                    {
+                        mouse.button_down(event.button.x, event.button.y);
+                    }
+                    break;
+                case SDL_MOUSEBUTTONUP:
+                    if (!io.WantCaptureMouse)
+                    {
+                        mouse.button_up(event.button.x, event.button.y);
+                    }
+                    break;
+
+                default:
+                    break;
+                }
             }
 
-            printf("\nwaiting for the worker thread to finish...");
-            render_task.wait();
+            if (quit)
+            {
+                break;
+            }
+
+
+            // imgui
+            {
+                ImGui_ImplSDLRenderer2_NewFrame();
+                ImGui_ImplSDL2_NewFrame();
+                ImGui::NewFrame();
+
+                bool is_shift_down = ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
+
+                if (is_shift_down && ImGui::IsKeyPressed(ImGuiKey_Space))
+                {
+                    blit_now = true;
+                }
+
+                ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+                ImGui::PushStyleColor(ImGuiCol_PlotHistogram, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+                ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(5.0f, 2.0f));
+                ImGui::Begin("StatusBar", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
+                {
+                    const float padding = 5.0f;
+                    auto button_size = ImVec2(22.0f, 20.0f);
+
+                    ImGui::SetWindowPos(ImVec2(0, io.DisplaySize.y - status_bar_height));
+                    ImGui::SetWindowSize(ImVec2(io.DisplaySize.x, status_bar_height));
+
+                    if (ImGui::Button("|<", button_size))
+                    {
+                        time = 0.0f;
+                        progress.cancel = true;
+                        num_frames = 0;
+                        // force render buffers flush
+                        pending_resize = true;
+                    }
+
+                    ImGui::SameLine();
+                    if (ImGui::Button(paused ? ">" : "||", button_size) || is_shift_down && ImGui::IsKeyPressed(ImGuiKey_P))
+                    {
+                        paused = !paused;
+                    }
+
+                    ImGui::SameLine();
+                    if (ImGui::ArrowButton("SeekBack", ImGuiDir_Left) || is_shift_down && ImGui::IsKeyPressed(ImGuiKey_LeftArrow))
+                    {
+                        time = std::max(0.0f, time - 1.0f);
+                        progress.cancel = true;
+                    }
+
+                    ImGui::SameLine();
+                    imgui_utils::imgui_text_centered(40.0f, true, "%.2f", time);
+
+                    ImGui::SameLine();
+                    if (ImGui::ArrowButton("SeekForward", ImGuiDir_Right) || is_shift_down && ImGui::IsKeyPressed(ImGuiKey_RightArrow))
+                    {
+                        time += 1.0f;
+                        progress.cancel = true;
+                    }
+
+                    ImGui::SameLine();
+                    imgui_utils::imgui_text_centered(90.0f, true, "%lG fps", current_fps);
+
+                    ImGui::SameLine();
+                    imgui_utils::imgui_text_centered(60.0f, true, "%dx%d\n", render_targets.width, render_targets.height);
+
+                    ImGui::SameLine();
+                    if (ImGui::RadioButton("MT", multi_threaded))
+                    {
+                        multi_threaded = !multi_threaded;
+                        progress.cancel = true;
+                    }
+                    if (ImGui::IsItemHovered()) 
+                    {
+                        ImGui::SetTooltip("Enable/disable multithreading");
+                    }
+
+                    ImGui::SameLine();
+                    if (ImGui::Button("TEX")) 
+                    {
+                        ImGui::OpenPopup("Details");
+                    }
+
+                        
+
+                    auto pass_type_to_label = [](pass_type pass)
+                    {
+                        switch (pass)
+                        {
+                        case pass_type::buffer_a: return "buffer_a";
+                        case pass_type::buffer_b: return "buffer_b";
+                        case pass_type::buffer_c: return "buffer_c";
+                        case pass_type::buffer_d: return "buffer_d";
+                        case pass_type::image:    return "image";
+                        default:                  return "?";
+                        }
+                    };
+                    auto pass_type_to_label_short = [](pass_type pass)
+                    {
+                        switch (pass)
+                        {
+                        case pass_type::buffer_a: return "A";
+                        case pass_type::buffer_b: return "B";
+                        case pass_type::buffer_c: return "C";
+                        case pass_type::buffer_d: return "D";
+                        case pass_type::image:    return "I";
+                        default:                  return "?";
+                        }
+                    };
+
+
+                    if (render_targets.num_passes > 1)
+                    {
+                        ImGui::SameLine();
+                        ImGui::PushItemWidth(15.0f);
+
+                        if (ImGui::BeginCombo("##PassCombo", pass_type_to_label_short(selected_pass), ImGuiComboFlags_NoArrowButton))
+                        {
+                            for (pass_type pass : shadertoy::passes)
+                            {
+                                const bool is_selected = (pass == selected_pass);
+                                if (ImGui::Selectable(pass_type_to_label(pass), is_selected))
+                                {
+                                    selected_pass = pass;
+                                }
+
+                                if (is_selected)
+                                {
+                                    ImGui::SetItemDefaultFocus();
+                                }
+                            }
+                            ImGui::EndCombo();
+                        }
+                    }
+
+                    // a low effort way of getting this aligned to the right, if there's a space
+                    ImGui::SameLine(io.DisplaySize.x - 85 > ImGui::GetItemRectMax().x ? io.DisplaySize.x - 80.0f : 0.0f);
+                    imgui_utils::imgui_text_centered(37.0f, false, "%.2f", current_frame_timestamp);
+                    ImGui::SameLine();
+                    ImGui::ProgressBar(progress.num_pixels / static_cast<float>(render_targets.width * render_targets.height * render_targets.num_passes), ImVec2(28.0f, button_size.y), "");
+
+                    if (ImGui::BeginPopup("Details"))
+                    {
+                        if (ImGui::BeginTabBar("Passes"))
+                        {
+                            for (pass_type pass : shadertoy::passes)
+                            {
+                                if (ImGui::BeginTabItem(pass_type_to_label(pass)))
+                                {
+                                    int sampler_idx = 0;
+                                    for (auto& sampler : config.get_pass(pass).samplers)
+                                    {
+                                        ImVec2 thumb_size = { 100, 75 };
+
+                                        if (sampler_idx != 0)
+                                        {
+                                            ImGui::SameLine();
+                                        }
+
+                                        ImGui::BeginGroup();
+
+                                        if (sampler.type == sampler_type::none)
+                                        {
+                                            ImGui::Button("None", thumb_size);
+                                        }
+                                        else if (sampler.type == sampler_type::texture)
+                                        {
+                                            auto path = sampler.paths[0];
+                                            if (ui_textures.find(path) == ui_textures.end())
+                                            {
+                                                ui_textures.emplace(path, create_sdl_object_or_abort(SDL_CreateTextureFromSurface, renderer.get(), textures[path].get()));
+                                            }
+                                            ImGui::Image(ui_textures[path].get(), thumb_size);
+                                        }
+                                        else
+                                        {
+                                            ImGui::Button(sampler.label.c_str(), thumb_size);
+                                        }
+                                        ImGui::Text("iChannel%d", sampler_idx++);
+                                        ImGui::EndGroup();
+                                    }
+
+
+                                    ImGui::EndTabItem();
+                                }
+                            }
+                            ImGui::EndTabBar();
+                        }
+
+                        ImGui::EndPopup();
+                    }
+
+                }
+
+                ImGui::End();
+                ImGui::PopStyleColor();
+                ImGui::PopStyleVar(2);
+            }
+                
+
+            // handle frame flushing
+
+            bool frame_ready = !(bool)render_task.wait_for(chrono::microseconds{ 16 });
+            if (pending_resize)
+            {
+                if (frame_ready)
+                {
+                    render_targets = shadertoy_render_targets(static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y) - status_bar_height);
+                    target_texture = create_matching_sdl_texture(renderer.get(), render_targets.width, render_targets.height);
+                    pending_resize = false;
+
+                    current_frame_timestamp = time;
+                    render_task = render_async();
+                }
+            }
+            else
+            {
+                if (blit_now || frame_ready)
+                {
+                    SDL_Rect rect{ 0, 0, render_targets.width, render_targets.height };
+                    if (selected_pass != pass_type::image)
+                    {
+                        int index = static_cast<int>(selected_pass);
+                        render_targets.buffers[num_frames & 1][index].convert(render_targets.target_tmp);
+                        SDL_UpdateTexture(target_texture.get(), &rect, render_targets.target_tmp.first_row, render_targets.target_tmp.pitch);
+                    }
+                    else 
+                    {
+                        SDL_UpdateTexture(target_texture.get(), &rect, render_targets.target.first_row, render_targets.target.pitch);
+                    }
+                }
+
+                if (frame_ready)
+                {
+#ifdef TRACY_ENABLE
+                    FrameMark;
+#endif
+
+                    if (!progress.cancel)
+                    {
+                        ++num_frames;
+                        last_render_stats = render_task.get();
+                        last_frame_timestamp = current_frame_timestamp;
+
+                        // update fps
+                        ++fps_frames_num;
+                        fps_frames_duration += last_render_stats.duration;
+                        if (fps_frames_duration >= std::chrono::milliseconds(500))
+                        {
+                            current_fps = fps_frames_num / utils::duration_to_seconds(fps_frames_duration);
+                            fps_frames_num = 0;
+                            fps_frames_duration = {};
+                        }
+                    }
+
+
+                    current_frame_timestamp = time;
+                    render_task = render_async();
+                }
+            }
+
+            ImGui::Render();
+            SDL_RenderClear(renderer.get());
+
+            SDL_Rect rect_image = { 0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y) - status_bar_height };
+            SDL_RenderCopy(renderer.get(), target_texture.get(), NULL, &rect_image);
+
+            ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
+
+            SDL_RenderPresent(renderer.get());
+
+            // update timers
+            auto now = chrono::steady_clock::now();
+            auto delta = chrono::duration_cast<chrono::microseconds>(now - update_begin);
+
+            if (!paused)
+            {
+                time += static_cast<float>(utils::duration_to_seconds(delta));
+            }
+            update_begin = now;
         }
-    } 
-    catch ( exception& error ) 
-    {
-        fprintf(stderr, "ERROR: %s\n", error.what());
-    } 
-    catch (...) 
-    {
-        fprintf(stderr, "ERROR: Unknown error\n");
+
+        printf("\nwaiting for the worker thread to finish...");
+        render_task.wait();
     }
 
     return 0; 
