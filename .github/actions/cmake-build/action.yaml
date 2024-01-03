@@ -45,17 +45,11 @@ runs:
       shell: bash
 
     - name: Restore artifacts, or run vcpkg, build and cache artifacts
-      uses: lukka/run-vcpkg@v6
+      uses: lukka/run-vcpkg@v11
       id: runvcpkg
-      with:
-        # Just install vcpkg for now, do not install any ports in this step yet.
-        setupOnly: true
-        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-        appendedCacheKey: ${{ hashFiles( '**/vcpkg.json' ) }}
-        vcpkgTriplet: ${{ inputs.triplet }}
 
     - name: Build with CMake
-      uses: lukka/run-cmake@v3
+      uses: lukka/run-cmake@v10
       id: runcmake
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
