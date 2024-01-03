@@ -185,12 +185,13 @@ macro(cxxswizzle_create_runner target_name shadertoy_dir setup textures_root)
 
     if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         # GLSL has "not" function, so better get rid of C++ operator mnemonics
-        target_compile_options(${target_name} PRIVATE "-fno-operator-names -fno-exceptions")
+        target_compile_options(${target_name} PRIVATE "-fno-operator-names"
+		                                              "-fno-exceptions")
     elseif(MSVC)
         # fast math, _vectorcall
         # the resons permissive can't be disabled in MSVC, because there's no way to disable mnemonics then
         target_compile_options(${target_name} PRIVATE "/fp:fast"
-												      "/EHsc"
+                                                      "/EHsc"
                                                       "-D_ENABLE_EXTENDED_ALIGNED_STORAGE"
                                                       "-D_CRT_SECURE_NO_WARNINGS"
                                                       "-DCXXSWIZZLE_CDECL=__cdecl")
