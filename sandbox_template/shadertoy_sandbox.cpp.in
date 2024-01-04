@@ -2,6 +2,7 @@
 
 #include <shadertoy_sandbox.hpp>
 #include <tuple>
+#include <cstring>
 
 using namespace swizzle;
 
